@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_图层_2" data-name="图层 2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 141.96 141.96">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #1daa39;
+      }
+
+      .cls-2 {
+        fill: #dc361e;
+      }
+
+      .cls-3 {
+        fill: none;
+        stroke: #231815;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 4.28px;
+      }
+
+      .cls-4 {
+        fill: #fff;
+      }
+    </style>
+  </defs>
+  <g id="_图层_1-2" data-name="图层 1">
+    <g>
+      <rect class="cls-2" x="0" y="0" width="141.96" height="141.96" rx="70.98" ry="70.98"/>
+      <ellipse class="cls-4" cx="51.83" cy="63.65" rx="13.34" ry="11.8" transform="translate(-19.96 103.47) rotate(-79.86)"/>
+      <ellipse class="cls-4" cx="89.9" cy="66.32" rx="13.34" ry="11.8" transform="translate(8.79 143.14) rotate(-79.86)"/>
+      <ellipse class="cls-1" cx="49.93" cy="65.76" rx="8.3" ry="7.22" transform="translate(-23.6 103.33) rotate(-79.86)"/>
+      <ellipse class="cls-1" cx="90.42" cy="68.05" rx="8.25" ry="6.99" transform="translate(7.51 145.08) rotate(-79.86)"/>
+      <path class="cls-3" d="M59.86,86.16l-4.62,5.12c8.49-.18,16.99-.35,25.48-.53"/>
+    </g>
+  </g>
+</svg>
