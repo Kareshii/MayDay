@@ -30,6 +30,15 @@ class="cls-2"
 <style scoped>
 .cls-1 {
     fill: #e83828;
+    animation: moveRed 1s infinite alternate;
+}
+@keyframes moveRed {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(3px);
+    }
 }
 
 .cls-2 {

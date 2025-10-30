@@ -6,7 +6,7 @@
   "main": "nuxt.config.ts",
   "license": "MIT",
   "scripts": {
-    "dev": "nuxi dev",
+    "dev": "nuxi dev --host",
     "build": "nuxi build",
     "generate": "nuxi generate",
     "preview": "nuxi preview",

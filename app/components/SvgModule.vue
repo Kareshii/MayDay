@@ -8,7 +8,7 @@ import Ming from '@/components/Faces/Ming.vue'
 </script>
 
 <template>
-    <div class="container flex w-screen justify-between">
+    <div class="flex w-screen justify-between">
         <Monster />
         <Ming/>
         <Ashin />
