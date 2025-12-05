@@ -33,7 +33,6 @@ class="cls-5"
 /* 瞳孔 */
 .cls-2 {
     fill: #231815;
-    /* Eyes now look side-to-side more naturally and calmly */
     animation: lookSide 4s ease-in-out infinite;
 }
 
@@ -56,30 +55,29 @@ class="cls-5"
     fill: #f0cd3e;
 }
 
-/* Main animation group for the character body */
 .eye-move {
-    /* The new animation is smoother, gentler, and alternates direction */
     animation: float-effect 4s ease-in-out infinite alternate;
 }
 
-/* New keyframe for the smooth floating effect */
 @keyframes float-effect {
     from {
         transform: translateY(0);
     }
+
     to {
         transform: translateY(4px);
     }
 }
 
-/* Refined keyframe for more natural eye movement */
 @keyframes lookSide {
-    /* Stays looking forward */
-    0%, 40%, 100% {
+    0%,
+    40%,
+    100% {
         transform: translateX(0);
     }
-    /* Moves to the side and holds the gaze */
-    50%, 90% {
+
+    50%,
+    90% {
         transform: translateX(3px);
     }
 }
