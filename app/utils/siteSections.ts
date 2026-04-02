@@ -89,6 +89,18 @@ export const siteSections: SiteSection[] = [
       'hover:border-violet-300/40 hover:shadow-[0_28px_90px_-55px_rgba(139,92,246,0.72)]',
   },
   {
+    path: '/posts',
+    navTitle: '文章',
+    title: '文章',
+    eyebrow: 'POSTS',
+    description: '数据库里新建和发布的文章会从这里对外展示，不再依赖 content 目录。',
+    image: coverImage,
+    badgeClass: 'border-slate-200/30 bg-slate-100/15 text-slate-50',
+    overlayClass: 'from-[#0f172a]/94 via-[#1e293b]/62 to-[#64748b]/18',
+    cardClass:
+      'hover:border-slate-300/40 hover:shadow-[0_28px_90px_-55px_rgba(100,116,139,0.72)]',
+  },
+  {
     path: '/balls',
     navTitle: '五球',
     title: '五球盲盒',

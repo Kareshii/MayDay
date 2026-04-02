@@ -27,6 +27,11 @@ type MemberCard = {
 const selectedMember = ref<MemberCard | null>(null)
 const isDrawing = ref(false)
 
+function pickRandomMember() {
+  const randomIndex = Math.floor(Math.random() * members.length)
+  return members[randomIndex] ?? members[0]!
+}
+
 const drawBlindBox = () => {
   if (isDrawing.value) return
   
@@ -36,16 +41,14 @@ const drawBlindBox = () => {
   // Simulate drawing animation
   let count = 0
   const interval = setInterval(() => {
-    const randomIndex = Math.floor(Math.random() * members.length)
-    selectedMember.value = members[randomIndex]
+    selectedMember.value = pickRandomMember()
     count++
     
     if (count > 10) {
       clearInterval(interval)
       isDrawing.value = false
       // Final selection
-      const finalIndex = Math.floor(Math.random() * members.length)
-      selectedMember.value = members[finalIndex]
+      selectedMember.value = pickRandomMember()
     }
   }, 100)
 }

@@ -2,7 +2,10 @@
 import { primaryNavigation } from '@/utils/siteSections'
 
 const currentYear = new Date().getFullYear()
-const footerLinks = primaryNavigation.filter(link => link.path !== '/quiz').slice(0, 6)
+const footerLinks = [
+  ...primaryNavigation.filter(link => link.path !== '/quiz').slice(0, 6),
+  { title: '内容管理', path: '/admin' },
+]
 </script>
 
 <template>

@@ -23,7 +23,16 @@ const statTargets = computed(() => [
   { label: 'MEMBERS', value: members.value.length },
 ])
 
-const featuredSection = featuredShowcase
+const featuredSection = featuredShowcase ?? showcaseSections[0] ?? {
+  path: '/',
+  title: 'Mayday Archive',
+  eyebrow: 'ARCHIVE',
+  description: 'Archive overview',
+  image: '/cover.jpg',
+  badgeClass: 'border-white/20 bg-white/10 text-white/80',
+  overlayClass: 'from-slate-950/88 via-slate-950/58 to-slate-950/30',
+  cardClass: '',
+}
 const secondarySections = showcaseSections.filter(section => section.path !== featuredSection.path)
 
 const heroImageStyle = computed(() => ({

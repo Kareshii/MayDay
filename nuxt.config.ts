@@ -1,4 +1,5 @@
 import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath } from 'node:url'
 
 export default defineNuxtConfig({
   modules: [
@@ -33,7 +34,7 @@ export default defineNuxtConfig({
     '/design': { ssr: false },
   },
   alias: {
-    '@/language': 'app/language',
+    '@/language': fileURLToPath(new URL('./app/language', import.meta.url)),
   },
   vite: { plugins: [tailwindcss()] },
 })

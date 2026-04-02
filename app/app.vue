@@ -2,7 +2,7 @@
 const { cover } = useAppConfig()
 const route = useRoute()
 
-const showSiteChrome = computed(() => !route.path.startsWith('/design'))
+const showSiteChrome = computed(() => !route.path.startsWith('/design') && !route.path.startsWith('/admin'))
 
 useSeoMeta({
   ogImage: cover,
@@ -14,7 +14,9 @@ useSeoMeta({
   <div class="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <Html lang="zh-CN" />
     <AppNavbar v-if="showSiteChrome" />
-    <NuxtPage />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
     <AppFooter v-if="showSiteChrome" />
   </div>
 </template>
