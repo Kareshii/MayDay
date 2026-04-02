@@ -1,0 +1,12 @@
+---
+navigation:
+  title: 粉丝创作
+seo:
+  description: 五月天粉丝创作展示 - 翻唱、画作、视频作品
+---
+
+# 粉丝创作
+
+用你的方式，致敬五月天。
+
+<CreationGallery />

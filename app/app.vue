@@ -1,5 +1,8 @@
 <script setup lang="ts">
 const { cover } = useAppConfig()
+const route = useRoute()
+
+const showSiteChrome = computed(() => !route.path.startsWith('/design'))
 
 useSeoMeta({
   ogImage: cover,
@@ -8,11 +11,10 @@ useSeoMeta({
 </script>
 
 <template>
-  <div class="sm:pt-6 sm:pb-10">
-    <SvgModule/>
-    <Html />
-    <!-- <NuxtLoadingIndicator /> -->
-    <AppNavbar />
+  <div class="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+    <Html lang="zh-CN" />
+    <AppNavbar v-if="showSiteChrome" />
     <NuxtPage />
+    <AppFooter v-if="showSiteChrome" />
   </div>
 </template>

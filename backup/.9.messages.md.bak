@@ -1,0 +1,12 @@
+---
+navigation:
+  title: 留言墙
+seo:
+  description: 五月天粉丝留言墙 - 分享你和五月天的故事
+---
+
+# 留言墙
+
+每个人都有属于自己的五月天故事。
+
+<MessageWall />

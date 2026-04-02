@@ -1,0 +1,658 @@
+{
+  "songs": [
+    {
+      "id": 1,
+      "title": "倔强",
+      "album": "神的孩子都在跳舞",
+      "year": 2004,
+      "cover": "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop",
+      "lyrics": "当我和世界不一样 那就让我不一样",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2841
+    },
+    {
+      "id": 2,
+      "title": "温柔",
+      "album": "我心中尚未崩坏的地方",
+      "year": 2000,
+      "cover": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
+      "lyrics": "走在风中 今天阳光突然好温柔",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 3156
+    },
+    {
+      "id": 3,
+      "title": "如烟",
+      "album": "时光机",
+      "year": 2003,
+      "cover": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=400&fit=crop",
+      "lyrics": "往事如烟 那模糊的眼睛",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2245
+    },
+    {
+      "id": 4,
+      "title": "后来的我们",
+      "album": "后来的我们",
+      "year": 2016,
+      "cover": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=400&fit=crop",
+      "lyrics": "后来的我们什么都有了 却没有了我们",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 1987
+    },
+    {
+      "id": 5,
+      "title": "突然好想你",
+      "album": "后青春期的诗",
+      "year": 2008,
+      "cover": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=400&h=400&fit=crop",
+      "lyrics": "最怕空气突然安静",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 3421
+    },
+    {
+      "id": 6,
+      "title": "知足",
+      "album": "知足最真杰作选",
+      "year": 2005,
+      "cover": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=400&h=400&fit=crop",
+      "lyrics": "怎么去拥有一道彩虹 怎么去拥抱一夏天的风",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2789
+    },
+    {
+      "id": 7,
+      "title": "志明与春娇",
+      "album": "我心中尚未崩坏的地方",
+      "year": 2000,
+      "cover": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=400&fit=crop",
+      "lyrics": "从前从前 有个人爱你很久",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2134
+    },
+    {
+      "id": 8,
+      "title": "派对动物",
+      "album": "第二人生",
+      "year": 2011,
+      "cover": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=400&fit=crop",
+      "lyrics": "什么派对没去过 什么阵仗没见过",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 1567
+    },
+    {
+      "id": 9,
+      "title": "恋爱ing",
+      "album": "后青春期的诗",
+      "year": 2008,
+      "cover": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=400&h=400&fit=crop",
+      "lyrics": "恋爱ing happy ing 心情就像是坐上一台喷射机",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2456
+    },
+    {
+      "id": 10,
+      "title": "你不是真正的快乐",
+      "album": "后青春期的诗",
+      "year": 2008,
+      "cover": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=400&h=400&fit=crop",
+      "lyrics": "你不是真正的快乐 你的笑只是你穿的保护色",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 2912
+    },
+    {
+      "id": 11,
+      "title": "人生海海",
+      "album": "人生无限公司",
+      "year": 2019,
+      "cover": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+      "lyrics": "人生海海浮沉起落 起起落落",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 3289
+    },
+    {
+      "id": 12,
+      "title": "成名在望",
+      "album": "人生无限公司",
+      "year": 2019,
+      "cover": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=400&fit=crop",
+      "lyrics": "成名在望 你必须等待 成名在望 世界为你安排",
+      "platforms": {
+        "spotify": "#",
+        "apple": "#",
+        "youtube": "#"
+      },
+      "votes": 1823
+    }
+  ],
+  "albums": [
+    {
+      "id": 1,
+      "title": "第一张创作专辑",
+      "year": 1999,
+      "cover": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=600&fit=crop",
+      "description": "五月天的首张专辑，青春与梦想的起点",
+      "tracks": [
+        "疯狂世界",
+        "你不是真正的快乐",
+        "拥抱",
+        "透露",
+        "爱情的模样"
+      ],
+      "background": "这张专辑标志着五月天的正式出道，充满了青春的热血与对音乐的纯粹热爱。"
+    },
+    {
+      "id": 2,
+      "title": "我心中尚未崩坏的地方",
+      "year": 2000,
+      "cover": "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=600&fit=crop",
+      "description": "温柔与志明春娇的诞生地",
+      "tracks": [
+        "温柔",
+        "志明与春娇",
+        "雨眠",
+        "彩虹",
+        "生命的诗篇"
+      ],
+      "background": "这张专辑以温暖的旋律和真挚的歌词打动无数听众，《温柔》成为传唱至今的经典。"
+    },
+    {
+      "id": 3,
+      "title": "时光机",
+      "year": 2003,
+      "cover": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=600&fit=crop",
+      "description": "穿越时空的音乐旅程",
+      "tracks": [
+        "如烟",
+        "时光机",
+        "DNA",
+        "王子面",
+        "候鸟"
+      ],
+      "background": "以时间为主题，探讨回忆、成长与变化，展现了乐队音乐风格的多元化。"
+    },
+    {
+      "id": 4,
+      "title": "神的孩子都在跳舞",
+      "year": 2004,
+      "cover": "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=600&h=600&fit=crop",
+      "description": "倔强的摇滚宣言",
+      "tracks": [
+        "倔强",
+        "垃圾车",
+        "小护士",
+        "憨人",
+        "武装"
+      ],
+      "background": "《倔强》成为激励无数人的励志金曲，代表了五月天最具代表性的摇滚精神。"
+    },
+    {
+      "id": 5,
+      "title": "后青春期的诗",
+      "year": 2008,
+      "cover": "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=600&h=600&fit=crop",
+      "description": "成长后的诗意表达",
+      "tracks": [
+        "突然好想你",
+        "你不是真正的快乐",
+        "恋爱ing",
+        "春天的呐喊",
+        "夜访吸血鬼"
+      ],
+      "background": "步入30岁的五月天，用更成熟的音乐语言诉说青春尾巴的故事。"
+    },
+    {
+      "id": 6,
+      "title": "人生无限公司",
+      "year": 2019,
+      "cover": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=600&fit=crop",
+      "description": "人生无限可能",
+      "tracks": [
+        "人生海海",
+        "成名在望",
+        "好好（想把你写成一首歌）",
+        "终于结束的起点",
+        "laughing"
+      ],
+      "background": "睽违四年的全新作品，探讨人生的无限可能与生命的意义。"
+    }
+  ],
+  "concerts": [
+    {
+      "id": 1,
+      "name": "五月天 离开地球表面 Jump! 世界巡回演唱会",
+      "year": 2007,
+      "location": "台北小巨蛋",
+      "city": "Taipei",
+      "country": "Taiwan",
+      "coordinates": { "lat": 25.0330, "lng": 121.5654 },
+      "image": "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=800&h=600&fit=crop",
+      "description": "历史性的跳跃，离开地球表面的音乐盛宴"
+    },
+    {
+      "id": 2,
+      "name": "五月天 DNA 创造演唱会",
+      "year": 2009,
+      "location": "鸟巢体育场",
+      "city": "Beijing",
+      "country": "China",
+      "coordinates": { "lat": 39.9042, "lng": 116.4074 },
+      "image": "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&h=600&fit=crop",
+      "description": "首次在鸟巢开唱，创造历史的一刻"
+    },
+    {
+      "id": 3,
+      "name": "五月天 诺亚方舟 世界巡回演唱会",
+      "year": 2013,
+      "location": "北京工人体育场",
+      "city": "Beijing",
+      "country": "China",
+      "coordinates": { "lat": 39.9289, "lng": 116.4053 },
+      "image": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=600&fit=crop",
+      "description": "诺亚方舟载着梦想航向未来"
+    },
+    {
+      "id": 4,
+      "name": "五月天 Just Rock It! 演唱会",
+      "year": 2016,
+      "location": "上海体育场",
+      "city": "Shanghai",
+      "country": "China",
+      "coordinates": { "lat": 31.2304, "lng": 121.4737 },
+      "image": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop",
+      "description": "纯粹的摇滚精神，Just Rock It!"
+    },
+    {
+      "id": 5,
+      "name": "五月天 人生无限公司 巡回演唱会",
+      "year": 2019,
+      "location": "桃园国际棒球场",
+      "city": "Taoyuan",
+      "country": "Taiwan",
+      "coordinates": { "lat": 24.9936, "lng": 121.3010 },
+      "image": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&h=600&fit=crop",
+      "description": "人生无限公司开张营业，欢迎光临"
+    },
+    {
+      "id": 6,
+      "name": "五月天 好好好想见到你 演唱会",
+      "year": 2024,
+      "location": "北京国家体育场",
+      "city": "Beijing",
+      "country": "China",
+      "coordinates": { "lat": 39.9042, "lng": 116.4074 },
+      "image": "https://images.unsplash.com/photo-1506157786151-b8491531f063?w=800&h=600&fit=crop",
+      "description": "好好好想见到你，终于重逢的时刻"
+    }
+  ],
+  "members": [
+    {
+      "id": 1,
+      "name": "阿信",
+      "realName": "陈信宏",
+      "role": "主唱",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop",
+      "bio": "五月天的灵魂人物，用歌声温暖无数人的心。词曲创作才华横溢，歌词总能打动人心深处。",
+      "birthYear": 1975,
+      "hobby": "摄影、文字创作",
+      "quote": "相信音乐的力量",
+      "gallery": [
+        "https://images.unsplash.com/photo-1540039155733-5bb30b53aa14?w=600&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&h=400&fit=crop"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "怪兽",
+      "realName": "温尚翊",
+      "role": "吉他手",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&h=400&fit=crop",
+      "bio": "五月天的吉他之神，音乐才华过人。除了吉他演奏，也是重要的词曲创作者。",
+      "birthYear": 1976,
+      "hobby": "音乐制作、收藏吉他",
+      "quote": "用吉他说话",
+      "gallery": [
+        "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=400&fit=crop"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "石头",
+      "realName": "石锦航",
+      "role": "吉他手",
+      "avatar": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&h=400&fit=crop",
+      "bio": "默默付出的吉他手，舞台上的稳定力量。低调但实力强劲，是乐队不可或缺的一员。",
+      "birthYear": 1975,
+      "hobby": "运动、健身",
+      "quote": "音乐需要的是用心",
+      "gallery": [
+        "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=600&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=600&h=400&fit=crop"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "玛莎",
+      "realName": "蔡升晏",
+      "role": "贝斯手",
+      "avatar": "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&h=400&fit=crop",
+      "bio": "五月天的贝斯担当，也是乐队的制作人。细腻的音乐感知力，为乐队打下坚实的低音基础。",
+      "birthYear": 1977,
+      "hobby": "美食、旅行",
+      "quote": "音乐是生活的节奏",
+      "gallery": [
+        "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&h=400&fit=crop"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "冠佑",
+      "realName": "刘冠佑",
+      "role": "鼓手",
+      "avatar": "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop",
+      "bio": "五月天的节奏引擎，强劲有力的鼓点是乐队的心跳。阳光开朗，总能带来正能量。",
+      "birthYear": 1973,
+      "hobby": "电影、阅读",
+      "quote": "用鼓点传递能量",
+      "gallery": [
+        "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=600&h=400&fit=crop",
+        "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&h=400&fit=crop"
+      ]
+    }
+  ],
+  "lyrics": [
+    {
+      "id": 1,
+      "song": "倔强",
+      "content": "当我和世界不一样\n那就让我不一样\n坚持对我来说就是以刚克刚",
+      "mood": "励志",
+      "featured": true
+    },
+    {
+      "id": 2,
+      "song": "温柔",
+      "content": "走在风中 今天阳光突然好温柔\n天的温柔 地的温柔\n像你抱着我 然后发现",
+      "mood": "温暖",
+      "featured": true
+    },
+    {
+      "id": 3,
+      "song": "突然好想你",
+      "content": "最怕空气突然安静\n最怕朋友突然的关心\n最怕回忆突然翻滚绞痛着不平息",
+      "mood": "思念",
+      "featured": true
+    },
+    {
+      "id": 4,
+      "song": "知足",
+      "content": "怎么去拥有一道彩虹\n怎么去拥抱一夏天的风\n天上的星星笑地上的人\n总是不能懂不能觉得足够",
+      "mood": "治愈",
+      "featured": false
+    },
+    {
+      "id": 5,
+      "song": "你不是真正的快乐",
+      "content": "你不是真正的快乐\n你的笑只是你穿的保护色\n你决定不恨了 也决定不爱了",
+      "mood": "深沉",
+      "featured": false
+    },
+    {
+      "id": 6,
+      "song": "人生海海",
+      "content": "人生海海浮沉起落\n起起落落\n日日年年反反覆覆\n万般花样",
+      "mood": "哲思",
+      "featured": true
+    },
+    {
+      "id": 7,
+      "song": "后来的我们",
+      "content": "后来的我们什么都有了\n却没有了我们\n好想再回到那个夏天",
+      "mood": "怀旧",
+      "featured": false
+    },
+    {
+      "id": 8,
+      "song": "恋爱ing",
+      "content": "恋爱ing happy ing\n心情就像是坐上一台喷射机\n恋爱ing 开心ing\n虽然偶尔会有乱流的出现",
+      "mood": "甜蜜",
+      "featured": false
+    }
+  ],
+  "countdowns": [
+    {
+      "id": 1,
+      "title": "五月天出道 26 周年",
+      "date": "2025-03-29",
+      "type": "anniversary",
+      "description": "1999年3月29日，五月天正式出道"
+    },
+    {
+      "id": 2,
+      "title": "阿信生日",
+      "date": "2026-12-06",
+      "type": "birthday",
+      "description": "主唱阿信的生日"
+    }
+  ],
+  "fanCreations": [
+    {
+      "id": 1,
+      "type": "cover",
+      "title": "倔强 吉他翻唱",
+      "author": "音乐爱好者小王",
+      "thumbnail": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=400&h=300&fit=crop",
+      "date": "2024-12-15",
+      "likes": 892
+    },
+    {
+      "id": 2,
+      "type": "art",
+      "title": "五月天演唱会手绘",
+      "author": "插画师小李",
+      "thumbnail": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=400&h=300&fit=crop",
+      "date": "2024-11-20",
+      "likes": 1245
+    },
+    {
+      "id": 3,
+      "type": "video",
+      "title": "温柔 MV 混剪",
+      "author": "剪辑师小张",
+      "thumbnail": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400&h=300&fit=crop",
+      "date": "2024-10-10",
+      "likes": 2134
+    },
+    {
+      "id": 4,
+      "type": "cover",
+      "title": "突然好想你 钢琴版",
+      "author": "钢琴手小陈",
+      "thumbnail": "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?w=400&h=300&fit=crop",
+      "date": "2024-09-05",
+      "likes": 1567
+    },
+    {
+      "id": 5,
+      "type": "art",
+      "title": "五月天成员Q版插画",
+      "author": "漫画家小刘",
+      "thumbnail": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=400&h=300&fit=crop",
+      "date": "2024-08-22",
+      "likes": 987
+    },
+    {
+      "id": 6,
+      "type": "video",
+      "title": "人生海海 Live 现场混剪",
+      "author": "粉丝小周",
+      "thumbnail": "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop",
+      "date": "2024-07-14",
+      "likes": 1823
+    }
+  ],
+  "quizQuestions": [
+    {
+      "id": 1,
+      "question": "五月天是哪一年正式出道的？",
+      "options": ["1997", "1999", "2000", "2001"],
+      "answer": 1,
+      "difficulty": "easy"
+    },
+    {
+      "id": 2,
+      "question": "以下哪首歌不是出自《神的孩子都在跳舞》专辑？",
+      "options": ["倔强", "垃圾车", "温柔", "小护士"],
+      "answer": 2,
+      "difficulty": "medium"
+    },
+    {
+      "id": 3,
+      "question": "阿信的真名是什么？",
+      "options": ["陈信宏", "温尚翊", "蔡升晏", "刘冠佑"],
+      "answer": 0,
+      "difficulty": "easy"
+    },
+    {
+      "id": 4,
+      "question": "\"最怕空气突然安静\" 出自哪首歌？",
+      "options": ["温柔", "你不是真正的快乐", "突然好想你", "如烟"],
+      "answer": 2,
+      "difficulty": "easy"
+    },
+    {
+      "id": 5,
+      "question": "五月天的贝斯手是谁？",
+      "options": ["怪兽", "石头", "玛莎", "冠佑"],
+      "answer": 2,
+      "difficulty": "easy"
+    },
+    {
+      "id": 6,
+      "question": "《人生无限公司》专辑发行于哪一年？",
+      "options": ["2016", "2017", "2018", "2019"],
+      "answer": 3,
+      "difficulty": "medium"
+    },
+    {
+      "id": 7,
+      "question": "\"当我和世界不一样，那就让我不一样\" 出自哪首歌？",
+      "options": ["倔强", "恋爱ing", "温柔", "派对动物"],
+      "answer": 0,
+      "difficulty": "easy"
+    },
+    {
+      "id": 8,
+      "question": "哪位成员是五月天的鼓手？",
+      "options": ["阿信", "怪兽", "冠佑", "石头"],
+      "answer": 2,
+      "difficulty": "easy"
+    },
+    {
+      "id": 9,
+      "question": "《后青春期的诗》专辑发行于哪一年？",
+      "options": ["2006", "2007", "2008", "2009"],
+      "answer": 2,
+      "difficulty": "medium"
+    },
+    {
+      "id": 10,
+      "question": "\"怎么去拥有一道彩虹\" 出自哪首歌？",
+      "options": ["彩虹", "知足", "志明与春娇", "如烟"],
+      "answer": 1,
+      "difficulty": "medium"
+    }
+  ],
+  "messages": [
+    {
+      "id": 1,
+      "content": "五月天的音乐陪伴我度过了最艰难的日子，每次听《倔强》都能重新找到力量",
+      "author": "匿名粉丝",
+      "mood": "励志",
+      "date": "2024-12-20",
+      "likes": 234,
+      "featured": true
+    },
+    {
+      "id": 2,
+      "content": "2019年人生无限公司演唱会，是我人生中最难忘的一天",
+      "author": "小明",
+      "mood": "回忆",
+      "date": "2024-12-18",
+      "likes": 189,
+      "featured": false
+    },
+    {
+      "id": 3,
+      "content": "温柔这首歌，从高中听到现在，每个阶段都有不同的感悟",
+      "author": "阿华",
+      "mood": "治愈",
+      "date": "2024-12-15",
+      "likes": 412,
+      "featured": true
+    },
+    {
+      "id": 4,
+      "content": "突然好想你，想念那个一起听五月天的人",
+      "author": "小美",
+      "mood": "怀念",
+      "date": "2024-12-10",
+      "likes": 567,
+      "featured": false
+    },
+    {
+      "id": 5,
+      "content": "五月天20年了，他们还在，我们也还在",
+      "author": "老歌迷",
+      "mood": "感动",
+      "date": "2024-12-05",
+      "likes": 891,
+      "featured": true
+    }
+  ]
+}

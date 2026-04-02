@@ -29,5 +29,11 @@ export default defineNuxtConfig({
   },
   compatibilityDate: '2025-02-19',
 
+  routeRules: {
+    '/design': { ssr: false },
+  },
+  alias: {
+    '@/language': 'app/language',
+  },
   vite: { plugins: [tailwindcss()] },
 })
