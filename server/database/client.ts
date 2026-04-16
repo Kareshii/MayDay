@@ -1,35 +1,43 @@
 import { createError } from 'h3'
-import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js'
+import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import * as schema from './schema'
+import { getDatabaseSchema } from './schema'
+import { getConfiguredArticleTableName, getConfiguredDatabaseUrl } from '../utils/runtimeSetup'
 
-type Database = PostgresJsDatabase<typeof schema>
-
-let dbInstance: Database | null = null
-
-export function isDatabaseConfigured() {
-  return Boolean(process.env.DATABASE_URL)
-}
-
-export function useDatabase() {
-  if (dbInstance) {
-    return dbInstance
-  }
-
-  const databaseUrl = process.env.DATABASE_URL
-
-  if (!databaseUrl) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'DATABASE_URL is not configured. Point it to your Neon PostgreSQL database.',
-    })
-  }
-
+function createDatabase(databaseUrl: string) {
   const client = postgres(databaseUrl, {
     max: 1,
     prepare: false,
   })
 
-  dbInstance = drizzle(client, { schema })
+  return drizzle(client, { schema: getDatabaseSchema() })
+}
+
+type Database = ReturnType<typeof createDatabase>
+
+let dbInstance: Database | null = null
+let dbKey: string | null = null
+
+export function isDatabaseConfigured() {
+  return Boolean(getConfiguredDatabaseUrl())
+}
+
+export function useDatabase() {
+  const databaseUrl = getConfiguredDatabaseUrl()
+  const databaseKey = `${databaseUrl}::${getConfiguredArticleTableName()}`
+
+  if (dbInstance && dbKey === databaseKey) {
+    return dbInstance
+  }
+
+  if (!databaseUrl) {
+    throw createError({
+      statusCode: 503,
+      statusMessage: 'DATABASE_URL is not configured. Complete the first-run setup before using the CMS.',
+    })
+  }
+
+  dbKey = databaseKey
+  dbInstance = createDatabase(databaseUrl)
   return dbInstance
 }

@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import ArticleForm from '../../../components/admin/ArticleForm.vue'
+import { defineComponent, h } from 'vue'
+import ArticleEditorForm from '../../../components/admin/ArticleEditorForm.vue'
 import type { ManagedArticle, ManagedArticlePayload } from '~~/shared/types/articles'
+
+interface AdminSettingsResponse {
+  databaseConfigured: boolean
+}
 
 definePageMeta({
   layout: 'admin',
@@ -10,13 +15,35 @@ const route = useRoute()
 const router = useRouter()
 const id = computed(() => String(route.params.id))
 
-const { data, pending, error, refresh } = await useFetch<{ article: ManagedArticle }>(
-  () => `/api/admin/articles/${id.value}`,
-)
+const { data: settings, error: settingsError } = await useFetch<AdminSettingsResponse>('/api/admin/settings')
+
+const databaseConfigured = computed(() => settings.value?.databaseConfigured ?? false)
+const databaseErrorMessage = '当前环境还没有配置 `DATABASE_URL`，所以后台暂时不能读取或保存文章。请先在环境变量里配置 PostgreSQL 连接串。'
+
+const articleRequest = databaseConfigured.value
+  ? await useFetch<{ article: ManagedArticle }>(() => `/api/admin/articles/${id.value}`)
+  : null
+
+const data = computed(() => articleRequest?.data.value)
+const pending = computed(() => articleRequest?.pending.value ?? false)
+const error = computed(() => settingsError.value || (!databaseConfigured.value ? { message: databaseErrorMessage } : articleRequest?.error.value || null))
+const refresh = articleRequest?.refresh ?? (async () => {})
 
 const saving = ref(false)
 const deleting = ref(false)
 const errorMessage = ref('')
+
+const ArticleForm = defineComponent({
+  inheritAttrs: false,
+  setup(_, { attrs, slots }) {
+    return () => h(ArticleEditorForm, {
+      ...attrs,
+      disabled: !databaseConfigured.value,
+      disabledMessage: !databaseConfigured.value ? databaseErrorMessage : '',
+      submitLabel: '保存修改',
+    }, slots)
+  },
+})
 
 useSeoMeta({
   title: '编辑文章',
@@ -24,6 +51,11 @@ useSeoMeta({
 })
 
 async function updateCurrentArticle(payload: ManagedArticlePayload) {
+  if (!databaseConfigured.value) {
+    errorMessage.value = databaseErrorMessage
+    return
+  }
+
   saving.value = true
   errorMessage.value = ''
 
@@ -44,6 +76,11 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
 }
 
 async function removeCurrentArticle() {
+  if (!databaseConfigured.value) {
+    errorMessage.value = databaseErrorMessage
+    return
+  }
+
   if (!window.confirm('确认要从 PostgreSQL 中删除这篇文章吗？')) {
     return
   }

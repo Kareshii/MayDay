@@ -1,9 +1,15 @@
 import { createError, deleteCookie, getCookie, setCookie, type H3Event } from 'h3'
 import { createHmac, timingSafeEqual } from 'node:crypto'
+import {
+  getConfiguredAdminUsername,
+  getConfiguredSessionSecret,
+  getRuntimeSetupState,
+  hasConfiguredAdminPassword,
+  verifyConfiguredAdminPassword,
+} from './runtimeSetup'
 
 const ADMIN_SESSION_COOKIE = 'mayday_admin_session'
 const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
-const DEFAULT_ADMIN_USERNAME = 'admin'
 
 interface AdminSessionPayload {
   username: string
@@ -18,12 +24,8 @@ function decodeBase64Url(value: string) {
   return Buffer.from(value, 'base64url').toString('utf8')
 }
 
-function getConfiguredUsername() {
-  return String(process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim() || DEFAULT_ADMIN_USERNAME
-}
-
 function getSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_PASSWORD || ''
+  return getConfiguredSessionSecret()
 }
 
 function safeCompare(left: string, right: string) {
@@ -75,14 +77,17 @@ function parseSessionPayload(token: string): AdminSessionPayload | null {
 }
 
 export function isAdminAuthConfigured() {
-  return Boolean(process.env.ADMIN_PASSWORD)
+  return hasConfiguredAdminPassword()
 }
 
 export function getAdminAuthSettings() {
+  const state = getRuntimeSetupState()
+
   return {
     configured: isAdminAuthConfigured(),
-    username: getConfiguredUsername(),
-    sessionSecretConfigured: Boolean(process.env.ADMIN_SESSION_SECRET),
+    username: getConfiguredAdminUsername(),
+    sessionSecretConfigured: state.sessionSecretConfigured,
+    source: state.authSource,
     sessionTtlHours: ADMIN_SESSION_TTL_SECONDS / 60 / 60,
   }
 }
@@ -92,10 +97,7 @@ export function verifyAdminCredentials(username: string, password: string) {
     return false
   }
 
-  const configuredPassword = String(process.env.ADMIN_PASSWORD || '')
-  const configuredUsername = getConfiguredUsername()
-
-  return safeCompare(username.trim(), configuredUsername) && safeCompare(password, configuredPassword)
+  return safeCompare(username.trim(), getConfiguredAdminUsername()) && verifyConfiguredAdminPassword(password)
 }
 
 export function createAdminSession(username: string) {
@@ -160,6 +162,6 @@ export function requireAdminAuthConfiguration() {
 
   throw createError({
     statusCode: 503,
-    statusMessage: 'Admin authentication is not configured. Set ADMIN_PASSWORD before using /admin.',
+    statusMessage: 'Admin authentication is not configured. Complete the first-run setup before using /admin.',
   })
 }

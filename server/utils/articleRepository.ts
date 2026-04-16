@@ -1,6 +1,6 @@
 import { and, desc, eq } from 'drizzle-orm'
 import { createError } from 'h3'
-import { articles, type ArticleRecord } from '../database/schema'
+import { getArticlesTable, type ArticleRecord } from '../database/schema'
 import { useDatabase } from '../database/client'
 import type { ManagedArticle, ManagedArticlePayload, ManagedArticleSummary } from '~~/shared/types/articles'
 import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
@@ -65,24 +65,28 @@ function validatePayload(payload: Partial<ManagedArticlePayload>) {
 
 async function findBySlug(slug: string) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1)
   return rows[0] ?? null
 }
 
 async function findById(id: string) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.id, id)).limit(1)
   return rows[0] ?? null
 }
 
 export async function listAdminArticles() {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const rows = await db.select().from(articles).orderBy(desc(articles.updatedAt))
   return rows.map(row => toSummary(serializeArticle(row)))
 }
 
 export async function listPublicArticles() {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const rows = await db
     .select()
     .from(articles)
@@ -107,6 +111,7 @@ export async function getAdminArticle(id: string) {
 
 export async function getPublicArticleBySlug(slug: string, includeDraft = false) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const conditions = includeDraft
     ? eq(articles.slug, slug)
     : and(eq(articles.slug, slug), eq(articles.published, true))
@@ -131,6 +136,7 @@ export async function getPublicArticleBySlug(slug: string, includeDraft = false)
 
 export async function createArticle(payload: ManagedArticlePayload) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const article = validatePayload(payload)
   const existing = await findBySlug(article.slug)
 
@@ -158,6 +164,7 @@ export async function createArticle(payload: ManagedArticlePayload) {
 
 export async function updateArticle(id: string, payload: ManagedArticlePayload) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const existing = await getAdminArticle(id)
   const article = validatePayload(payload)
   const conflict = await findBySlug(article.slug)
@@ -196,6 +203,7 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
 
 export async function deleteArticle(id: string) {
   const db = useDatabase()
+  const articles = getArticlesTable()
   const rows = await db.delete(articles).where(eq(articles.id, id)).returning({ id: articles.id })
 
   if (!rows[0]) {

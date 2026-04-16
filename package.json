@@ -5,7 +5,11 @@
   "version": "2.0.0",
   "main": "nuxt.config.ts",
   "license": "MIT",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
+    "preinstall": "node ./scripts/check-node-sqlite.mjs",
     "dev": "nuxi dev --host",
     "build": "nuxi build",
     "generate": "nuxi generate",
@@ -69,7 +73,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@parcel/watcher",
-      "better-sqlite3",
       "esbuild",
       "vue-demi"
     ]

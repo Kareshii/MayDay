@@ -13,6 +13,9 @@ export default defineNuxtConfig({
   colorMode: { classSuffix: '' },
 
   content: {
+    experimental: {
+      nativeSqlite: true,
+    },
     build: {
       markdown: {
         highlight: {

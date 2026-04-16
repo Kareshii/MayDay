@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import ArticleForm from '../../../components/admin/ArticleForm.vue'
+import { defineComponent, h } from 'vue'
+import ArticleEditorForm from '../../../components/admin/ArticleEditorForm.vue'
 import type { ManagedArticle, ManagedArticlePayload } from '~~/shared/types/articles'
+
+interface AdminSettingsResponse {
+  databaseConfigured: boolean
+}
 
 definePageMeta({
   layout: 'admin',
@@ -15,7 +20,33 @@ const router = useRouter()
 const saving = ref(false)
 const errorMessage = ref('')
 
+const { data: settings, error: settingsError } = await useFetch<AdminSettingsResponse>('/api/admin/settings')
+
+const databaseConfigured = computed(() => settings.value?.databaseConfigured ?? false)
+const databaseErrorMessage = '当前环境还没有配置 `DATABASE_URL`，所以后台暂时不能创建文章。请先在环境变量里配置 PostgreSQL 连接串。'
+
+if (settingsError.value) {
+  errorMessage.value = settingsError.value.message
+}
+
+const ArticleForm = defineComponent({
+  inheritAttrs: false,
+  setup(_, { attrs, slots }) {
+    return () => h(ArticleEditorForm, {
+      ...attrs,
+      disabled: !databaseConfigured.value,
+      disabledMessage: !databaseConfigured.value ? databaseErrorMessage : '',
+      submitLabel: '创建文章',
+    }, slots)
+  },
+})
+
 async function createNewArticle(payload: ManagedArticlePayload) {
+  if (!databaseConfigured.value) {
+    errorMessage.value = databaseErrorMessage
+    return
+  }
+
   saving.value = true
   errorMessage.value = ''
 
