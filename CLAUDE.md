@@ -61,10 +61,6 @@ See [`.env.example`](/Users/if/Desktop/code-local/IF/mayday.life/.env.example).
 Static/public Mayday sections are still file-based:
 
 - `content/1.index.md`
-- `content/4.albums.md`
-- `content/5.songs.md`
-- `content/6.concerts.md`
-- `content/7.members.md`
 - `content/8.quiz.md`
 
 These pages are rendered through:
@@ -225,4 +221,3 @@ The normal path is:
 4. Update admin pages/components under `app/pages/admin/` and `app/components/admin/`
 5. Run `pnpm lint`
 6. Run `pnpm exec nuxi typecheck`
-

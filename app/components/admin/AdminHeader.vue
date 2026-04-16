@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
+const loggingOut = ref(false)
 
 const emit = defineEmits<{
   toggle: []
@@ -46,6 +47,20 @@ const pageMeta = computed(() => {
     description: 'CMS 工作区',
   }
 })
+
+async function signOut() {
+  loggingOut.value = true
+
+  try {
+    await $fetch('/api/admin/logout', {
+      method: 'POST',
+    })
+
+    await navigateTo('/admin/login')
+  } finally {
+    loggingOut.value = false
+  }
+}
 </script>
 
 <template>
@@ -71,6 +86,9 @@ const pageMeta = computed(() => {
         <NuxtLink to="/" class="text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
           查看前台
         </NuxtLink>
+        <UiButton variant="outline" size="sm" :disabled="loggingOut" @click="signOut">
+          {{ loggingOut ? '退出中...' : '退出登录' }}
+        </UiButton>
         <ColorModeSwitch class="text-[var(--text-primary)]" />
       </div>
     </div>

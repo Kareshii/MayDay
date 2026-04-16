@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import TinyMceEditor from './TinyMceEditor.client.vue'
-import type { ManagedArticle, ManagedArticlePayload } from '../../../shared/types/articles'
-import { normalizeArticleSlug } from '../../../shared/utils/articleSlug'
+import type { ManagedArticle, ManagedArticlePayload } from '~~/shared/types/articles'
+import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 
 const props = defineProps<{
   article?: ManagedArticle | null

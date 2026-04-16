@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ManagedArticle } from '../../../shared/types/articles'
+import type { ManagedArticle } from '~~/shared/types/articles'
 
 definePageMeta({
   layout: 'default',

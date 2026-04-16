@@ -2,8 +2,8 @@ import { and, desc, eq } from 'drizzle-orm'
 import { createError } from 'h3'
 import { articles, type ArticleRecord } from '../database/schema'
 import { useDatabase } from '../database/client'
-import type { ManagedArticle, ManagedArticlePayload, ManagedArticleSummary } from '../../shared/types/articles'
-import { normalizeArticleSlug } from '../../shared/utils/articleSlug'
+import type { ManagedArticle, ManagedArticlePayload, ManagedArticleSummary } from '~~/shared/types/articles'
+import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 
 function serializeArticle(record: ArticleRecord): ManagedArticle {
   return {

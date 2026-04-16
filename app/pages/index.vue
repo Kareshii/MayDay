@@ -2,25 +2,26 @@
 import type { DirectiveBinding } from 'vue'
 import { useMediaQuery, useWindowScroll } from '@vueuse/core'
 import { featuredShowcase, showcaseSections } from '@/utils/siteSections'
+import { mojoItems } from '@/utils/mojoData'
 
 definePageMeta({
   layout: 'full-width',
 })
 
-const { songs, albums, concerts, members } = useMaydayData()
+const { countdowns, quizQuestions } = useMaydayData()
 const { y } = useWindowScroll()
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
 useSeoMeta({
   title: '纯真之后，继续唱',
-  description: '一个用 Vue 写成的五月天档案馆首页，把专辑、歌曲、演唱会、成员和互动页面重新编排成 blog-next 风格。',
+  description: '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
 })
 
 const statTargets = computed(() => [
-  { label: 'SONGS', value: songs.value.length },
-  { label: 'ALBUMS', value: albums.value.length },
-  { label: 'SHOWS', value: concerts.value.length },
-  { label: 'MEMBERS', value: members.value.length },
+  { label: 'SECTIONS', value: showcaseSections.length },
+  { label: 'COUNTDOWNS', value: countdowns.value.length },
+  { label: 'QUIZ', value: quizQuestions.value.length },
+  { label: 'MOJOS', value: mojoItems.length },
 ])
 
 const featuredSection = featuredShowcase ?? showcaseSections[0] ?? {
@@ -159,8 +160,8 @@ onBeforeUnmount(() => {
               星星在闪烁，你会怎么说。
             </p>
             <p class="max-w-2xl text-sm leading-7 text-white/64 md:text-base">
-              把专辑、歌曲、现场、成员和互动页整理成一座能慢慢翻、慢慢点开的五月天档案馆。
-              视觉骨架参考 blog-next，但内容还是这支乐队和你熟悉的蓝色年代。
+              把测验、文章、收集和互动页整理成一座能慢慢翻、慢慢点开的五月天档案馆。
+              视觉骨架参考 blog-next，但首页入口已经收束到仍然保留的章节。
             </p>
           </div>
 
@@ -182,16 +183,16 @@ onBeforeUnmount(() => {
 
           <div class="hero-entrance mt-10 flex flex-wrap items-center gap-3" style="--enter-delay: 760ms">
             <NuxtLink
-              to="/songs"
+              to="/quiz"
               class="rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/88"
             >
-              进入歌曲档案
+              开始五月天测验
             </NuxtLink>
             <NuxtLink
-              to="/albums"
+              to="/mojo"
               class="rounded-full border border-white/22 bg-white/10 px-7 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/18"
             >
-              查看专辑博物馆
+              打开 Mojo Family
             </NuxtLink>
             <NuxtLink
               to="/balls"
@@ -218,11 +219,11 @@ onBeforeUnmount(() => {
         <div>
           <p class="section-kicker">RECENT SECTIONS</p>
           <h2 class="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[var(--text-primary)] md:text-5xl">
-            像读 blog-next 一样，翻开五月天的不同章节。
+            像读 blog-next 一样，翻开站里保留的章节。
           </h2>
         </div>
         <p class="max-w-md text-sm leading-7 text-[var(--text-secondary)]">
-          这里不做传统博客列表，而是把站内每一个主题页面都当成一篇值得点开的主内容。
+          这里不做传统博客列表，而是把站内仍然开放的主题页面和文章入口排成一组封面。
         </p>
       </div>
 

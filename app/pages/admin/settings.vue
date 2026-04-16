@@ -8,7 +8,19 @@ useSeoMeta({
   description: '查看当前后台的技术栈与数据库配置。',
 })
 
-const { data, pending, error, refresh } = await useFetch('/api/admin/settings')
+const { data, pending, error, refresh } = await useFetch<{
+  databaseConfigured: boolean
+  databaseProvider: string
+  editor: string
+  orm: string
+  ui: string
+  auth: {
+    configured: boolean
+    username: string
+    sessionSecretConfigured: boolean
+    sessionTtlHours: number
+  }
+}>('/api/admin/settings')
 </script>
 
 <template>
@@ -70,6 +82,27 @@ const { data, pending, error, refresh } = await useFetch('/api/admin/settings')
         </h2>
         <p class="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
           因为这是 Vue 项目，后台使用的是符合 shadcn 风格的 Vue 组件和 Reka UI primitives，而不是 React 专用的 Radix 包。
+        </p>
+      </UiCard>
+
+      <UiCard class="p-6">
+        <p class="section-kicker">鉴权</p>
+        <h2 class="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+          Cookie Session
+        </h2>
+        <p class="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+          后台要求 <code>ADMIN_PASSWORD</code>，默认用户名是 <code>{{ data?.auth.username || 'admin' }}</code>，登录成功后写入服务端签名的会话 Cookie。
+        </p>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <UiBadge :variant="data?.auth.configured ? 'success' : 'warning'">
+            {{ data?.auth.configured ? 'ADMIN_PASSWORD 已配置' : 'ADMIN_PASSWORD 缺失' }}
+          </UiBadge>
+          <UiBadge :variant="data?.auth.sessionSecretConfigured ? 'success' : 'warning'">
+            {{ data?.auth.sessionSecretConfigured ? 'ADMIN_SESSION_SECRET 已配置' : '使用密码作为签名密钥' }}
+          </UiBadge>
+        </div>
+        <p class="mt-4 text-xs text-[var(--text-secondary)]">
+          会话有效期约 {{ data?.auth.sessionTtlHours || 0 }} 小时。
         </p>
       </UiCard>
     </div>

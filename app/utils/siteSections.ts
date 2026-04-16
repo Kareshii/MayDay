@@ -1,4 +1,3 @@
-import maydayData from '~/assets/data/mayday-data.json'
 import { mojoItems } from '@/utils/mojoData'
 
 export interface SiteSection {
@@ -21,60 +20,12 @@ export const siteSections: SiteSection[] = [
     navTitle: '主页',
     title: '纯真之后，继续唱',
     eyebrow: 'MAYDAY ARCHIVE',
-    description: '把专辑、现场、歌词、成员和互动页面收进同一座五月天档案馆。',
+    description: '把测验、文章、收藏和互动页面收进同一座五月天档案馆。',
     image: coverImage,
     badgeClass: 'border-white/20 bg-white/10 text-white/80',
     overlayClass: 'from-slate-950/88 via-slate-950/58 to-slate-950/30',
     cardClass:
       'hover:border-cyan-400/45 hover:shadow-[0_28px_90px_-55px_rgba(34,211,238,0.8)]',
-  },
-  {
-    path: '/albums',
-    navTitle: '专辑',
-    title: '专辑博物馆',
-    eyebrow: 'ALBUMS',
-    description: '从第一张创作专辑到最新作品，把青春时代的封面、背景和曲目重新摊开。',
-    image: maydayData.albums[0]?.cover ?? coverImage,
-    badgeClass: 'border-amber-200/30 bg-amber-100/15 text-amber-50',
-    overlayClass: 'from-[#1e1610]/92 via-[#51331f]/58 to-[#f2b56d]/18',
-    cardClass:
-      'hover:border-amber-300/35 hover:shadow-[0_28px_90px_-55px_rgba(245,158,11,0.72)]',
-  },
-  {
-    path: '/songs',
-    navTitle: '歌曲',
-    title: '经典歌曲',
-    eyebrow: 'SONGS',
-    description: '把歌词、热门曲目和年代感混在一起，做成一条可检索、可回看的歌曲时间线。',
-    image: maydayData.songs[0]?.cover ?? coverImage,
-    badgeClass: 'border-cyan-200/30 bg-cyan-100/15 text-cyan-50',
-    overlayClass: 'from-[#06131d]/94 via-[#09314d]/62 to-[#14b8a6]/16',
-    cardClass:
-      'hover:border-cyan-300/40 hover:shadow-[0_28px_90px_-55px_rgba(6,182,212,0.72)]',
-  },
-  {
-    path: '/concerts',
-    navTitle: '演唱会',
-    title: '演唱会时光轴',
-    eyebrow: 'LIVE',
-    description: '把一次次现场的时间、城市和画面整理成能慢慢回看的巡演档案。',
-    image: maydayData.concerts[0]?.image ?? coverImage,
-    badgeClass: 'border-fuchsia-200/30 bg-fuchsia-100/15 text-fuchsia-50',
-    overlayClass: 'from-[#180b1e]/94 via-[#4b1458]/62 to-[#ec4899]/18',
-    cardClass:
-      'hover:border-fuchsia-300/40 hover:shadow-[0_28px_90px_-55px_rgba(217,70,239,0.72)]',
-  },
-  {
-    path: '/members',
-    navTitle: '成员',
-    title: '乐队成员',
-    eyebrow: 'MEMBERS',
-    description: '五个人，一路唱到现在。每个人的角色、侧写和照片都放在同一页里。',
-    image: maydayData.members[0]?.avatar ?? coverImage,
-    badgeClass: 'border-emerald-200/30 bg-emerald-100/15 text-emerald-50',
-    overlayClass: 'from-[#0a1712]/94 via-[#134e4a]/58 to-[#34d399]/18',
-    cardClass:
-      'hover:border-emerald-300/40 hover:shadow-[0_28px_90px_-55px_rgba(16,185,129,0.72)]',
   },
   {
     path: '/quiz',
@@ -133,7 +84,7 @@ export const primaryNavigation = siteSections.filter(section => section.path !==
 
 export const showcaseSections = siteSections.filter(section => section.path !== '/')
 
-export const featuredShowcase = showcaseSections.find(section => section.path === '/songs') ?? showcaseSections[0]
+export const featuredShowcase = showcaseSections.find(section => section.path === '/quiz') ?? showcaseSections[0]
 
 export function getSiteSection(path: string) {
   return siteSections.find(section => section.path === path)

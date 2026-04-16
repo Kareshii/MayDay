@@ -3,7 +3,7 @@ import { primaryNavigation } from '@/utils/siteSections'
 
 const currentYear = new Date().getFullYear()
 const footerLinks = [
-  ...primaryNavigation.filter(link => link.path !== '/quiz').slice(0, 6),
+  ...primaryNavigation,
   { title: '内容管理', path: '/admin' },
 ]
 </script>
@@ -15,7 +15,7 @@ const footerLinks = [
         <div class="max-w-xl">
           <p class="section-kicker mb-3">MAYDAY.LIFE</p>
           <p class="text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
-            把那些歌、那些现场、那些一起唱过的夜晚，整理成可以反复回来的地方。
+            把还保留的互动、收藏和文章入口，整理成可以反复回来的地方。
           </p>
           <p class="mt-3 text-sm text-[var(--text-secondary)]">
             Copyright © {{ currentYear }} mayday.life

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ArticleForm from '../../../components/admin/ArticleForm.vue'
-import type { ManagedArticle, ManagedArticlePayload } from '../../../../shared/types/articles'
+import type { ManagedArticle, ManagedArticlePayload } from '~~/shared/types/articles'
 
 definePageMeta({
   layout: 'admin',
