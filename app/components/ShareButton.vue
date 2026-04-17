@@ -8,13 +8,17 @@ interface Props {
 const props = defineProps<Props>()
 
 const share = async () => {
+  if (!import.meta.client) {
+    return
+  }
+
   const shareData = {
     title: props.title,
     text: props.text || props.title,
-    url: props.url || window.location.href
+    url: props.url || window.location.href,
   }
 
-  if (navigator.share) {
+  if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
     try {
       await navigator.share(shareData)
     } catch (err) {
@@ -23,8 +27,13 @@ const share = async () => {
   } else {
     // 降级处理：复制到剪贴板
     try {
-      await navigator.clipboard.writeText(shareData.url)
-      alert('链接已复制到剪贴板')
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareData.url)
+        alert('链接已复制到剪贴板')
+        return
+      }
+
+      alert('当前环境不支持系统分享和剪贴板复制')
     } catch (err) {
       console.log('复制失败', err)
     }

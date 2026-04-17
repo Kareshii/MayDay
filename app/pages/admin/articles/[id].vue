@@ -69,7 +69,7 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
   } catch (error: unknown) {
     errorMessage.value = typeof error === 'object' && error && 'message' in error
       ? String((error as { message?: string }).message)
-        : '更新文章失败'
+      : '更新文章失败'
   } finally {
     saving.value = false
   }
@@ -78,6 +78,10 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
 async function removeCurrentArticle() {
   if (!databaseConfigured.value) {
     errorMessage.value = databaseErrorMessage
+    return
+  }
+
+  if (!import.meta.client) {
     return
   }
 
@@ -94,7 +98,7 @@ async function removeCurrentArticle() {
   } catch (error: unknown) {
     errorMessage.value = typeof error === 'object' && error && 'message' in error
       ? String((error as { message?: string }).message)
-        : '删除文章失败'
+      : '删除文章失败'
   } finally {
     deleting.value = false
   }
@@ -102,12 +106,21 @@ async function removeCurrentArticle() {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div v-if="errorMessage || error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+  <div class="cms-page space-y-7">
+    <section>
+      <h1 class="cms-page-title">
+        编辑文章
+      </h1>
+      <p class="cms-page-subtitle">
+        调整标题、摘要、封面与正文内容，保存后会立即更新数据库记录。
+      </p>
+    </section>
+
+    <div v-if="errorMessage || error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200">
       {{ errorMessage || error?.message }}
     </div>
 
-    <div v-if="pending" class="rounded-2xl border border-[var(--border)] px-5 py-12 text-center text-sm text-[var(--text-secondary)]">
+    <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-5 py-12 text-center text-sm text-[var(--text-secondary)]">
       正在加载文章...
     </div>
 

@@ -62,4 +62,7 @@ export function getDatabaseSchema() {
   }
 }
 
-export { adminSettings }
+// Export a concrete table so drizzle-kit can always discover and push it.
+const articles = getArticlesTable()
+
+export { articles, adminSettings }

@@ -6,9 +6,20 @@ const votes = ref<Record<number, number>>({})
 
 // Initialize votes from localStorage
 onMounted(() => {
+  if (!import.meta.client) {
+    return
+  }
+
   const savedVotes = localStorage.getItem('mayday-song-votes')
-  if (savedVotes) {
+
+  if (!savedVotes) {
+    return
+  }
+
+  try {
     votes.value = JSON.parse(savedVotes)
+  } catch {
+    votes.value = {}
   }
 })
 
@@ -17,7 +28,10 @@ const vote = (songId: number) => {
     votes.value[songId] = 0
   }
   votes.value[songId]++
-  localStorage.setItem('mayday-song-votes', JSON.stringify(votes.value))
+
+  if (import.meta.client) {
+    localStorage.setItem('mayday-song-votes', JSON.stringify(votes.value))
+  }
 }
 
 const hasVoted = (songId: number) => {
@@ -49,12 +63,18 @@ const selectedSong = ref<any>(null)
 
 const openLyrics = (song: any) => {
   selectedSong.value = song
-  document.body.style.overflow = 'hidden' // Prevent background scrolling
+
+  if (import.meta.client) {
+    document.body.style.overflow = 'hidden' // Prevent background scrolling
+  }
 }
 
 const closeLyrics = () => {
   selectedSong.value = null
-  document.body.style.overflow = ''
+
+  if (import.meta.client) {
+    document.body.style.overflow = ''
+  }
 }
 </script>
 

@@ -65,30 +65,30 @@ async function signIn() {
 
 <template>
   <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_38%),linear-gradient(180deg,_rgba(255,255,255,0.9),_rgba(255,255,255,1))] dark:bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.12),_transparent_32%),linear-gradient(180deg,_rgba(8,15,30,0.96),_rgba(2,6,23,1))]" />
-    <div class="absolute inset-x-0 top-0 h-px bg-black/10 dark:bg-white/10" />
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,95,184,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(92,0,202,0.13),transparent_36%)]" />
+    <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
-    <UiCard class="relative w-full max-w-md p-7 sm:p-8">
-      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--text-secondary)]">
+    <UiCard class="relative w-full max-w-md border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-8">
+      <p class="cms-kicker">
         Mayday CMS
       </p>
-      <h1 class="mt-4 text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+      <h1 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)]">
         后台登录
       </h1>
       <p class="mt-2 text-sm leading-7 text-[var(--text-secondary)]">
-        后台接口现在要求登录态。默认用户名是 {{ sessionInfo?.defaultUsername || 'admin' }}，也可以通过 `ADMIN_USERNAME` 自定义。
+        输入管理员账号信息后进入后台。默认用户名是 {{ sessionInfo?.defaultUsername || 'admin' }}。
       </p>
 
       <div
         v-if="route.query.reason === 'not-configured' || !sessionInfo?.configured"
-        class="mt-5 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200"
+        class="mt-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200"
       >
         服务器还没有配置后台密码。先设置 `ADMIN_PASSWORD`，建议同时设置 `ADMIN_SESSION_SECRET`。
       </div>
 
       <div
         v-else-if="errorMessage"
-        class="mt-5 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
+        class="mt-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
       >
         {{ errorMessage }}
       </div>
@@ -115,13 +115,13 @@ async function signIn() {
           />
         </label>
 
-        <UiButton class="w-full" type="submit" :disabled="submitting || !sessionInfo?.configured">
+        <UiButton class="mt-2 w-full" type="submit" :disabled="submitting || !sessionInfo?.configured">
           {{ submitting ? '登录中...' : '登录后台' }}
         </UiButton>
       </form>
 
       <div class="mt-6 flex items-center justify-between text-sm">
-        <NuxtLink to="/" class="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
+        <NuxtLink to="/" class="text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
           返回前台
         </NuxtLink>
         <UiButton variant="ghost" size="sm" @click="refresh">

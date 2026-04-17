@@ -11,9 +11,9 @@ watch(() => route.path, () => {
   <div class="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
     <AdminSidebar :mobile-open="mobileOpen" @close="mobileOpen = false" />
 
-    <div class="min-h-screen lg:pl-72">
+    <div class="min-h-screen lg:pl-[calc(var(--cms-sidebar-width)_+_1.5rem)]">
       <AdminHeader @toggle="mobileOpen = true" />
-      <main class="p-4 lg:p-6">
+      <main class="px-4 pb-10 lg:px-6">
         <slot />
       </main>
     </div>

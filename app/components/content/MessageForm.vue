@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { MaydayMessage } from '@/composables/useMaydayData'
+
 const emit = defineEmits<{
-  submit: [message: any]
+  submit: [message: MaydayMessage]
 }>()
 
 const formData = ref({
@@ -17,14 +19,14 @@ const submitMessage = () => {
     return
   }
 
-  const newMessage = {
+  const newMessage: MaydayMessage = {
     id: Date.now(),
     content: formData.value.content,
     author: formData.value.author,
     mood: formData.value.mood,
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().slice(0, 10),
     likes: 0,
-    featured: false
+    featured: false,
   }
 
   emit('submit', newMessage)

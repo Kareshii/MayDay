@@ -1,7 +1,7 @@
 import { getPublicArticleBySlug } from '../../utils/articleRepository'
 
 export default defineEventHandler(async (event) => {
-  const slug = getRouterParam(event, 'slug')
+  const slug = getRouterParam(event, 'slug', { decode: true })
   const query = getQuery(event)
 
   if (!slug) {

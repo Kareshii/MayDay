@@ -28,7 +28,7 @@ interface SetupConnectionTestResponse {
   currentUser: string
 }
 
-type WizardStepKey = 'address' | 'database' | 'admin'
+type WizardStepKey = 'database' | 'admin'
 
 const { data, pending, refresh, error } = await useFetch<SetupStateResponse>('/api/admin/setup')
 
@@ -62,18 +62,11 @@ const steps = computed(() => {
   const value: Array<{ key: WizardStepKey; title: string; description: string }> = []
 
   if (requiresDatabaseSetup.value) {
-    value.push(
-      {
-        key: 'address',
-        title: '连接地址',
-        description: '填写数据库主机和端口。',
-      },
-      {
-        key: 'database',
-        title: '数据库信息',
-        description: '填写数据库名称、账号和密码。',
-      },
-    )
+    value.push({
+      key: 'database',
+      title: '数据库信息',
+      description: '在同一页填写主机、端口、库名、账号和密码。',
+    })
   }
 
   if (requiresAdminSetup.value) {
@@ -89,7 +82,6 @@ const steps = computed(() => {
 
 const currentStep = computed(() => steps.value[currentStepIndex.value] || null)
 const isLastStep = computed(() => currentStepIndex.value >= steps.value.length - 1)
-const isBusy = computed(() => submitting.value || testingConnection.value)
 
 watchEffect(() => {
   if (data.value?.defaultUsername) {
@@ -137,29 +129,8 @@ function setError(message: string) {
   successMessage.value = ''
 }
 
-function getRequestErrorMessage(requestError: unknown, fallbackMessage: string) {
-  if (typeof requestError !== 'object' || requestError === null) {
-    return fallbackMessage
-  }
-
-  if ('data' in requestError && typeof requestError.data === 'object' && requestError.data && 'statusMessage' in requestError.data && typeof requestError.data.statusMessage === 'string') {
-    return requestError.data.statusMessage
-  }
-
-  if ('statusMessage' in requestError && typeof requestError.statusMessage === 'string') {
-    return requestError.statusMessage
-  }
-
-  if ('message' in requestError && typeof requestError.message === 'string') {
-    return requestError.message
-  }
-
-  return fallbackMessage
-}
-
-function buildSetupRequestBody(options: { dryRun?: boolean } = {}) {
+function buildSetupRequestBody() {
   return {
-    dryRun: options.dryRun,
     databaseMode: inferredDatabaseMode.value,
     databaseHost: form.databaseHost,
     databasePort: form.databasePort,
@@ -193,7 +164,7 @@ function validateAddressStep() {
   return true
 }
 
-function validateDatabaseStep() {
+function validateDatabaseCredentials() {
   if (!form.databaseName.trim()) {
     setError('请先输入数据库名称。')
     return false
@@ -210,6 +181,10 @@ function validateDatabaseStep() {
   }
 
   return true
+}
+
+function validateDatabaseStep() {
+  return validateAddressStep() && validateDatabaseCredentials()
 }
 
 function validateAdminStep() {
@@ -239,10 +214,6 @@ function validateAdminStep() {
 function validateStep(stepKey: WizardStepKey) {
   errorMessage.value = ''
 
-  if (stepKey === 'address') {
-    return validateAddressStep()
-  }
-
   if (stepKey === 'database') {
     return validateDatabaseStep()
   }
@@ -254,9 +225,16 @@ function validateStep(stepKey: WizardStepKey) {
   return true
 }
 
-function validateDatabaseConnection() {
-  errorMessage.value = ''
-  return validateAddressStep() && validateDatabaseStep()
+function goToStep(index: number) {
+  if (index === currentStepIndex.value) {
+    return
+  }
+
+  if (index > currentStepIndex.value && currentStep.value && !validateStep(currentStep.value.key)) {
+    return
+  }
+
+  currentStepIndex.value = index
 }
 
 function goNext() {
@@ -280,7 +258,7 @@ function goBack() {
 }
 
 async function testConnection() {
-  if (!validateDatabaseConnection()) {
+  if (!validateDatabaseStep()) {
     return
   }
 
@@ -291,12 +269,17 @@ async function testConnection() {
   try {
     const result = await $fetch<SetupConnectionTestResponse>('/api/admin/setup', {
       method: 'POST',
-      body: buildSetupRequestBody({ dryRun: true }),
+      body: {
+        ...buildSetupRequestBody(),
+        dryRun: true,
+      },
     })
 
     successMessage.value = `连接成功，已验证数据库 ${result.databaseName}（用户 ${result.currentUser}）。`
   } catch (connectionError: unknown) {
-    errorMessage.value = getRequestErrorMessage(connectionError, '测试连接失败，请检查配置后重试。')
+    errorMessage.value = typeof connectionError === 'object' && connectionError && 'message' in connectionError
+      ? String((connectionError as { message?: string }).message)
+      : '测试连接失败，请检查配置后重试。'
   } finally {
     testingConnection.value = false
   }
@@ -336,47 +319,59 @@ async function submitSetup() {
 
 <template>
   <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-    <div
-      class="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.08),_transparent_34%),linear-gradient(180deg,_rgba(255,255,255,0.92),_rgba(255,255,255,1))] dark:bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_transparent_30%),linear-gradient(180deg,_rgba(8,15,30,0.96),_rgba(2,6,23,1))]" />
-    <div
-      class="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,rgba(15,23,42,0.03)_50%,transparent_100%)] dark:bg-[linear-gradient(135deg,transparent_0%,rgba(255,255,255,0.04)_50%,transparent_100%)]" />
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,95,184,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(92,0,202,0.13),transparent_36%)]" />
+    <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
-    <UiCard
-      class="relative w-full max-w-3xl border border-[var(--border)] bg-[var(--card)]/95 p-7 shadow-[0_40px_120px_-60px_rgba(15,23,42,0.45)] backdrop-blur sm:p-9">
-      <p class="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--text-secondary)]">
+    <UiCard class="relative w-full max-w-3xl border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-9">
+      <p class="cms-kicker">
         First Deploy
       </p>
-      <h1 class="mt-4 text-3xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-4xl">
+      <h1 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl">
         配置初始化
       </h1>
+      <p class="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+        按步骤完成数据库与管理员配置，结束后可直接进入后台。
+      </p>
 
       <div
-v-if="error"
-        class="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+        v-if="error"
+        class="mt-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
+      >
         {{ error.message }}
       </div>
 
       <div
-v-else-if="errorMessage"
-        class="mt-6 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+        v-else-if="errorMessage"
+        class="mt-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
+      >
         {{ errorMessage }}
       </div>
 
       <div
-v-else-if="successMessage"
-        class="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
+        v-else-if="successMessage"
+        class="mt-6 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200"
+      >
         {{ successMessage }}
       </div>
 
-      <div v-if="steps.length" class="mt-8 grid gap-3 sm:grid-cols-3">
+      <div
+        v-if="steps.length"
+        class="mt-8 grid gap-3"
+        :class="steps.length === 1 ? 'sm:grid-cols-1' : 'sm:grid-cols-2'"
+      >
         <button
-v-for="(step, index) in steps" :key="step.key" type="button"
-          class="rounded-2xl border px-4 py-4 text-left transition" :class="index === currentStepIndex
-            ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+          v-for="(step, index) in steps"
+          :key="step.key"
+          type="button"
+          class="cursor-pointer rounded-xl border px-4 py-4 text-left transition"
+          :class="index === currentStepIndex
+            ? 'border-transparent bg-[var(--primary)] text-white'
             : index < currentStepIndex
-              ? 'border-emerald-400 bg-emerald-50 text-emerald-800 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200'
-              : 'border-[var(--border)] bg-transparent text-[var(--text-primary)]'">
-          <span class="block text-xs font-semibold uppercase tracking-[0.2em] opacity-70">
+              ? 'border-transparent bg-[var(--primary-soft)] text-[var(--primary)]'
+              : 'border-[var(--border-soft)] bg-[var(--surface-low)] text-[var(--text-primary)]'"
+          @click="goToStep(index)"
+        >
+          <span class="block text-xs font-semibold uppercase tracking-[0.2em] opacity-75">
             Step {{ index + 1 }}
           </span>
           <span class="mt-2 block text-sm font-semibold">
@@ -395,15 +390,19 @@ v-for="(step, index) in steps" :key="step.key" type="button"
           </p>
         </div>
 
-        <div v-if="currentStep.key === 'address'" class="space-y-5">
+        <div v-if="currentStep.key === 'database'" class="space-y-5">
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库主机
               </span>
               <UiInput
-v-model="form.databaseHost" :disabled="submitting" placeholder="127.0.0.1 或 db.example.com"
-                autocomplete="off" spellcheck="false" />
+                v-model="form.databaseHost"
+                :disabled="submitting"
+                placeholder="127.0.0.1 或 db.example.com"
+                autocomplete="off"
+                spellcheck="false"
+              />
             </label>
 
             <label class="block space-y-2">
@@ -411,14 +410,61 @@ v-model="form.databaseHost" :disabled="submitting" placeholder="127.0.0.1 或 db
                 端口
               </span>
               <UiInput
-v-model="form.databasePort" :disabled="submitting" placeholder="5432" autocomplete="off"
-                inputmode="numeric" />
+                v-model="form.databasePort"
+                :disabled="submitting"
+                placeholder="5432"
+                autocomplete="off"
+                inputmode="numeric"
+              />
             </label>
           </div>
-          <label class="flex items-start gap-3 rounded-2xl border border-[var(--border)] px-4 py-4">
+
+          <label class="block space-y-2">
+            <span class="text-sm font-medium text-[var(--text-primary)]">
+              数据库名称
+            </span>
+            <UiInput
+              v-model="form.databaseName"
+              :disabled="submitting"
+              placeholder="mayday"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">
+                数据库用户名
+              </span>
+              <UiInput
+                v-model="form.databaseUsername"
+                :disabled="submitting"
+                placeholder="postgres"
+                autocomplete="username"
+              />
+            </label>
+
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">
+                数据库密码
+              </span>
+              <UiInput
+                v-model="form.databasePassword"
+                type="password"
+                :disabled="submitting"
+                placeholder="输入数据库密码"
+                autocomplete="new-password"
+              />
+            </label>
+          </div>
+
+          <label class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
             <UiCheckbox
-v-model="form.databaseSsl" :disabled="submitting || inferredDatabaseMode === 'local'"
-              class="mt-0.5" />
+              v-model="form.databaseSsl"
+              :disabled="submitting || inferredDatabaseMode === 'local'"
+              class="mt-0.5"
+            />
             <span>
               <span class="block text-sm font-medium text-[var(--text-primary)]">
                 启用 SSL
@@ -428,38 +474,15 @@ v-model="form.databaseSsl" :disabled="submitting || inferredDatabaseMode === 'lo
               </span>
             </span>
           </label>
-        </div>
 
-        <div v-else-if="currentStep.key === 'database'" class="space-y-5">
-          <label class="block space-y-2">
-            <span class="text-sm font-medium text-[var(--text-primary)]">
-              数据库名称
-            </span>
-            <UiInput
-v-model="form.databaseName" :disabled="submitting" placeholder="mayday" autocomplete="off"
-              spellcheck="false" />
-          </label>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block space-y-2">
-              <span class="text-sm font-medium text-[var(--text-primary)]">
-                数据库用户名
-              </span>
-              <UiInput
-v-model="form.databaseUsername" :disabled="submitting" placeholder="postgres"
-                autocomplete="username" />
-            </label>
-
-            <label class="block space-y-2">
-              <span class="text-sm font-medium text-[var(--text-primary)]">
-                数据库密码
-              </span>
-              <UiInput
-v-model="form.databasePassword" type="password" :disabled="submitting" placeholder="输入数据库密码"
-                autocomplete="new-password" />
-            </label>
+          <div
+            class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4 text-sm leading-6 text-[var(--text-secondary)]"
+          >
+            <p>即将连接：{{ inferredDatabaseMode === 'local' ? '本地 PostgreSQL' : '远程 PostgreSQL' }}</p>
+            <p>地址：{{ form.databaseHost || '未填写' }}:{{ form.databasePort || '未填写' }}</p>
+            <p>库名：{{ form.databaseName || '未填写' }}</p>
+            <p>用户：{{ form.databaseUsername || '未填写' }}</p>
           </div>
-
         </div>
 
         <div v-else class="space-y-5">
@@ -469,12 +492,16 @@ v-model="form.databasePassword" type="password" :disabled="submitting" placehold
                 管理员用户名
               </span>
               <UiInput
-v-model="form.adminUsername" :disabled="submitting" autocomplete="username"
-                placeholder="admin" />
+                v-model="form.adminUsername"
+                :disabled="submitting"
+                autocomplete="username"
+                placeholder="admin"
+              />
             </label>
 
             <div
-              class="rounded-2xl border border-[var(--border)] bg-black/[0.03] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)] dark:bg-white/[0.04]">
+              class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]"
+            >
               完成后管理员密码只保存哈希值，后续请直接通过登录页进入后台。
             </div>
           </div>
@@ -485,8 +512,12 @@ v-model="form.adminUsername" :disabled="submitting" autocomplete="username"
                 管理员密码
               </span>
               <UiInput
-v-model="form.adminPassword" type="password" :disabled="submitting" autocomplete="new-password"
-                placeholder="至少 8 位" />
+                v-model="form.adminPassword"
+                type="password"
+                :disabled="submitting"
+                autocomplete="new-password"
+                placeholder="至少 8 位"
+              />
             </label>
 
             <label class="block space-y-2">
@@ -494,13 +525,18 @@ v-model="form.adminPassword" type="password" :disabled="submitting" autocomplete
                 确认密码
               </span>
               <UiInput
-v-model="form.adminPasswordConfirm" type="password" :disabled="submitting"
-                autocomplete="new-password" placeholder="再次输入密码" />
+                v-model="form.adminPasswordConfirm"
+                type="password"
+                :disabled="submitting"
+                autocomplete="new-password"
+                placeholder="再次输入密码"
+              />
             </label>
           </div>
 
           <div
-            class="rounded-2xl border border-[var(--border)] bg-black/[0.03] px-4 py-4 text-sm leading-6 text-[var(--text-secondary)] dark:bg-white/[0.04]">
+            class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4 text-sm leading-6 text-[var(--text-secondary)]"
+          >
             <p>你即将创建以下配置：</p>
             <p class="mt-2">数据库：{{ inferredDatabaseMode === 'local' ? '本地 PostgreSQL' : '远程 PostgreSQL' }}</p>
             <p>地址：{{ form.databaseHost }}:{{ form.databasePort }}</p>
@@ -509,14 +545,20 @@ v-model="form.adminPasswordConfirm" type="password" :disabled="submitting"
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] pt-5">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border-soft)] pt-5">
           <UiButton type="button" variant="outline" :disabled="submitting || currentStepIndex === 0" @click="goBack">
             上一步
           </UiButton>
 
           <div class="flex flex-wrap gap-3">
-            <UiButton type="button" variant="ghost" :disabled="pending || submitting" @click="refresh">
-              测试连接
+            <UiButton
+              v-if="currentStep.key === 'database'"
+              type="button"
+              variant="ghost"
+              :disabled="pending || submitting || testingConnection"
+              @click="testConnection"
+            >
+              {{ testingConnection ? '测试中...' : '测试连接' }}
             </UiButton>
             <UiButton v-if="!isLastStep" type="submit" :disabled="submitting">
               下一步

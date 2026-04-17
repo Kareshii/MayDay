@@ -14,9 +14,9 @@ const props = defineProps<Props>()
 
 <template>
   <CheckboxRoot
-    v-model:checked="model"
+    v-model="model"
     :disabled="props.disabled"
-    :class="cn('flex size-5 items-center justify-center rounded border border-[var(--border)] bg-[var(--card-bg)] text-white outline-none transition focus-visible:ring-2 focus-visible:ring-black/20 data-[state=checked]:border-black data-[state=checked]:bg-black dark:focus-visible:ring-white/20 dark:data-[state=checked]:border-white dark:data-[state=checked]:bg-white dark:data-[state=checked]:text-black', props.class)"
+    :class="cn('flex size-5 items-center justify-center rounded-md border border-[var(--border-soft)] bg-[var(--surface-card)] text-white outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] data-[state=checked]:border-[var(--primary)] data-[state=checked]:bg-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-65', props.class)"
   >
     <CheckboxIndicator>
       <Icon name="lucide:check" class="size-3.5" />

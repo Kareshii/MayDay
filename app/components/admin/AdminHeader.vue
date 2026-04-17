@@ -1,51 +1,51 @@
 <script setup lang="ts">
 const route = useRoute()
+const router = useRouter()
 const loggingOut = ref(false)
+const searchInput = ref('')
 
 const emit = defineEmits<{
   toggle: []
 }>()
 
-const pageMeta = computed(() => {
-  if (route.path === '/admin') {
-    return {
-      title: '仪表盘',
-      description: '查看 CMS 指标和最近更新的文章。',
+const isArticlesListPage = computed(() => route.path === '/admin/articles')
+
+watch(
+  () => [route.path, route.query.search],
+  () => {
+    if (!isArticlesListPage.value) {
+      searchInput.value = ''
+      return
     }
+
+    searchInput.value = typeof route.query.search === 'string' ? route.query.search : ''
+  },
+  { immediate: true },
+)
+
+watch(searchInput, async (value) => {
+  if (!isArticlesListPage.value) {
+    return
   }
 
-  if (route.path === '/admin/articles') {
-    return {
-      title: '文章管理',
-      description: '搜索、筛选和管理数据库中的文章。',
-    }
+  const trimmed = value.trim()
+  const currentSearch = typeof route.query.search === 'string' ? route.query.search : ''
+
+  if (trimmed === currentSearch) {
+    return
   }
 
-  if (route.path === '/admin/articles/new') {
-    return {
-      title: '新建文章',
-      description: '使用 TinyMCE 编写并发布新文章。',
-    }
+  const nextQuery: Record<string, string> = {}
+  if (trimmed) {
+    nextQuery.search = trimmed
   }
 
-  if (route.path.startsWith('/admin/articles/')) {
-    return {
-      title: '编辑文章',
-      description: '更新标题、封面、摘要和富文本正文。',
-    }
+  const currentStatus = typeof route.query.status === 'string' ? route.query.status : ''
+  if (currentStatus && currentStatus !== 'all') {
+    nextQuery.status = currentStatus
   }
 
-  if (route.path === '/admin/settings') {
-    return {
-      title: '设置',
-      description: '查看当前后台运行时与数据库配置。',
-    }
-  }
-
-  return {
-    title: '后台',
-    description: 'CMS 工作区',
-  }
+  await router.replace({ query: nextQuery })
 })
 
 async function signOut() {
@@ -64,32 +64,36 @@ async function signOut() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--bg-primary)]/88 backdrop-blur-xl">
-    <div class="flex h-20 items-center gap-4 px-4 lg:px-8">
+  <header class="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-[var(--surface-card)]/72 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 w-full max-w-[1200px] items-center gap-4 px-4 lg:px-6">
       <UiButton variant="ghost" size="icon" class="lg:hidden" @click="emit('toggle')">
         <Icon name="lucide:menu" class="size-5" />
       </UiButton>
 
-      <div>
-        <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-secondary)]">
-          后台
-        </p>
-        <h1 class="mt-1 text-lg font-semibold text-[var(--text-primary)]">
-          {{ pageMeta.title }}
-        </h1>
-        <p class="text-sm text-[var(--text-secondary)]">
-          {{ pageMeta.description }}
+      <div class="min-w-0 flex-1">
+        <label v-if="isArticlesListPage" class="relative block max-w-[22rem]">
+          <Icon name="lucide:search" class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-secondary)]" />
+          <input
+            v-model="searchInput"
+            type="search"
+            placeholder="搜索文章..."
+            class="h-10 w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] pl-10 pr-3 text-sm text-[var(--text-primary)] outline-none transition placeholder:text-[var(--text-secondary)]/85 focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--focus-ring)]"
+          >
+        </label>
+
+        <p v-else class="text-sm font-medium text-[var(--text-secondary)]">
+          Architectural Curator Workspace
         </p>
       </div>
 
-      <div class="ml-auto flex items-center gap-3">
-        <NuxtLink to="/" class="text-sm font-medium text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]">
+      <div class="ml-auto flex items-center gap-2.5">
+        <NuxtLink to="/" class="hidden text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)] md:inline-flex">
           查看前台
         </NuxtLink>
+        <ColorModeSwitch class="text-[var(--text-primary)]" />
         <UiButton variant="outline" size="sm" :disabled="loggingOut" @click="signOut">
           {{ loggingOut ? '退出中...' : '退出登录' }}
         </UiButton>
-        <ColorModeSwitch class="text-[var(--text-primary)]" />
       </div>
     </div>
   </header>

@@ -60,7 +60,7 @@ async function createNewArticle(payload: ManagedArticlePayload) {
   } catch (error: unknown) {
     errorMessage.value = typeof error === 'object' && error && 'message' in error
       ? String((error as { message?: string }).message)
-        : '创建文章失败'
+      : '创建文章失败'
   } finally {
     saving.value = false
   }
@@ -68,8 +68,17 @@ async function createNewArticle(payload: ManagedArticlePayload) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div v-if="errorMessage" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+  <div class="cms-page space-y-7">
+    <section>
+      <h1 class="cms-page-title">
+        新建文章
+      </h1>
+      <p class="cms-page-subtitle">
+        在编辑器中组织标题、摘要、正文与封面，确认后发布到前台。
+      </p>
+    </section>
+
+    <div v-if="errorMessage" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200">
       {{ errorMessage }}
     </div>
 

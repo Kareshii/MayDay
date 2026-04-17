@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const { messages: initialMessages, getMessagesByMood } = useMaydayData()
+import type { MaydayMessage } from '@/composables/useMaydayData'
+
+const { messages: initialMessages } = useMaydayData()
 
 const allMessages = ref([...initialMessages.value])
 const selectedMood = ref<string>('')
@@ -13,7 +15,7 @@ const filteredMessages = computed(() => {
     : allMessages.value
 })
 
-const addMessage = (message: any) => {
+const addMessage = (message: MaydayMessage) => {
   allMessages.value.unshift(message)
   showForm.value = false
 }

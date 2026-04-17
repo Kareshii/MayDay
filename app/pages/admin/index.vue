@@ -26,16 +26,32 @@ const maxMonthValue = computed(() => Math.max(...(data.value?.byMonth.map(item =
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div v-if="error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+  <div class="cms-page space-y-7">
+    <section class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div>
+        <h1 class="cms-page-title">
+          仪表板概览
+        </h1>
+        <p class="cms-page-subtitle">
+          欢迎回来。这是编辑平台今天的脉动。
+        </p>
+      </div>
+
+      <UiButton variant="secondary" size="sm" @click="refresh">
+        <Icon name="lucide:refresh-cw" class="size-4" />
+        刷新数据
+      </UiButton>
+    </section>
+
+    <div v-if="error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200">
       {{ error.message }}
     </div>
 
-    <div v-if="data?.configMissing" class="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+    <div v-if="data?.configMissing" class="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200">
       `DATABASE_URL` 还没有配置，所以后台目前只显示空态。把 PostgreSQL 连接串写进项目环境变量后再刷新。
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <AdminMetricCard
         label="文章总数"
         :value="data?.stats.total || 0"
@@ -54,107 +70,97 @@ const maxMonthValue = computed(() => Math.max(...(data.value?.byMonth.map(item =
         :hint="'仅后台可见'"
         icon="lucide:file-clock"
       />
-      <AdminMetricCard
-        label="最近更新"
-        :value="data?.stats.latestUpdatedAt ? new Date(data.stats.latestUpdatedAt).toLocaleDateString() : '--'"
-        :hint="'最近一次编辑日期'"
-        icon="lucide:history"
-      />
     </div>
 
-    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)]">
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.16fr)_minmax(18rem,0.84fr)]">
       <UiCard class="p-6">
-        <div class="mb-5 flex items-center justify-between">
+        <div class="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p class="text-sm font-semibold text-[var(--text-primary)]">
-              发布趋势
+            <p class="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+              流量来源洞察
             </p>
             <p class="mt-1 text-xs text-[var(--text-secondary)]">
-              按月份统计近期文章数量
+              以最近文章发布量模拟趋势条形图
             </p>
           </div>
-          <UiButton variant="outline" size="sm" @click="refresh">
-            刷新
-          </UiButton>
+          <UiBadge variant="secondary">
+            最近 6 个月
+          </UiBadge>
         </div>
 
-        <div v-if="pending" class="grid h-72 place-items-center text-sm text-[var(--text-secondary)]">
+        <div v-if="pending" class="grid h-64 place-items-center text-sm text-[var(--text-secondary)]">
           正在加载仪表盘...
         </div>
 
-        <div v-else class="space-y-4">
+        <div v-else class="grid h-64 grid-cols-6 items-end gap-3">
           <div
             v-for="item in data?.byMonth || []"
             :key="item.label"
-            class="grid grid-cols-[4rem_minmax(0,1fr)_3rem] items-center gap-3"
+            class="group flex flex-col items-center justify-end gap-2"
           >
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">
-              {{ item.label }}
-            </span>
-            <div class="h-3 rounded-full bg-black/[0.06] dark:bg-white/[0.08]">
-              <div
-                class="h-full rounded-full bg-black dark:bg-white"
-                :style="{ width: `${(item.value / maxMonthValue) * 100}%` }"
-              />
-            </div>
-            <span class="text-sm font-semibold text-[var(--text-primary)]">
+            <div class="text-xs font-semibold text-[var(--text-secondary)] opacity-0 transition group-hover:opacity-100">
               {{ item.value }}
-            </span>
+            </div>
+            <div
+              class="w-full rounded-lg bg-[var(--primary)]/80 shadow-[0_10px_18px_-14px_rgba(0,72,141,0.9)]"
+              :style="{ height: `${Math.max((item.value / maxMonthValue) * 100, 8)}%` }"
+            />
+            <div class="text-xs font-medium text-[var(--text-secondary)]">
+              {{ item.label }}
+            </div>
           </div>
         </div>
       </UiCard>
 
       <UiCard class="p-6">
-        <div class="mb-5">
-          <p class="text-sm font-semibold text-[var(--text-primary)]">
-            快捷操作
-          </p>
-          <p class="mt-1 text-xs text-[var(--text-secondary)]">
-            直接进入最常用的后台功能。
-          </p>
+        <div class="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p class="text-lg font-bold tracking-tight text-[var(--text-primary)]">
+              最近动态
+            </p>
+            <p class="mt-1 text-xs text-[var(--text-secondary)]">
+              刚刚更新过的内容
+            </p>
+          </div>
+          <UiBadge :variant="data?.stats.latestUpdatedAt ? 'success' : 'secondary'">
+            {{ data?.stats.latestUpdatedAt ? '活跃' : '空闲' }}
+          </UiBadge>
         </div>
 
-        <div class="space-y-3">
-          <NuxtLink
-            to="/admin/articles/new"
-            class="flex items-center justify-between rounded-2xl border border-[var(--border)] px-4 py-4 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-          >
-            <span>
-              <span class="block text-sm font-semibold text-[var(--text-primary)]">新建文章</span>
-              <span class="block text-xs text-[var(--text-secondary)]">打开 TinyMCE 开始写作</span>
-            </span>
-            <Icon name="lucide:arrow-right" class="size-4 text-[var(--text-secondary)]" />
-          </NuxtLink>
+        <div v-if="pending" class="grid h-52 place-items-center text-sm text-[var(--text-secondary)]">
+          正在加载动态...
+        </div>
 
-          <NuxtLink
-            to="/admin/articles"
-            class="flex items-center justify-between rounded-2xl border border-[var(--border)] px-4 py-4 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+        <div v-else class="space-y-3">
+          <div
+            v-for="article in (data?.recentArticles || []).slice(0, 4)"
+            :key="article.id"
+            class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-3"
           >
-            <span>
-              <span class="block text-sm font-semibold text-[var(--text-primary)]">文章管理</span>
-              <span class="block text-xs text-[var(--text-secondary)]">搜索、筛选、编辑和删除文章</span>
-            </span>
-            <Icon name="lucide:arrow-right" class="size-4 text-[var(--text-secondary)]" />
-          </NuxtLink>
+            <p class="line-clamp-1 text-sm font-semibold text-[var(--text-primary)]">
+              {{ article.title }}
+            </p>
+            <div class="mt-1 flex items-center justify-between gap-3">
+              <p class="text-xs text-[var(--text-secondary)]">
+                {{ new Date(article.updatedAt).toLocaleString() }}
+              </p>
+              <UiBadge :variant="article.published ? 'success' : 'warning'">
+                {{ article.published ? '已发布' : '草稿' }}
+              </UiBadge>
+            </div>
+          </div>
 
-          <NuxtLink
-            to="/admin/settings"
-            class="flex items-center justify-between rounded-2xl border border-[var(--border)] px-4 py-4 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
-          >
-            <span>
-              <span class="block text-sm font-semibold text-[var(--text-primary)]">设置</span>
-              <span class="block text-xs text-[var(--text-secondary)]">查看数据库与编辑器配置</span>
-            </span>
-            <Icon name="lucide:arrow-right" class="size-4 text-[var(--text-secondary)]" />
-          </NuxtLink>
+          <div v-if="!(data?.recentArticles || []).length" class="rounded-xl border border-dashed border-[var(--border-soft)] px-4 py-6 text-center text-sm text-[var(--text-secondary)]">
+            暂无动态
+          </div>
         </div>
       </UiCard>
     </div>
 
     <UiCard class="p-6">
-      <div class="mb-5 flex items-center justify-between">
+      <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p class="text-sm font-semibold text-[var(--text-primary)]">
+          <p class="text-lg font-bold tracking-tight text-[var(--text-primary)]">
             最近文章
           </p>
           <p class="mt-1 text-xs text-[var(--text-secondary)]">
@@ -168,48 +174,45 @@ const maxMonthValue = computed(() => Math.max(...(data.value?.byMonth.map(item =
         </NuxtLink>
       </div>
 
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[640px] text-left text-sm">
-          <thead class="text-xs uppercase tracking-[0.18em] text-[var(--text-secondary)]">
-            <tr>
-              <th class="pb-3">标题</th>
-              <th class="pb-3">状态</th>
-              <th class="pb-3">更新时间</th>
-              <th class="pb-3 text-right">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="article in data?.recentArticles || []"
-              :key="article.id"
-              class="border-t border-[var(--border)]"
-            >
-              <td class="py-4">
-                <p class="font-medium text-[var(--text-primary)]">
-                  {{ article.title }}
-                </p>
-                <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                  /posts/{{ article.slug }}
-                </p>
-              </td>
-              <td class="py-4">
-                <UiBadge :variant="article.published ? 'success' : 'warning'">
-                  {{ article.published ? '已发布' : '草稿' }}
-                </UiBadge>
-              </td>
-              <td class="py-4 text-[var(--text-secondary)]">
+      <div v-if="pending" class="rounded-xl border border-dashed border-[var(--border-soft)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
+        正在加载文章...
+      </div>
+
+      <div v-else class="space-y-3">
+        <div
+          v-for="article in data?.recentArticles || []"
+          :key="article.id"
+          class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4"
+        >
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p class="font-semibold text-[var(--text-primary)]">
+                {{ article.title }}
+              </p>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">
+                /posts/{{ article.slug }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <UiBadge :variant="article.published ? 'success' : 'warning'">
+                {{ article.published ? '已发布' : '草稿' }}
+              </UiBadge>
+              <span class="text-xs text-[var(--text-secondary)]">
                 {{ new Date(article.updatedAt).toLocaleString() }}
-              </td>
-              <td class="py-4 text-right">
-                <NuxtLink :to="`/admin/articles/${article.id}`">
-                  <UiButton variant="ghost" size="sm">
-                    编辑
-                  </UiButton>
-                </NuxtLink>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              </span>
+              <NuxtLink :to="`/admin/articles/${article.id}`">
+                <UiButton variant="ghost" size="sm">
+                  编辑
+                </UiButton>
+              </NuxtLink>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!(data?.recentArticles || []).length" class="rounded-xl border border-dashed border-[var(--border-soft)] px-6 py-12 text-center text-sm text-[var(--text-secondary)]">
+          暂无文章
+        </div>
       </div>
     </UiCard>
   </div>

@@ -13,33 +13,39 @@ const highlightText = (text: string, query: string) => {
 
 const openModal = (lyric: any) => {
   selectedLyric.value = lyric
-  document.body.style.overflow = 'hidden'
+
+  if (import.meta.client) {
+    document.body.style.overflow = 'hidden'
+  }
 }
 
 const closeModal = () => {
   selectedLyric.value = null
-  document.body.style.overflow = ''
+
+  if (import.meta.client) {
+    document.body.style.overflow = ''
+  }
 }
 
 const shareLyric = async () => {
-  if (!selectedLyric.value) return
-  
+  if (!selectedLyric.value || !import.meta.client) return
+
   const shareData = {
     title: `Mayday - ${selectedLyric.value.song}`,
     text: `${selectedLyric.value.content}\n\n—— ${selectedLyric.value.song} #MaydayLife`,
-    url: window.location.href
+    url: window.location.href,
   }
 
   try {
     // 首先尝试使用 Web Share API
-    if (typeof navigator !== 'undefined' && navigator.share) {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       await navigator.share(shareData)
-    } 
+    }
     // 其次尝试使用 Clipboard API
-    else if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+    else if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(shareData.text)
       alert('歌词已复制到剪贴板！')
-    } 
+    }
     // 兜底方案：创建临时文本框
     else {
       const textArea = document.createElement('textarea')
@@ -202,4 +208,3 @@ const shareLyric = async () => {
     </Teleport>
   </div>
 </template>
-

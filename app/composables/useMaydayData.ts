@@ -1,5 +1,8 @@
 import maydayData from '~/assets/data/mayday-data.json'
 
+export type MaydayLyric = (typeof maydayData.lyrics)[number]
+export type MaydayMessage = (typeof maydayData.messages)[number]
+
 export const useMaydayData = () => {
   const songs = computed(() => maydayData.songs)
   const albums = computed(() => maydayData.albums)
@@ -28,11 +31,6 @@ export const useMaydayData = () => {
     return [...songs.value].sort((a, b) => b.votes - a.votes).slice(0, 10)
   })
 
-  // 获取精选歌词
-  const featuredLyrics = computed(() => {
-    return lyrics.value.filter(lyric => lyric.featured)
-  })
-
   // 搜索歌词
   const searchLyrics = (query: string) => {
     if (!query) return lyrics.value
@@ -41,22 +39,6 @@ export const useMaydayData = () => {
       lyric.song.toLowerCase().includes(lowerQuery) ||
       lyric.content.toLowerCase().includes(lowerQuery)
     )
-  }
-
-  // 按情绪筛选留言
-  const getMessagesByMood = (mood?: string) => {
-    if (!mood) return messages.value
-    return messages.value.filter(msg => msg.mood === mood)
-  }
-
-  // 获取专辑详情
-  const getAlbumById = (id: number) => {
-    return albums.value.find(album => album.id === id)
-  }
-
-  // 获取成员详情
-  const getMemberById = (id: number) => {
-    return members.value.find(member => member.id === id)
   }
 
   // 按类型筛选粉丝创作
@@ -89,14 +71,10 @@ export const useMaydayData = () => {
     // 计算属性
     songsByYear,
     topSongs,
-    featuredLyrics,
     activeCountdowns,
     
     // 工具方法
     searchLyrics,
-    getMessagesByMood,
-    getAlbumById,
-    getMemberById,
     getCreationsByType,
   }
 }
