@@ -333,30 +333,31 @@ async function submitSetup() {
         按步骤完成数据库与管理员配置，结束后可直接进入后台。
       </p>
 
+      <div class="mt-8 space-y-8">
       <div
         v-if="error"
-        class="mt-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
+        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
       >
         {{ error.message }}
       </div>
 
       <div
         v-else-if="errorMessage"
-        class="mt-6 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
+        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
       >
         {{ errorMessage }}
       </div>
 
       <div
         v-else-if="successMessage"
-        class="mt-6 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200"
+        class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200"
       >
         {{ successMessage }}
       </div>
 
       <div
         v-if="steps.length"
-        class="mt-8 grid gap-3"
+        class="grid gap-3"
         :class="steps.length === 1 ? 'sm:grid-cols-1' : 'sm:grid-cols-2'"
       >
         <button
@@ -380,7 +381,7 @@ async function submitSetup() {
         </button>
       </div>
 
-      <form v-if="currentStep" class="mt-8 space-y-6" @submit.prevent="isLastStep ? submitSetup() : goNext()">
+      <form v-if="currentStep" class="space-y-6" @submit.prevent="isLastStep ? submitSetup() : goNext()">
         <div>
           <p class="text-sm font-semibold text-[var(--text-primary)]">
             {{ currentStep.title }}
@@ -569,6 +570,7 @@ async function submitSetup() {
           </div>
         </div>
       </form>
+      </div>
     </UiCard>
   </main>
 </template>

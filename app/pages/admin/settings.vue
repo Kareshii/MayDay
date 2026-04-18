@@ -86,7 +86,7 @@ const { data, pending, error, refresh } = await useFetch<{
                 编辑器
               </p>
               <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                富文本编辑通过 Vue 客户端组件中的 TinyMCE 完成。
+                文章编辑支持 Markdown 编写，并使用 MDC 进行渲染预览。
               </p>
             </div>
             <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">

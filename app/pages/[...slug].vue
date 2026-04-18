@@ -18,19 +18,12 @@ if (!page.value) {
   })
 }
 
-if (route.path.startsWith('/posts/') && page.value.published === false && route.query.preview !== '1') {
-  throw createError({
-    statusCode: 404,
-    statusMessage: 'Page not found',
-  })
-}
-
 const section = computed(() => getSiteSection(route.path))
 const pageDescription = computed(() => page.value?.seo?.description || page.value?.description || '')
 const relatedSections = computed(() => showcaseSections.filter(item => item.path !== route.path).slice(0, 4))
 const heroImage = computed(() => section.value?.image || page.value?.coverImage || '/cover.jpg')
 const heroBadge = computed(() => section.value?.badgeClass || 'border-white/20 bg-white/10 text-white/72')
-const heroLabel = computed(() => section.value?.navTitle || (route.path.startsWith('/posts/') ? 'ARTICLE' : 'MAYDAY'))
+const heroLabel = computed(() => section.value?.navTitle || 'MAYDAY')
 const heroSummary = computed(() => section.value?.description || pageDescription.value)
 const pageNavigationTitle = computed(() => {
   const navigation = page.value?.navigation
@@ -42,11 +35,12 @@ const pageNavigationTitle = computed(() => {
 useSeoMeta({
   title: () => page.value?.seo?.title || page.value?.title,
   description: () => pageDescription.value,
+  ogImage: () => heroImage.value,
 })
 </script>
 
 <template>
-  <article class="site-container">
+  <article class="container">
     <header class="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
       <div class="grid gap-6 p-6 md:p-10 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
         <div>
@@ -96,10 +90,10 @@ useSeoMeta({
     </header>
 
     <div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
-      <div class="surface-card p-6 md:p-10">
+      <div class="surface-card space-y-8 p-6 md:p-10">
         <div
           v-if="pageDescription"
-          class="mb-8 rounded-[1.4rem] border-l-4 border-black/70 bg-black/[0.035] p-5 text-lg leading-8 text-[var(--text-secondary)] dark:border-white/70 dark:bg-white/[0.035]"
+          class="rounded-[1.4rem] border-l-4 border-black/70 bg-black/[0.035] p-5 text-lg leading-8 text-[var(--text-secondary)] dark:border-white/70 dark:bg-white/[0.035]"
         >
           {{ pageDescription }}
         </div>

@@ -13,7 +13,7 @@ const { y } = useWindowScroll()
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 
 useSeoMeta({
-  title: '纯真之后，继续唱',
+  title: 'Hi,',
   description: '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
 })
 
@@ -41,6 +41,29 @@ const heroImageStyle = computed(() => ({
     ? 'translate3d(0, 0, 0) scale(1.08)'
     : `translate3d(0, ${Math.min(y.value * 0.38, 220)}px, 0) scale(1.08)`,
 }))
+
+const rollCueInitial = {
+  opacity: 0,
+  y: 18,
+}
+
+const rollCueEnter = computed(() => (prefersReducedMotion.value
+  ? {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0,
+      },
+    }
+  : {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 680,
+        delay: 980,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    }))
 
 const animatedStats = ref(statTargets.value.map(() => 0))
 let statsRaf = 0
@@ -131,7 +154,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="relative overflow-hidden">
-    <section class="relative flex min-h-screen items-end overflow-hidden">
+    <section class="relative h-[100svh] overflow-hidden">
       <img
         src="/cover.jpg"
         alt="Mayday cover"
@@ -143,15 +166,15 @@ onBeforeUnmount(() => {
       <div class="absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
       <div class="hero-grid absolute inset-0 opacity-35" />
 
-      <div class="site-container relative z-10 flex min-h-screen flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
-        <div class="max-w-4xl">
-          <span class="hero-entrance mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-[0.24em] text-white/72 backdrop-blur-sm" style="--enter-delay: 60ms">
+      <div class="container relative z-10 flex h-full flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
+        <div class="max-w-4xl space-y-6">
+          <span class="hero-entrance inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-[0.24em] text-white/72 backdrop-blur-sm" style="--enter-delay: 60ms">
             <span class="size-1.5 rounded-full bg-white/60" />
             MAYDAY ARCHIVE
           </span>
 
           <h1 class="hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
-            <span class="glitch-text block" data-text="纯真之后，">纯真之后，</span>
+            <span class="glitch-text block" data-text="Hi，">Hi，</span>
             <span class="glitch-text mt-1 block" data-text="继续唱。">继续唱。</span>
           </h1>
 
@@ -204,17 +227,19 @@ onBeforeUnmount(() => {
         </div>
 
         <a
+          v-motion
+          :initial="rollCueInitial"
+          :enter="rollCueEnter"
           href="#chapters"
-          class="hero-entrance home-scroll-cue mt-14 inline-flex items-center gap-2 self-start text-xs tracking-[0.24em] text-white/48 transition-colors hover:text-white/72"
-          style="--enter-delay: 980ms"
+          class="home-roll-cue absolute bottom-7 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 text-xs tracking-[0.24em] text-white/58 transition-colors hover:text-white/78 md:bottom-9"
         >
-          SCROLL
-          <Icon name="lucide:arrow-down" class="size-4" />
+          ROLL
+          <Icon name="lucide:arrow-down" class="roll-arrow size-4" />
         </a>
       </div>
     </section>
 
-    <section id="chapters" class="site-container relative z-10 -mt-16 pb-20 md:-mt-24 md:pb-28">
+    <section id="chapters" class="container relative z-10 min-h-[100svh] scroll-mt-18 pt-12 pb-20 md:pt-16 md:pb-28">
       <div v-reveal="40" class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p class="section-kicker">RECENT SECTIONS</p>
@@ -306,7 +331,7 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <section class="site-container pb-24 md:pb-32">
+    <section class="container pb-24 md:pb-32">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div v-reveal="60" class="surface-card p-8 md:p-10">
           <p class="section-kicker">COUNTDOWN</p>
@@ -323,12 +348,12 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="space-y-6">
-          <div v-reveal="180" class="surface-card p-8">
+          <div v-reveal="180" class="surface-card space-y-4 p-8">
             <p class="section-kicker">NOTE</p>
-            <blockquote class="mt-4 border-l-2 border-[var(--border-strong)] pl-4 text-lg leading-8 text-[var(--text-primary)]">
+            <blockquote class="border-l-2 border-[var(--border-strong)] pl-4 text-lg leading-8 text-[var(--text-primary)]">
               “无垠的蓝色年代，相伴的每一秒钟，分离的每一滴泪，都陪你穿越二十多年。”
             </blockquote>
-            <p class="mt-4 text-sm leading-7 text-[var(--text-secondary)]">
+            <p class="text-sm leading-7 text-[var(--text-secondary)]">
               首页不再只是 markdown 内容输出，而是一张完整的入口海报。原来的内容语气仍然留在这里。
             </p>
           </div>

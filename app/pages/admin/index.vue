@@ -190,7 +190,7 @@ const maxMonthValue = computed(() => Math.max(...(data.value?.byMonth.map(item =
                 {{ article.title }}
               </p>
               <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                /posts/{{ article.slug }}
+                /detail/{{ article.slug }}
               </p>
             </div>
 

@@ -96,9 +96,54 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-.site-container {
-  width: min(1120px, calc(100% - 2rem));
-  margin-inline: auto;
+a[href],
+button:not(:disabled),
+summary,
+label[for],
+[role="button"]:not([aria-disabled="true"]),
+input[type="button"]:not(:disabled),
+input[type="submit"]:not(:disabled),
+input[type="reset"]:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.container {
+  width: 100%;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-inline: 1rem;
+}
+
+@media (min-width: 40rem) {
+  .container {
+    max-width: 40rem !important;
+  }
+}
+
+@media (min-width: 48rem) {
+  .container {
+    max-width: 48rem !important;
+  }
+}
+
+@media (min-width: 64rem) {
+  .container {
+    max-width: 64rem !important;
+  }
+}
+
+@media (min-width: 80rem) {
+  .container {
+    max-width: 80rem !important;
+  }
 }
 
 .surface-card {
@@ -163,10 +208,12 @@ button {
   pointer-events: none;
 }
 
-.home-scroll-cue {
-  animation:
-    hero-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards,
-    scroll-pulse 1.8s ease-in-out infinite 1.4s;
+.home-roll-cue {
+  will-change: opacity;
+}
+
+.home-roll-cue .roll-arrow {
+  animation: roll-drift 2.6s cubic-bezier(0.37, 0, 0.63, 1) infinite;
 }
 
 .reveal-on-scroll {
@@ -349,12 +396,14 @@ button {
   }
 }
 
-@keyframes scroll-pulse {
+@keyframes roll-drift {
   0%, 100% {
     transform: translate3d(0, 0, 0);
+    opacity: 0.56;
   }
   50% {
-    transform: translate3d(0, 8px, 0);
+    transform: translate3d(0, 7px, 0);
+    opacity: 0.98;
   }
 }
 
@@ -676,7 +725,7 @@ button {
 
 @media (min-width: 1024px) {
   .cms-theme .cms-page {
-    width: min(1200px, calc(100% - 4rem));
+    width: min(1320px, calc(100% - 4rem));
     padding-top: 2.25rem;
   }
 }
@@ -687,8 +736,12 @@ button {
   }
 
   .hero-entrance,
-  .home-scroll-cue {
+  .home-roll-cue {
     opacity: 1;
+    animation: none;
+  }
+
+  .home-roll-cue .roll-arrow {
     animation: none;
   }
 

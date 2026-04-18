@@ -598,13 +598,13 @@ function onDrop(e: DragEvent) {
                     <button @click="undo" :disabled="!canUndo" class="p-2 rounded hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent">
                         <Icon name="lucide:undo-2" class="w-5 h-5" />
                     </button>
-                    <span class="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">撤销</span>
+                    <span class="absolute left-1/2 top-[calc(100%+0.25rem)] -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">撤销</span>
                 </div>
                 <div class="group relative">
                     <button @click="redo" :disabled="!canRedo" class="p-2 rounded hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent">
                         <Icon name="lucide:redo-2" class="w-5 h-5" />
                     </button>
-                    <span class="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">重做</span>
+                    <span class="absolute left-1/2 top-[calc(100%+0.25rem)] -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">重做</span>
                 </div>
             </div>
             
@@ -616,13 +616,13 @@ function onDrop(e: DragEvent) {
                     <button @click="group" class="p-2 rounded hover:bg-gray-100">
                         <Icon name="lucide:group" class="w-5 h-5" />
                     </button>
-                    <span class="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">组合</span>
+                    <span class="absolute left-1/2 top-[calc(100%+0.25rem)] -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">组合</span>
                 </div>
                 <div class="group relative">
                     <button @click="ungroup" class="p-2 rounded hover:bg-gray-100">
                         <Icon name="lucide:ungroup" class="w-5 h-5" />
                     </button>
-                    <span class="absolute top-full mt-1 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">拆分</span>
+                    <span class="absolute left-1/2 top-[calc(100%+0.25rem)] -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">拆分</span>
                 </div>
             </div>
             

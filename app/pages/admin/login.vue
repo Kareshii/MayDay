@@ -79,21 +79,22 @@ async function signIn() {
         输入管理员账号信息后进入后台。默认用户名是 {{ sessionInfo?.defaultUsername || 'admin' }}。
       </p>
 
+      <div class="mt-5 space-y-6">
       <div
         v-if="route.query.reason === 'not-configured' || !sessionInfo?.configured"
-        class="mt-5 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200"
+        class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200"
       >
         服务器还没有配置后台密码。先设置 `ADMIN_PASSWORD`，建议同时设置 `ADMIN_SESSION_SECRET`。
       </div>
 
       <div
         v-else-if="errorMessage"
-        class="mt-5 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
+        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
       >
         {{ errorMessage }}
       </div>
 
-      <form class="mt-6 space-y-4" @submit.prevent="signIn">
+      <form class="space-y-4" @submit.prevent="signIn">
         <label class="block space-y-2">
           <span class="text-sm font-medium text-[var(--text-primary)]">用户名</span>
           <UiInput
@@ -120,13 +121,14 @@ async function signIn() {
         </UiButton>
       </form>
 
-      <div class="mt-6 flex items-center justify-between text-sm">
+      <div class="flex items-center justify-between text-sm">
         <NuxtLink to="/" class="text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
           返回前台
         </NuxtLink>
         <UiButton variant="ghost" size="sm" @click="refresh">
           刷新状态
         </UiButton>
+      </div>
       </div>
     </UiCard>
   </main>

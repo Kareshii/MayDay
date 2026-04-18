@@ -8,6 +8,7 @@ export default defineAppConfig({
   },
   icon: {
     aliases: {
+      'system-mode': 'lucide-monitor',
       'dark-mode': 'lucide-moon',
       'light-mode': 'lucide-sun',
     },

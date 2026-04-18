@@ -89,6 +89,7 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
         title text NOT NULL,
         summary text NOT NULL DEFAULT '',
         cover_image text NOT NULL DEFAULT '',
+        cover_layout text NOT NULL DEFAULT 'split-right',
         content text NOT NULL,
         published boolean NOT NULL DEFAULT false,
         created_at timestamptz NOT NULL DEFAULT now(),
@@ -107,6 +108,7 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${slugIndex} ON ${articlesTable} (slug)`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${publishedIndex} ON ${articlesTable} (published)`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${updatedAtIndex} ON ${articlesTable} (updated_at)`)
+    await client.unsafe(`ALTER TABLE ${articlesTable} ADD COLUMN IF NOT EXISTS cover_layout text NOT NULL DEFAULT 'split-right'`)
   } catch (error) {
     throw toDatabaseSetupError(error, 'PostgreSQL initialization failed')
   } finally {

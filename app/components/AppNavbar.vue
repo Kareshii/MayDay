@@ -5,13 +5,14 @@ import { primaryNavigation } from '@/utils/siteSections'
 const route = useRoute()
 const { y } = useWindowScroll()
 const mobileOpen = ref(false)
+const heroNavbarOverlay = useState<boolean>('hero-navbar-overlay', () => false)
 
 const navigation = [
   { title: '主页', path: '/' },
   ...primaryNavigation,
 ]
 
-const isTransparent = computed(() => route.path === '/' && y.value < 24)
+const isTransparent = computed(() => (route.path === '/' || heroNavbarOverlay.value) && y.value < 24)
 
 watch(() => route.path, () => {
   mobileOpen.value = false
@@ -37,7 +38,7 @@ function navLinkClass(path: string) {
 <template>
   <header class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
     :class="isTransparent ? 'border-b-0 bg-transparent' : 'border-b border-[var(--border)] bg-[var(--card)]/82 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.38)] backdrop-blur-xl'">
-    <div class="site-container">
+    <div class="container" :class="{ 'pb-4': mobileOpen }">
       <div class="flex h-18 items-center justify-between gap-4 py-4">
         <NuxtLink to="/" class="group flex items-center gap-3 transition-opacity hover:opacity-85">
           <span
@@ -79,7 +80,7 @@ function navLinkClass(path: string) {
         enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in"
         leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
         <nav v-if="mobileOpen"
-          class="mb-4 rounded-[1.5rem] border p-3 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.48)] lg:hidden"
+          class="rounded-[1.5rem] border p-3 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.48)] lg:hidden"
           :class="isTransparent ? 'border-white/12 bg-slate-950/75 backdrop-blur-xl' : 'border-[var(--border)] bg-[var(--card)]'">
           <div class="grid grid-cols-2 gap-2">
             <NuxtLink v-for="link in navigation" :key="link.path" :to="link.path"

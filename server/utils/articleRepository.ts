@@ -1,11 +1,37 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, sql } from 'drizzle-orm'
 import { createError } from 'h3'
 import { getArticlesTable, type ArticleRecord } from '../database/schema'
 import { useDatabase } from '../database/client'
-import type { ManagedArticle, ManagedArticlePayload, ManagedArticleSummary } from '~~/shared/types/articles'
+import { getConfiguredArticleTableName } from './runtimeSetup'
+import {
+  ARTICLE_COVER_LAYOUTS,
+  DEFAULT_ARTICLE_COVER_LAYOUT,
+  type ArticleCoverLayout,
+  type ManagedArticle,
+  type ManagedArticlePayload,
+  type ManagedArticleSummary,
+} from '~~/shared/types/articles'
 import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 
-function serializeArticle(record: ArticleRecord): ManagedArticle {
+type ArticleSummaryRecord = Pick<
+  ArticleRecord,
+  'id' | 'slug' | 'title' | 'summary' | 'coverImage' | 'coverLayout' | 'published' | 'createdAt' | 'updatedAt'
+>
+
+const articleCoverLayoutSet = new Set<ArticleCoverLayout>(ARTICLE_COVER_LAYOUTS)
+const ensuredArticlesSchema = new Set<string>()
+const ensuringArticlesSchema = new Map<string, Promise<void>>()
+
+function quoteIdentifier(identifier: string) {
+  return `"${identifier.replaceAll('"', '""')}"`
+}
+
+function normalizeCoverLayout(rawLayout?: string | null): ArticleCoverLayout {
+  const layout = String(rawLayout || '').trim() as ArticleCoverLayout
+  return articleCoverLayoutSet.has(layout) ? layout : DEFAULT_ARTICLE_COVER_LAYOUT
+}
+
+function serializeArticleSummary(record: ArticleSummaryRecord): ManagedArticleSummary {
   return {
     id: record.id,
     slug: record.slug,
@@ -13,18 +39,50 @@ function serializeArticle(record: ArticleRecord): ManagedArticle {
     summary: record.summary,
     description: record.summary,
     coverImage: record.coverImage,
+    coverLayout: normalizeCoverLayout(record.coverLayout),
     published: record.published,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
-    path: `/posts/${record.slug}`,
+    path: `/detail/${record.slug}`,
+  }
+}
+
+function serializeArticle(record: ArticleRecord): ManagedArticle {
+  return {
+    ...serializeArticleSummary(record),
     content: record.content,
   }
 }
 
-function toSummary(article: ManagedArticle): ManagedArticleSummary {
-  const { content, ...summary } = article
-  void content
-  return summary
+async function ensureArticlesSchema() {
+  const tableName = getConfiguredArticleTableName()
+
+  if (ensuredArticlesSchema.has(tableName)) {
+    return
+  }
+
+  const runningTask = ensuringArticlesSchema.get(tableName)
+  if (runningTask) {
+    await runningTask
+    return
+  }
+
+  const defaultCoverLayout = DEFAULT_ARTICLE_COVER_LAYOUT.replaceAll("'", "''")
+  const quotedTableName = quoteIdentifier(tableName)
+
+  const task = (async () => {
+    const db = useDatabase()
+    await db.execute(sql.raw(`
+      ALTER TABLE ${quotedTableName}
+      ADD COLUMN IF NOT EXISTS cover_layout text NOT NULL DEFAULT '${defaultCoverLayout}'
+    `))
+    ensuredArticlesSchema.add(tableName)
+  })().finally(() => {
+    ensuringArticlesSchema.delete(tableName)
+  })
+
+  ensuringArticlesSchema.set(tableName, task)
+  await task
 }
 
 function validatePayload(payload: Partial<ManagedArticlePayload>) {
@@ -58,12 +116,14 @@ function validatePayload(payload: Partial<ManagedArticlePayload>) {
     slug,
     summary: String(payload.summary || '').trim(),
     coverImage: String(payload.coverImage || '').trim(),
+    coverLayout: normalizeCoverLayout(payload.coverLayout),
     published: payload.published === true,
     content,
   } satisfies ManagedArticlePayload
 }
 
 async function findBySlug(slug: string) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1)
@@ -71,6 +131,7 @@ async function findBySlug(slug: string) {
 }
 
 async function findById(id: string) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.id, id)).limit(1)
@@ -78,22 +139,48 @@ async function findById(id: string) {
 }
 
 export async function listAdminArticles() {
-  const db = useDatabase()
-  const articles = getArticlesTable()
-  const rows = await db.select().from(articles).orderBy(desc(articles.updatedAt))
-  return rows.map(row => toSummary(serializeArticle(row)))
-}
-
-export async function listPublicArticles() {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db
-    .select()
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      summary: articles.summary,
+      coverImage: articles.coverImage,
+      coverLayout: articles.coverLayout,
+      published: articles.published,
+      createdAt: articles.createdAt,
+      updatedAt: articles.updatedAt,
+    })
+    .from(articles)
+    .orderBy(desc(articles.updatedAt))
+
+  return rows.map(serializeArticleSummary)
+}
+
+export async function listPublicArticles() {
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const rows = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      summary: articles.summary,
+      coverImage: articles.coverImage,
+      coverLayout: articles.coverLayout,
+      published: articles.published,
+      createdAt: articles.createdAt,
+      updatedAt: articles.updatedAt,
+    })
     .from(articles)
     .where(eq(articles.published, true))
     .orderBy(desc(articles.updatedAt))
 
-  return rows.map(row => toSummary(serializeArticle(row)))
+  return rows.map(serializeArticleSummary)
 }
 
 export async function getAdminArticle(id: string) {
@@ -110,6 +197,7 @@ export async function getAdminArticle(id: string) {
 }
 
 export async function getPublicArticleBySlug(slug: string, includeDraft = false) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const conditions = includeDraft
@@ -135,6 +223,7 @@ export async function getPublicArticleBySlug(slug: string, includeDraft = false)
 }
 
 export async function createArticle(payload: ManagedArticlePayload) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const article = validatePayload(payload)
@@ -153,6 +242,7 @@ export async function createArticle(payload: ManagedArticlePayload) {
     title: article.title,
     summary: article.summary,
     coverImage: article.coverImage,
+    coverLayout: article.coverLayout,
     content: article.content,
     published: article.published,
     createdAt: now,
@@ -163,6 +253,7 @@ export async function createArticle(payload: ManagedArticlePayload) {
 }
 
 export async function updateArticle(id: string, payload: ManagedArticlePayload) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const existing = await getAdminArticle(id)
@@ -183,6 +274,7 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
       title: article.title,
       summary: article.summary,
       coverImage: article.coverImage,
+      coverLayout: article.coverLayout,
       content: article.content,
       published: article.published,
       updatedAt: new Date(),
@@ -202,6 +294,7 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
 }
 
 export async function deleteArticle(id: string) {
+  await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db.delete(articles).where(eq(articles.id, id)).returning({ id: articles.id })

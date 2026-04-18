@@ -7,7 +7,7 @@ export default defineEventHandler(async () => {
     databaseConfigured: setup.databaseConfigured,
     databaseProvider: 'PostgreSQL',
     orm: 'Drizzle ORM',
-    editor: 'TinyMCE',
+    editor: 'Markdown + MDC',
     ui: 'Vue + Tailwind CSS v4 + shadcn 风格组件 + Reka UI primitives',
     databaseSource: setup.databaseSource,
     auth: getAdminAuthSettings(),

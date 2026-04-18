@@ -8,12 +8,12 @@ watch(() => route.path, () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)]">
+  <div class="min-h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] lg:flex-row">
     <AdminSidebar :mobile-open="mobileOpen" @close="mobileOpen = false" />
 
-    <div class="min-h-screen lg:pl-[calc(var(--cms-sidebar-width)_+_1.5rem)]">
+    <div class="min-h-screen min-w-0 flex flex-1 flex-col">
       <AdminHeader @toggle="mobileOpen = true" />
-      <main class="px-4 pb-10 lg:px-6">
+      <main class="min-h-0 flex-1">
         <slot />
       </main>
     </div>

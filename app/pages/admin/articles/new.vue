@@ -51,12 +51,12 @@ async function createNewArticle(payload: ManagedArticlePayload) {
   errorMessage.value = ''
 
   try {
-    const response = await $fetch<{ article: ManagedArticle }>('/api/admin/articles', {
+    await $fetch<{ article: ManagedArticle }>('/api/admin/articles', {
       method: 'POST',
       body: payload,
     })
 
-    await router.push(`/admin/articles/${response.article.id}`)
+    await router.push('/admin/articles')
   } catch (error: unknown) {
     errorMessage.value = typeof error === 'object' && error && 'message' in error
       ? String((error as { message?: string }).message)

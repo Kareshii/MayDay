@@ -7,6 +7,7 @@ export interface ArticleRecord {
   title: string
   summary: string
   coverImage: string
+  coverLayout: string
   content: string
   published: boolean
   createdAt: Date
@@ -33,6 +34,7 @@ function createArticlesTable(tableName: string) {
     title: text('title').notNull(),
     summary: text('summary').default('').notNull(),
     coverImage: text('cover_image').default('').notNull(),
+    coverLayout: text('cover_layout').default('split-right').notNull(),
     content: text('content').notNull(),
     published: boolean('published').default(false).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),

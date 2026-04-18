@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ManagedArticleSummary } from '~~/shared/types/articles'
+import type { RouteLocationRaw } from 'vue-router'
 
 definePageMeta({
   layout: 'default',
@@ -7,16 +8,33 @@ definePageMeta({
 
 useSeoMeta({
   title: '文章',
-  description: '管理页写出来的文章会展示在这里。',
+  description: '这里展示后台发布的文章列表。',
 })
 
-const { data } = await useFetch<{ articles: ManagedArticleSummary[] }>('/api/posts')
+const articleRequest = useFetch<{ articles: ManagedArticleSummary[] }>('/api/posts', {
+  key: 'public-posts-list',
+  default: () => ({ articles: [] }),
+  lazy: import.meta.client,
+})
 
+if (import.meta.server) {
+  await articleRequest
+}
+
+const { data, pending } = articleRequest
 const allPages = computed(() => data.value?.articles || [])
+const isLoading = computed(() => pending.value && !allPages.value.length)
+
+function getArticleDetailRoute(slug: string): RouteLocationRaw {
+  return {
+    name: 'detail-slug',
+    params: { slug },
+  }
+}
 </script>
 
 <template>
-  <section class="site-container">
+  <section class="container">
     <div class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div>
         <p class="section-kicker">POSTS</p>
@@ -25,15 +43,31 @@ const allPages = computed(() => data.value?.articles || [])
         </h1>
       </div>
       <p class="max-w-xl text-sm leading-7 text-[var(--text-secondary)]">
-        这里汇总通过管理页创建并发布的文章。文章正文仍然由 Nuxt Content 渲染。
+        这里汇总通过管理页创建并发布的文章。
       </p>
     </div>
 
-    <div v-if="allPages?.length" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div v-if="isLoading" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div
+        v-for="skeleton in 3"
+        :key="`post-skeleton-${skeleton}`"
+        class="overflow-hidden rounded-[1.8rem] border border-[var(--border)] bg-[var(--card)]"
+      >
+        <div class="aspect-[4/3] animate-pulse bg-[var(--surface-low)]" />
+        <div class="space-y-3 p-6">
+          <div class="h-4 w-2/5 animate-pulse rounded bg-[var(--surface-low)]" />
+          <div class="h-5 w-4/5 animate-pulse rounded bg-[var(--surface-low)]" />
+          <div class="h-4 w-full animate-pulse rounded bg-[var(--surface-low)]" />
+          <div class="h-4 w-3/4 animate-pulse rounded bg-[var(--surface-low)]" />
+        </div>
+      </div>
+    </div>
+
+    <div v-else-if="allPages?.length" class="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
       <NuxtLink
         v-for="page in allPages"
-        :key="page.path"
-        :to="page.path"
+        :key="page.id"
+        :to="getArticleDetailRoute(page.slug)"
         class="group block overflow-hidden rounded-[1.8rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_24px_64px_-52px_rgba(15,23,42,0.45)] transition-all duration-300 hover:-translate-y-1"
       >
         <div class="relative aspect-[4/3] overflow-hidden bg-slate-950">

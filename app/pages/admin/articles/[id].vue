@@ -27,7 +27,6 @@ const articleRequest = databaseConfigured.value
 const data = computed(() => articleRequest?.data.value)
 const pending = computed(() => articleRequest?.pending.value ?? false)
 const error = computed(() => settingsError.value || (!databaseConfigured.value ? { message: databaseErrorMessage } : articleRequest?.error.value || null))
-const refresh = articleRequest?.refresh ?? (async () => {})
 
 const saving = ref(false)
 const deleting = ref(false)
@@ -65,7 +64,7 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
       body: payload,
     })
 
-    await refresh()
+    await router.push('/admin/articles')
   } catch (error: unknown) {
     errorMessage.value = typeof error === 'object' && error && 'message' in error
       ? String((error as { message?: string }).message)

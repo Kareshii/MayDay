@@ -41,6 +41,70 @@ const filteredArticles = computed(() => {
   })
 })
 
+const PAGE_SIZE = 12
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredArticles.value.length / PAGE_SIZE))
+})
+
+const currentPage = computed(() => {
+  const pageParam = typeof route.query.page === 'string'
+    ? Number.parseInt(route.query.page, 10)
+    : 1
+
+  if (!Number.isFinite(pageParam) || pageParam < 1) {
+    return 1
+  }
+
+  return Math.min(pageParam, totalPages.value)
+})
+
+const paginatedArticles = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredArticles.value.slice(start, start + PAGE_SIZE)
+})
+
+const pageStart = computed(() => {
+  if (!filteredArticles.value.length) {
+    return 0
+  }
+
+  return (currentPage.value - 1) * PAGE_SIZE + 1
+})
+
+const pageEnd = computed(() => {
+  return Math.min(currentPage.value * PAGE_SIZE, filteredArticles.value.length)
+})
+
+function buildPageQuery(nextPage: number) {
+  const query: Record<string, string> = {}
+  const keyword = searchText.value.trim()
+
+  if (keyword) {
+    query.search = keyword
+  }
+
+  if (status.value !== 'all') {
+    query.status = status.value
+  }
+
+  if (nextPage > 1) {
+    query.page = String(nextPage)
+  }
+
+  return query
+}
+
+async function goToPage(nextPage: number) {
+  const safePage = Math.min(Math.max(1, nextPage), totalPages.value)
+
+  if (safePage === currentPage.value) {
+    return
+  }
+
+  await router.replace({ query: buildPageQuery(safePage) })
+}
+
 async function setStatus(nextStatus: 'all' | 'published' | 'draft') {
   if (status.value === nextStatus) {
     return
@@ -123,59 +187,93 @@ async function setStatus(nextStatus: 'all' | 'published' | 'draft') {
           当前筛选条件下没有文章。
         </div>
 
-        <div v-else class="overflow-x-auto">
-          <table class="w-full min-w-[780px] text-left text-sm">
-            <thead class="bg-[var(--surface-low)] text-xs uppercase tracking-[0.16em] text-[var(--text-secondary)]">
-              <tr>
-                <th class="px-6 py-4">标题</th>
-                <th class="px-4 py-4">状态</th>
-                <th class="px-4 py-4">创建时间</th>
-                <th class="px-4 py-4">更新时间</th>
-                <th class="px-6 py-4 text-right">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="article in filteredArticles"
-                :key="article.id"
-                class="transition hover:bg-[var(--surface-high)]"
+        <div v-else>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[780px] text-left text-sm">
+              <thead class="bg-[var(--surface-low)] text-xs uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+                <tr>
+                  <th class="px-6 py-4">标题</th>
+                  <th class="px-4 py-4">状态</th>
+                  <th class="px-4 py-4">创建时间</th>
+                  <th class="px-4 py-4">更新时间</th>
+                  <th class="px-6 py-4 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="article in paginatedArticles"
+                  :key="article.id"
+                  class="transition hover:bg-[var(--surface-high)]"
+                >
+                  <td class="px-6 py-5 align-top">
+                    <p class="font-semibold text-[var(--text-primary)]">
+                      {{ article.title }}
+                    </p>
+                    <p class="mt-1 text-xs text-[var(--text-secondary)]">
+                      /detail/{{ article.slug }}
+                    </p>
+                  </td>
+                  <td class="px-4 py-5 align-top">
+                    <UiBadge :variant="article.published ? 'success' : 'warning'">
+                      {{ article.published ? '已发布' : '草稿' }}
+                    </UiBadge>
+                  </td>
+                  <td class="px-4 py-5 align-top text-[var(--text-secondary)]">
+                    {{ new Date(article.createdAt).toLocaleDateString() }}
+                  </td>
+                  <td class="px-4 py-5 align-top text-[var(--text-secondary)]">
+                    {{ new Date(article.updatedAt).toLocaleString() }}
+                  </td>
+                  <td class="px-6 py-5 align-top">
+                    <div class="flex justify-end gap-2">
+                      <NuxtLink :to="`/admin/articles/${article.id}`">
+                        <UiButton variant="secondary" size="sm">
+                          编辑
+                        </UiButton>
+                      </NuxtLink>
+                      <NuxtLink
+                        :to="article.published
+                          ? { name: 'detail-slug', params: { slug: article.slug } }
+                          : { name: 'detail-slug', params: { slug: article.slug }, query: { preview: '1' } }"
+                        target="_blank"
+                      >
+                        <UiButton variant="ghost" size="sm">
+                          查看
+                        </UiButton>
+                      </NuxtLink>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="flex flex-col gap-3 border-t border-[var(--border-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p class="text-sm text-[var(--text-secondary)]">
+              显示 {{ pageStart }} - {{ pageEnd }} / {{ filteredArticles.length }}
+            </p>
+            <div class="flex items-center gap-2">
+              <UiButton
+                variant="secondary"
+                size="sm"
+                :disabled="currentPage <= 1"
+                @click="goToPage(currentPage - 1)"
               >
-                <td class="px-6 py-5 align-top">
-                  <p class="font-semibold text-[var(--text-primary)]">
-                    {{ article.title }}
-                  </p>
-                  <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                    /posts/{{ article.slug }}
-                  </p>
-                </td>
-                <td class="px-4 py-5 align-top">
-                  <UiBadge :variant="article.published ? 'success' : 'warning'">
-                    {{ article.published ? '已发布' : '草稿' }}
-                  </UiBadge>
-                </td>
-                <td class="px-4 py-5 align-top text-[var(--text-secondary)]">
-                  {{ new Date(article.createdAt).toLocaleDateString() }}
-                </td>
-                <td class="px-4 py-5 align-top text-[var(--text-secondary)]">
-                  {{ new Date(article.updatedAt).toLocaleString() }}
-                </td>
-                <td class="px-6 py-5 align-top">
-                  <div class="flex justify-end gap-2">
-                    <NuxtLink :to="`/admin/articles/${article.id}`">
-                      <UiButton variant="secondary" size="sm">
-                        编辑
-                      </UiButton>
-                    </NuxtLink>
-                    <NuxtLink :to="article.published ? `/posts/${article.slug}` : `/posts/${article.slug}?preview=1`" target="_blank">
-                      <UiButton variant="ghost" size="sm">
-                        查看
-                      </UiButton>
-                    </NuxtLink>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                上一页
+              </UiButton>
+              <span class="min-w-[5.5rem] text-center text-sm font-medium text-[var(--text-secondary)]">
+                {{ currentPage }} / {{ totalPages }}
+              </span>
+              <UiButton
+                variant="secondary"
+                size="sm"
+                :disabled="currentPage >= totalPages"
+                @click="goToPage(currentPage + 1)"
+              >
+                下一页
+              </UiButton>
+            </div>
+          </div>
         </div>
       </UiCard>
     </div>

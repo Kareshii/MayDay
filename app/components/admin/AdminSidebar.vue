@@ -10,10 +10,12 @@ const emit = defineEmits<{
 }>()
 
 const navItems = [
-  { title: '仪表盘', to: '/admin', icon: 'lucide:layout-dashboard' },
-  { title: '文章', to: '/admin/articles', icon: 'lucide:file-text' },
-  { title: '设置', to: '/admin/settings', icon: 'lucide:settings-2' },
+  { title: '\u4eea\u8868\u76d8', to: '/admin', icon: 'lucide:layout-dashboard' },
+  { title: '\u6587\u7ae0', to: '/admin/articles', icon: 'lucide:file-text' },
+  { title: '\u8bbe\u7f6e', to: '/admin/settings', icon: 'lucide:settings-2' },
 ]
+
+const workspaceLabel = '\u7f16\u8f91\u5de5\u4f5c\u7a7a\u95f4'
 
 function isActive(path: string) {
   return path === '/admin' ? route.path === path : route.path.startsWith(path)
@@ -37,17 +39,19 @@ function isActive(path: string) {
   </Transition>
 
   <aside
-    class="fixed inset-y-0 left-0 z-50 w-[var(--cms-sidebar-width)] px-3 py-3 transition-transform duration-200 lg:px-4 lg:py-4"
-    :class="props.mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
+    class="fixed inset-y-0 left-0 z-50 w-[var(--cms-sidebar-width)] shrink-0 transform-gpu transition-transform duration-200 ease-out lg:sticky lg:inset-y-auto lg:left-auto lg:top-0 lg:h-screen lg:z-auto lg:translate-x-0"
+    :class="props.mobileOpen
+      ? 'translate-x-0'
+      : '-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0'"
   >
-    <div class="flex h-full flex-col rounded-[1.75rem] border border-[var(--border-soft)] bg-[var(--surface-low)] p-4 shadow-[var(--surface-shadow)]">
+    <div class="flex h-full flex-col border border-[var(--border-soft)] bg-[var(--surface-low)] p-4 shadow-[var(--surface-shadow)]">
       <NuxtLink to="/admin" class="flex items-center gap-3 rounded-xl px-2 py-1" @click="emit('close')">
         <span class="flex size-10 items-center justify-center rounded-xl bg-[var(--primary)] text-white shadow-[0_8px_16px_-12px_rgba(0,72,141,0.8)]">
           <Icon name="lucide:layout-grid" class="size-4" />
         </span>
         <span>
-          <span class="block text-xl font-bold tracking-tight text-[var(--text-primary)]">策展人 CMS</span>
-          <span class="block text-xs text-[var(--text-secondary)]">编辑工作空间</span>
+          <span class="block text-xl font-bold tracking-tight text-[var(--text-primary)]">Blog_CMS</span>
+          <span class="block text-xs text-[var(--text-secondary)]">{{ workspaceLabel }}</span>
         </span>
       </NuxtLink>
 
@@ -66,16 +70,6 @@ function isActive(path: string) {
           <span>{{ item.title }}</span>
         </NuxtLink>
       </nav>
-
-      <NuxtLink to="/admin/articles/new" class="mt-4 block" @click="emit('close')">
-        <button
-          type="button"
-          class="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] px-4 text-sm font-semibold text-white shadow-[0_16px_30px_-18px_rgba(0,72,141,0.85)] transition hover:brightness-105"
-        >
-          <Icon name="lucide:plus" class="size-4" />
-          Create New Post
-        </button>
-      </NuxtLink>
     </div>
   </aside>
 </template>
