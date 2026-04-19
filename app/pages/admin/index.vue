@@ -102,7 +102,7 @@ const maxMonthValue = computed(() => Math.max(...(data.value?.byMonth.map(item =
               {{ item.value }}
             </div>
             <div
-              class="w-full rounded-lg bg-[var(--primary)]/80 shadow-[0_10px_18px_-14px_rgba(0,72,141,0.9)]"
+              class="w-full rounded-lg bg-[var(--primary)]/80 shadow-[0_10px_18px_-14px_rgba(0,72,141,0.45)]"
               :style="{ height: `${Math.max((item.value / maxMonthValue) * 100, 8)}%` }"
             />
             <div class="text-xs font-medium text-[var(--text-secondary)]">

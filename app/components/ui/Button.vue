@@ -7,11 +7,11 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'border border-transparent bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] text-white shadow-[0_10px_24px_-16px_rgba(0,72,141,0.72)] hover:brightness-105',
+        default: 'border border-transparent bg-gradient-to-br from-[var(--primary)] to-[var(--primary-strong)] text-white shadow-[0_10px_24px_-16px_rgba(0,72,141,0.45)] hover:brightness-105',
         secondary: 'border border-transparent bg-[var(--surface-high)] text-[var(--text-primary)] hover:bg-[var(--surface-highest)]',
         outline: 'border border-[var(--border-soft)] bg-[var(--surface-card)]/60 text-[var(--text-primary)] hover:bg-[var(--surface-low)]',
         ghost: 'border border-transparent bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-low)]',
-        destructive: 'border border-transparent bg-red-600 text-white shadow-[0_10px_24px_-16px_rgba(220,38,38,0.75)] hover:bg-red-500',
+        destructive: 'border border-transparent bg-red-600 text-white shadow-[0_10px_24px_-16px_rgba(220,38,38,0.45)] hover:bg-red-500',
       },
       size: {
         default: 'h-10 px-4 py-2',

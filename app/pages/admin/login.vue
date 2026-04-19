@@ -53,10 +53,12 @@ async function signIn() {
     })
 
     await navigateTo(redirectTarget.value)
-  } catch (error: unknown) {
-    errorMessage.value = typeof error === 'object' && error && 'message' in error
-      ? String((error as { message?: string }).message)
-      : '登录失败'
+  } catch (error: any) {
+    let msg = error?.data?.message || error?.message || '登录失败'
+    if (msg.includes('401') || error?.status === 401) {
+      msg = '管理员账号或密码错误。'
+    }
+    errorMessage.value = msg
   } finally {
     submitting.value = false
   }
@@ -69,9 +71,10 @@ async function signIn() {
     <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
     <UiCard class="relative w-full max-w-md border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-8">
-      <p class="cms-kicker">
-        Mayday CMS
-      </p>
+      <div class="flex items-center gap-2 text-[var(--primary)] font-semibold text-sm">
+        <Icon name="lucide:shield-check" class="size-5" />
+        <span>MAYDAY CMS</span>
+      </div>
       <h1 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)]">
         后台登录
       </h1>
@@ -121,13 +124,15 @@ async function signIn() {
         </UiButton>
       </form>
 
-      <div class="flex items-center justify-between text-sm">
-        <NuxtLink to="/" class="text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
+      <div class="flex items-center justify-between mt-6">
+        <NuxtLink to="/" class="flex flex-row items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]">
+          <Icon name="lucide:arrow-left" class="size-4" />
           返回前台
         </NuxtLink>
-        <UiButton variant="ghost" size="sm" @click="refresh">
+        <button class="flex flex-row items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]" @click="refresh">
+          <Icon name="lucide:refresh-cw" class="size-4" />
           刷新状态
-        </UiButton>
+        </button>
       </div>
       </div>
     </UiCard>
