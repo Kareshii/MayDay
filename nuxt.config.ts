@@ -1,5 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
+import AppLoading from 'vite-plugin-app-loading'
 
 type RoutePage = {
   path?: string
@@ -68,5 +69,5 @@ export default defineNuxtConfig({
       removeLegacyPostDetailRoute(pages as RoutePage[])
     },
   },
-  vite: { plugins: [tailwindcss()] },
+  vite: { plugins: [AppLoading('loading.html'), tailwindcss()] },
 })

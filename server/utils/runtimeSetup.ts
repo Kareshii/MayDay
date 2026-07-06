@@ -75,6 +75,12 @@ export interface SaveRuntimeSetupInput {
   adminSessionSecret?: string
 }
 
+export interface UpdateAdminCredentialsInput {
+  adminUsername?: string
+  currentPassword?: string
+  newPassword?: string
+}
+
 let cachedConfig: StoredRuntimeSetup | null = null
 let configLoaded = false
 let cachedEncryptionKey: Buffer | null = null
@@ -445,6 +451,42 @@ export function saveRuntimeSetup(input: SaveRuntimeSetupInput) {
 
   if (!nextConfig.configuredAt) {
     nextConfig.configuredAt = new Date().toISOString()
+  }
+
+  writeStoredRuntimeSetup(nextConfig)
+  return getRuntimeSetupState()
+}
+
+export function updateStoredAdminCredentials(input: UpdateAdminCredentialsInput) {
+  if (process.env.ADMIN_PASSWORD) {
+    throw new Error('ADMIN_PASSWORD_MANAGED_BY_ENV')
+  }
+
+  const currentPassword = String(input.currentPassword || '')
+
+  if (!verifyConfiguredAdminPassword(currentPassword)) {
+    throw new Error('ADMIN_CURRENT_PASSWORD_INVALID')
+  }
+
+  const nextPassword = String(input.newPassword || '')
+
+  if (!nextPassword) {
+    throw new Error('ADMIN_PASSWORD_REQUIRED')
+  }
+
+  if (nextPassword.length < 8) {
+    throw new Error('ADMIN_PASSWORD_TOO_SHORT')
+  }
+
+  const stored = readStoredRuntimeSetup()
+  const salt = randomBytes(16).toString('hex')
+  const adminUsername = String(input.adminUsername || getConfiguredAdminUsername()).trim() || DEFAULT_ADMIN_USERNAME
+  const nextConfig: StoredRuntimeSetup = {
+    ...stored,
+    adminUsername,
+    adminPasswordSalt: salt,
+    adminPasswordHash: hashPassword(nextPassword, salt),
+    adminSessionSecret: stored.adminSessionSecret || randomBytes(32).toString('hex'),
   }
 
   writeStoredRuntimeSetup(nextConfig)

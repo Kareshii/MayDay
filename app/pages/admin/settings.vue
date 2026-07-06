@@ -8,7 +8,7 @@ useSeoMeta({
   description: '查看当前后台的技术栈与数据库配置。',
 })
 
-const { data, pending, error, refresh } = await useFetch<{
+const { data, pending, error } = await useFetch<{
   databaseConfigured: boolean
   databaseProvider: string
   editor: string
@@ -21,139 +21,140 @@ const { data, pending, error, refresh } = await useFetch<{
     sessionTtlHours: number
   }
 }>('/api/admin/settings')
+const { showErrorToast } = useAdminToast()
+
+watch(error, (value) => {
+  if (value) {
+    showErrorToast('系统设置加载失败', value.message)
+  }
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="cms-page space-y-7">
-    <section class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 class="cms-page-title">
-          系统设置
-        </h1>
-        <p class="cms-page-subtitle">
-          管理站点的核心配置和基础信息。
-        </p>
-      </div>
-
-      <UiButton variant="outline" size="sm" @click="refresh">
-        <Icon name="lucide:refresh-cw" class="size-4" />
-        刷新
-      </UiButton>
-    </section>
-
-    <div v-if="error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200">
-      {{ error.message }}
-    </div>
+  <div class="cms-page space-y-6">
+    <AdminPageHeader title="系统配置" subtitle="" />
 
     <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-5 py-12 text-center text-sm text-[var(--text-secondary)]">
-      正在加载设置...
+      正在加载配置...
     </div>
 
     <template v-else>
-      <UiCard class="overflow-hidden p-0">
-        <div class="border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-6 py-5">
-          <div class="flex items-center gap-2">
-            <Icon name="lucide:sliders-horizontal" class="size-4 text-[var(--primary)]" />
-            <p class="text-lg font-bold tracking-tight text-[var(--text-primary)]">
-              常规设置
-            </p>
+      <UiCard class="p-0 overflow-hidden">
+        <div class="flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-6 py-4">
+          <div>
+            <h3 class="text-base font-bold text-[var(--text-primary)]">运行环境参数</h3>
+            <p class="mt-0.5 text-xs text-[var(--text-secondary)]">只读信息。如需修改，请在宿主机更新环境变量或配置文件并重启服务。</p>
           </div>
         </div>
 
-        <div class="space-y-8 px-6 py-7">
-          <div class="grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-            <div>
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                数据库
-              </p>
-              <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                当前后台要求 `DATABASE_URL` 指向一个可访问的 PostgreSQL 实例。
-              </p>
+        <div class="divide-y divide-[var(--border-soft)] px-6">
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-start md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">数据库配置状态</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">当前后台的数据持久化来源及连接串。</p>
             </div>
-            <div class="space-y-3">
-              <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">
-                {{ data?.databaseProvider }}
-              </div>
-              <UiBadge :variant="data?.databaseConfigured ? 'success' : 'warning'">
-                {{ data?.databaseConfigured ? 'DATABASE_URL 已配置' : 'DATABASE_URL 缺失' }}
-              </UiBadge>
-            </div>
-          </div>
-
-          <div class="grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-            <div>
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                编辑器
-              </p>
-              <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                文章编辑支持 Markdown 编写，并使用 MDC 进行渲染预览。
-              </p>
-            </div>
-            <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">
-              {{ data?.editor }}
-            </div>
-          </div>
-
-          <div class="grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-            <div>
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                ORM
-              </p>
-              <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                Schema 定义和数据库访问由 Drizzle ORM 与 `postgres` 驱动。
-              </p>
-            </div>
-            <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">
-              {{ data?.orm }}
-            </div>
-          </div>
-
-          <div class="grid gap-6 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-            <div>
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                界面栈
-              </p>
-              <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                后台使用符合 shadcn 风格的 Vue 组件与 Reka UI primitives。
-              </p>
-            </div>
-            <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">
-              {{ data?.ui }}
-            </div>
-          </div>
-
-          <div class="grid gap-6 border-t border-[var(--border-soft)] pt-8 md:grid-cols-[13rem_minmax(0,1fr)] md:items-start">
-            <div>
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                鉴权
-              </p>
-              <p class="mt-1 text-xs leading-6 text-[var(--text-secondary)]">
-                后台会话采用 Cookie Session，默认用户名是 admin。
-              </p>
-            </div>
-            <div class="space-y-3">
-              <div class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-4 py-3 text-sm text-[var(--text-primary)]">
-                用户名：{{ data?.auth.username || 'admin' }} · 会话有效期约 {{ data?.auth.sessionTtlHours || 0 }} 小时
-              </div>
-
-              <div class="flex flex-wrap gap-2">
-                <UiBadge :variant="data?.auth.configured ? 'success' : 'warning'">
-                  {{ data?.auth.configured ? 'ADMIN_PASSWORD 已配置' : 'ADMIN_PASSWORD 缺失' }}
-                </UiBadge>
-                <UiBadge :variant="data?.auth.sessionSecretConfigured ? 'success' : 'warning'">
-                  {{ data?.auth.sessionSecretConfigured ? 'ADMIN_SESSION_SECRET 已配置' : '使用密码作为签名密钥' }}
+            <div class="flex flex-1 flex-col gap-3 md:w-1/2">
+              <div class="flex items-center justify-between">
+                <span class="font-mono text-sm font-medium text-[var(--text-primary)]">{{ data?.databaseProvider }}</span>
+                <UiBadge :variant="data?.databaseConfigured ? 'success' : 'warning'">
+                  {{ data?.databaseConfigured ? 'DATABASE_URL 已就绪' : 'DATABASE_URL 缺失' }}
                 </UiBadge>
               </div>
+              <div v-if="data?.databaseUrl" class="rounded-lg bg-[var(--surface-card)] px-3 py-2 border border-[var(--border-soft)]">
+                <code class="break-all font-mono text-[11px] text-[var(--text-secondary)]">
+                  {{ data.databaseUrl }}
+                </code>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">内容编辑器</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">Markdown 核心解析与渲染引擎。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <span class="font-mono text-sm text-[var(--text-primary)]">{{ data?.editor }}</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">ORM 数据映射</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">Schema 定义和数据库访问控制。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <span class="font-mono text-sm text-[var(--text-primary)]">{{ data?.orm }}</span>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">UI 界面基座</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">前端视觉与交互的基础库。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <span class="font-mono text-sm text-[var(--text-primary)]">{{ data?.ui }}</span>
             </div>
           </div>
         </div>
       </UiCard>
 
-      <div class="flex justify-end">
-        <UiButton variant="secondary" disabled>
-          保存更改（当前页只读）
-        </UiButton>
-      </div>
+      <UiCard class="p-0 overflow-hidden">
+        <div class="flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-6 py-4">
+          <div>
+            <h3 class="text-base font-bold text-[var(--text-primary)]">鉴权安全与会话</h3>
+            <p class="mt-0.5 text-xs text-[var(--text-secondary)]">系统访问控制与密码配置状态。</p>
+          </div>
+        </div>
+
+        <div class="divide-y divide-[var(--border-soft)] px-6">
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">管理账户标识</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">用于登录后台的根管理员用户名。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <span class="font-mono text-sm font-medium text-[var(--text-primary)]">{{ data?.auth.username || 'admin' }}</span>
+            </div>
+          </div>
+          
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">环境变量密码验证</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">是否使用 `.env` 强制配置根密码。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <UiBadge :variant="data?.auth.configured ? 'success' : 'warning'">
+                {{ data?.auth.configured ? 'ADMIN_PASSWORD 已配置' : 'ADMIN_PASSWORD 未配置' }}
+              </UiBadge>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">会话签名密钥</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">用于保证 Cookie 防篡改的密钥状态。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <UiBadge :variant="data?.auth.sessionSecretConfigured ? 'success' : 'secondary'">
+                {{ data?.auth.sessionSecretConfigured ? 'SESSION_SECRET 已配置' : '使用密码做默认签名' }}
+              </UiBadge>
+            </div>
+          </div>
+          
+          <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+            <div class="md:w-1/3">
+              <h4 class="text-sm font-medium text-[var(--text-primary)]">会话存活时长 (TTL)</h4>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">登录状态的保持时间（以小时为单位）。</p>
+            </div>
+            <div class="flex flex-1 items-center md:w-1/2">
+              <span class="font-mono text-sm text-[var(--text-primary)]">{{ data?.auth.sessionTtlHours || 0 }} 小时</span>
+            </div>
+          </div>
+        </div>
+      </UiCard>
+
     </template>
   </div>
 </template>

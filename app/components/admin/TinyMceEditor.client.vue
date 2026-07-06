@@ -6,18 +6,67 @@ import 'tinymce/skins/ui/oxide/skin.css'
 import contentUiSkinCss from 'tinymce/skins/ui/oxide/content.css?inline'
 import contentCss from 'tinymce/skins/content/default/content.css?inline'
 
+interface TinyMceBlobInfo {
+  blob: () => Blob
+  filename: () => string
+}
+
+interface ContentImageUploadResponse {
+  image?: {
+    url?: string
+  }
+}
+
+interface TinyMceShortcutEditor {
+  addShortcut: (pattern: string, description: string, callback: () => void) => void
+}
+
 const model = defineModel<string>({ default: '' })
+const emit = defineEmits<{
+  'save-shortcut': []
+}>()
 const props = withDefaults(defineProps<{
   disabled?: boolean
+  height?: number | string
 }>(), {
   disabled: false,
+  height: 'calc(100dvh - 10rem)',
 })
 
 const editorComponent = shallowRef<unknown>(null)
 const tinymceInstance = shallowRef<unknown>(null)
+const { showErrorToast } = useAdminToast()
 
-const editorConfig = {
-  height: 620,
+async function uploadEditorImage(blobInfo: TinyMceBlobInfo, progress?: (value: number) => void) {
+  const formData = new FormData()
+  const filename = blobInfo.filename() || `editor-image-${Date.now()}`
+
+  formData.append('file', blobInfo.blob(), filename)
+  progress?.(8)
+
+  try {
+    const response = await $fetch<ContentImageUploadResponse>('/api/admin/content-images', {
+      method: 'POST',
+      body: formData,
+    })
+    const imageUrl = response.image?.url
+
+    if (!imageUrl) {
+      throw new Error('图片上传接口没有返回图片地址')
+    }
+
+    progress?.(100)
+    return imageUrl
+  } catch (error: unknown) {
+    const message = getRequestErrorMessage(error, '图片上传失败')
+    showErrorToast('图片上传失败', message)
+    throw new Error(message)
+  }
+}
+
+const editorConfig = computed(() => ({
+  height: props.height,
+  language: 'zh-CN',
   menubar: 'file edit view insert format table tools help',
   plugins: 'advlist anchor autolink charmap code fullscreen help image link lists media preview searchreplace table visualblocks wordcount',
   toolbar:
@@ -31,7 +80,13 @@ const editorConfig = {
   image_caption: true,
   automatic_uploads: true,
   paste_data_images: true,
+  images_upload_handler: uploadEditorImage,
   convert_urls: false,
+  setup: (editor: TinyMceShortcutEditor) => {
+    editor.addShortcut('Meta+S', '保存文章', () => {
+      emit('save-shortcut')
+    })
+  },
   skin: false,
   content_css: false,
   content_style: [
@@ -41,7 +96,7 @@ const editorConfig = {
     'img { max-width: 100%; height: auto; border-radius: 16px; }',
     'blockquote { border-left: 4px solid #005fb8; margin: 1.5rem 0; padding: 0.5rem 0 0.5rem 1rem; color: #4a5568; background: #f6f8ff; border-radius: 0 10px 10px 0; }',
   ].join('\n'),
-}
+}))
 
 onMounted(async () => {
   if (!import.meta.client) {
@@ -73,6 +128,7 @@ onMounted(async () => {
     import('tinymce/plugins/table'),
     import('tinymce/plugins/visualblocks'),
     import('tinymce/plugins/wordcount'),
+    import('tinymce-i18n/langs8/zh-CN'),
   ])
 
   editorComponent.value = Editor
@@ -101,14 +157,17 @@ onMounted(async () => {
 
 <style scoped>
 .cms-editor-shell {
-  border: 1px solid var(--border-soft);
-  border-radius: 1rem;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
   background: var(--surface-card);
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(194, 198, 212, 0.12);
+  box-shadow: none;
 }
 
 .cms-editor-shell :deep(.tox) {
+  height: 100% !important;
   border: 0;
   font-family: "Inter", "Avenir Next", "PingFang SC", "Noto Sans SC", sans-serif;
 }

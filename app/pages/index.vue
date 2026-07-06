@@ -4,6 +4,24 @@ import { useMediaQuery, useWindowScroll } from '@vueuse/core'
 import { featuredShowcase, showcaseSections } from '@/utils/siteSections'
 import { mojoItems } from '@/utils/mojoData'
 
+interface PublicSiteSettings {
+  siteName: string
+  homeHeroTitleLine1: string
+  homeHeroTitleLine2: string
+  homeHeroSubtitle: string
+}
+
+interface PublicSeoSettings {
+  title: string
+  description: string
+  keywords: string
+}
+
+interface PublicSiteResponse {
+  site: PublicSiteSettings
+  seo: PublicSeoSettings
+}
+
 definePageMeta({
   layout: 'full-width',
 })
@@ -11,10 +29,31 @@ definePageMeta({
 const { countdowns, quizQuestions } = useMaydayData()
 const { y } = useWindowScroll()
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
+  key: 'public-site-config',
+  default: () => ({
+    site: {
+      siteName: 'mayday.life',
+      homeHeroTitleLine1: 'Hi，Kareshi',
+      homeHeroTitleLine2: '继续唱。',
+      homeHeroSubtitle: '星星在闪烁，你会怎么说。',
+    },
+    seo: {
+      title: 'Hi,',
+      description: '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
+      keywords: 'mayday, 五月天, blog',
+    },
+  }),
+})
+
+const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
+const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 || '继续唱。')
+const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
 
 useSeoMeta({
-  title: 'Hi,',
-  description: '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
+  title: () => siteConfig.value.seo.title || siteConfig.value.site.siteName || 'Hi,',
+  description: () => siteConfig.value.seo.description || '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
+  keywords: () => siteConfig.value.seo.keywords,
 })
 
 const statTargets = computed(() => [
@@ -174,17 +213,13 @@ onBeforeUnmount(() => {
           </span>
 
           <h1 class="hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
-            <span class="glitch-text block" data-text="Hi，">Hi，</span>
-            <span class="glitch-text mt-1 block" data-text="继续唱。">继续唱。</span>
+            <span class="glitch-text block" :data-text="heroTitleLine1">{{ heroTitleLine1 }}</span>
+            <span class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
           </h1>
 
           <div class="hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">
             <p class="text-xl font-medium md:text-2xl">
-              星星在闪烁，你会怎么说。
-            </p>
-            <p class="max-w-2xl text-sm leading-7 text-white/64 md:text-base">
-              把测验、文章、收集和互动页整理成一座能慢慢翻、慢慢点开的五月天档案馆。
-              视觉骨架参考 blog-next，但首页入口已经收束到仍然保留的章节。
+              {{ heroSubtitle }}
             </p>
           </div>
 
@@ -240,18 +275,6 @@ onBeforeUnmount(() => {
     </section>
 
     <section id="chapters" class="container relative z-10 min-h-[100svh] scroll-mt-18 pt-12 pb-20 md:pt-16 md:pb-28">
-      <div v-reveal="40" class="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p class="section-kicker">RECENT SECTIONS</p>
-          <h2 class="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-[var(--text-primary)] md:text-5xl">
-            像读 blog-next 一样，翻开站里保留的章节。
-          </h2>
-        </div>
-        <p class="max-w-md text-sm leading-7 text-[var(--text-secondary)]">
-          这里不做传统博客列表，而是把站内仍然开放的主题页面和文章入口排成一组封面。
-        </p>
-      </div>
-
       <NuxtLink v-reveal="120" :to="featuredSection.path" class="group block">
         <article
           class="overflow-hidden rounded-[2rem] border border-white/12 bg-slate-950 text-white shadow-[0_40px_100px_-48px_rgba(15,23,42,0.88)] transition-all duration-300"
@@ -335,13 +358,6 @@ onBeforeUnmount(() => {
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div v-reveal="60" class="surface-card p-8 md:p-10">
           <p class="section-kicker">COUNTDOWN</p>
-          <h2 class="mt-3 text-3xl font-semibold tracking-tight text-[var(--text-primary)] md:text-4xl">
-            重要日期，还在这里等你。
-          </h2>
-          <p class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)]">
-            旧首页里的倒计时模块没有删除，只是换到一个更安静、更像杂志内页的位置继续存在。
-          </p>
-
           <div class="mt-8">
             <CountdownBoard />
           </div>

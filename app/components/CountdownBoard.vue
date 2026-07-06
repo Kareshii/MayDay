@@ -57,7 +57,7 @@ const getTypeIcon = (type: string) => {
 </script>
 
 <template>
-  <div class="grid md:grid-cols-2 gap-6 lg:gap-8">
+  <div class="grid ">
     <BaseCard
       v-for="countdown in countdowns"
       :key="countdown.id"

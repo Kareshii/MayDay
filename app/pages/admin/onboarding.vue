@@ -34,9 +34,8 @@ const { data, pending, refresh, error } = await useFetch<SetupStateResponse>('/a
 
 const submitting = ref(false)
 const testingConnection = ref(false)
-const successMessage = ref('')
-const errorMessage = ref('')
 const currentStepIndex = ref(0)
+const { showSuccessToast, showErrorToast, showWarningToast } = useAdminToast()
 
 const form = reactive({
   databaseHost: '127.0.0.1',
@@ -113,20 +112,8 @@ watch(inferredDatabaseMode, (mode) => {
   form.databaseSsl = mode === 'remote'
 }, { immediate: true })
 
-watch(() => [
-  form.databaseHost,
-  form.databasePort,
-  form.databaseName,
-  form.databaseUsername,
-  form.databasePassword,
-  form.databaseSsl,
-], () => {
-  successMessage.value = ''
-})
-
 function setError(message: string) {
-  errorMessage.value = message
-  successMessage.value = ''
+  showWarningToast('请完善配置', message)
 }
 
 function buildSetupRequestBody() {
@@ -212,8 +199,6 @@ function validateAdminStep() {
 }
 
 function validateStep(stepKey: WizardStepKey) {
-  errorMessage.value = ''
-
   if (stepKey === 'database') {
     return validateDatabaseStep()
   }
@@ -250,8 +235,6 @@ function goNext() {
 }
 
 function goBack() {
-  errorMessage.value = ''
-
   if (currentStepIndex.value > 0) {
     currentStepIndex.value -= 1
   }
@@ -262,8 +245,6 @@ async function testConnection() {
     return
   }
 
-  errorMessage.value = ''
-  successMessage.value = ''
   testingConnection.value = true
 
   try {
@@ -275,11 +256,9 @@ async function testConnection() {
       },
     })
 
-    successMessage.value = `连接成功，已验证数据库 ${result.databaseName}（用户 ${result.currentUser}）。`
+    showSuccessToast('连接成功', `已验证数据库 ${result.databaseName}（用户 ${result.currentUser}）。`)
   } catch (connectionError: unknown) {
-    errorMessage.value = typeof connectionError === 'object' && connectionError && 'message' in connectionError
-      ? String((connectionError as { message?: string }).message)
-      : '测试连接失败，请检查配置后重试。'
+    showErrorToast('测试连接失败', getRequestErrorMessage(connectionError, '测试连接失败，请检查配置后重试。'))
   } finally {
     testingConnection.value = false
   }
@@ -294,8 +273,6 @@ async function submitSetup() {
     return
   }
 
-  errorMessage.value = ''
-  successMessage.value = ''
   submitting.value = true
 
   try {
@@ -304,21 +281,25 @@ async function submitSetup() {
       body: buildSetupRequestBody(),
     })
 
-    successMessage.value = '初始化完成，正在进入后台...'
+    showSuccessToast('初始化完成', '正在进入后台...')
     await refresh()
     await navigateTo('/admin')
   } catch (setupError: unknown) {
-    errorMessage.value = typeof setupError === 'object' && setupError && 'message' in setupError
-      ? String((setupError as { message?: string }).message)
-      : '初始化失败，请检查配置后重试。'
+    showErrorToast('初始化失败', getRequestErrorMessage(setupError, '初始化失败，请检查配置后重试。'))
   } finally {
     submitting.value = false
   }
 }
+
+watch(error, (value) => {
+  if (value) {
+    showErrorToast('初始化状态加载失败', value.message)
+  }
+}, { immediate: true })
 </script>
 
 <template>
-  <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
+  <main class="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,95,184,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(92,0,202,0.13),transparent_36%)]" />
     <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
@@ -335,36 +316,16 @@ async function submitSetup() {
 
       <div class="mt-8 space-y-8">
       <div
-        v-if="error"
-        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
-      >
-        {{ error.message }}
-      </div>
-
-      <div
-        v-else-if="errorMessage"
-        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
-      >
-        {{ errorMessage }}
-      </div>
-
-      <div
-        v-else-if="successMessage"
-        class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/12 dark:text-emerald-200"
-      >
-        {{ successMessage }}
-      </div>
-
-      <div
         v-if="steps.length"
         class="grid gap-3"
         :class="steps.length === 1 ? 'sm:grid-cols-1' : 'sm:grid-cols-2'"
       >
-        <button
+        <UiButton
           v-for="(step, index) in steps"
           :key="step.key"
           type="button"
-          class="cursor-pointer rounded-xl border px-4 py-4 text-left transition"
+          variant="outline"
+          class="h-auto cursor-pointer flex-col items-start justify-start gap-0 rounded-xl px-4 py-4 text-left"
           :class="index === currentStepIndex
             ? 'border-transparent bg-[var(--primary)] text-white'
             : index < currentStepIndex
@@ -378,7 +339,7 @@ async function submitSetup() {
           <span class="mt-2 block text-sm font-semibold">
             {{ step.title }}
           </span>
-        </button>
+        </UiButton>
       </div>
 
       <form v-if="currentStep" class="space-y-6" @submit.prevent="isLastStep ? submitSetup() : goNext()">

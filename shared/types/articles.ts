@@ -13,6 +13,7 @@ export interface ManagedArticleSummary {
   coverImage: string
   coverLayout: ArticleCoverLayout
   published: boolean
+  pinned: boolean
   createdAt: string
   updatedAt: string
   path: string
@@ -29,5 +30,6 @@ export interface ManagedArticlePayload {
   coverImage: string
   coverLayout: ArticleCoverLayout
   published: boolean
+  pinned: boolean
   content: string
 }

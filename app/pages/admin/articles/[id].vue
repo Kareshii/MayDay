@@ -7,6 +7,10 @@ interface AdminSettingsResponse {
   databaseConfigured: boolean
 }
 
+interface ArticleEditorSubmitOptions {
+  shortcut?: boolean
+}
+
 definePageMeta({
   layout: 'admin',
 })
@@ -30,7 +34,7 @@ const error = computed(() => settingsError.value || (!databaseConfigured.value ?
 
 const saving = ref(false)
 const deleting = ref(false)
-const errorMessage = ref('')
+const { showSuccessToast, showErrorToast } = useAdminToast()
 
 const ArticleForm = defineComponent({
   inheritAttrs: false,
@@ -49,14 +53,13 @@ useSeoMeta({
   description: '在后台编辑已有文章。',
 })
 
-async function updateCurrentArticle(payload: ManagedArticlePayload) {
+async function updateCurrentArticle(payload: ManagedArticlePayload, options?: ArticleEditorSubmitOptions) {
   if (!databaseConfigured.value) {
-    errorMessage.value = databaseErrorMessage
+    showErrorToast('无法保存文章', databaseErrorMessage)
     return
   }
 
   saving.value = true
-  errorMessage.value = ''
 
   try {
     await $fetch(`/api/admin/articles/${id.value}`, {
@@ -64,11 +67,13 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
       body: payload,
     })
 
-    await router.push('/admin/articles')
+    showSuccessToast('文章已保存')
+
+    if (!options?.shortcut) {
+      await router.push('/admin/articles')
+    }
   } catch (error: unknown) {
-    errorMessage.value = typeof error === 'object' && error && 'message' in error
-      ? String((error as { message?: string }).message)
-      : '更新文章失败'
+    showErrorToast('更新文章失败', getRequestErrorMessage(error, '更新文章失败'))
   } finally {
     saving.value = false
   }
@@ -76,7 +81,7 @@ async function updateCurrentArticle(payload: ManagedArticlePayload) {
 
 async function removeCurrentArticle() {
   if (!databaseConfigured.value) {
-    errorMessage.value = databaseErrorMessage
+    showErrorToast('无法删除文章', databaseErrorMessage)
     return
   }
 
@@ -89,35 +94,28 @@ async function removeCurrentArticle() {
   }
 
   deleting.value = true
-  errorMessage.value = ''
 
   try {
     await $fetch(`/api/admin/articles/${id.value}`, { method: 'DELETE' })
+    showSuccessToast('文章已删除')
     await router.push('/admin/articles')
   } catch (error: unknown) {
-    errorMessage.value = typeof error === 'object' && error && 'message' in error
-      ? String((error as { message?: string }).message)
-      : '删除文章失败'
+    showErrorToast('删除文章失败', getRequestErrorMessage(error, '删除文章失败'))
   } finally {
     deleting.value = false
   }
 }
+
+watch(error, (value) => {
+  if (value && databaseConfigured.value) {
+    showErrorToast('文章加载失败', value.message)
+  }
+}, { immediate: true })
 </script>
 
 <template>
-  <div class="cms-page space-y-7">
-    <section>
-      <h1 class="cms-page-title">
-        编辑文章
-      </h1>
-      <p class="cms-page-subtitle">
-        调整标题、摘要、封面与正文内容，保存后会立即更新数据库记录。
-      </p>
-    </section>
-
-    <div v-if="errorMessage || error" class="rounded-2xl border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200">
-      {{ errorMessage || error?.message }}
-    </div>
+  <div class="cms-page cms-editor-page space-y-4">
+    <AdminPageHeader title="编辑文章"  />
 
     <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-5 py-12 text-center text-sm text-[var(--text-secondary)]">
       正在加载文章...

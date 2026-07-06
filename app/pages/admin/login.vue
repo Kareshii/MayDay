@@ -20,9 +20,29 @@ function normalizeAdminRedirect(value: unknown) {
   return value
 }
 
+function getLoginErrorMessage(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return '登录失败'
+  }
+
+  const responseError = error as {
+    data?: { message?: unknown }
+    message?: unknown
+    status?: unknown
+  }
+
+  const message = typeof responseError.data?.message === 'string'
+    ? responseError.data.message
+    : typeof responseError.message === 'string' ? responseError.message : '登录失败'
+
+  return message.includes('401') || responseError.status === 401
+    ? '管理员账号或密码错误。'
+    : message
+}
+
 const route = useRoute()
 const submitting = ref(false)
-const errorMessage = ref('')
+const { showErrorToast } = useAdminToast()
 const form = reactive({
   username: 'admin',
   password: '',
@@ -44,7 +64,6 @@ const redirectTarget = computed(() => normalizeAdminRedirect(route.query.redirec
 
 async function signIn() {
   submitting.value = true
-  errorMessage.value = ''
 
   try {
     await $fetch('/api/admin/login', {
@@ -53,12 +72,8 @@ async function signIn() {
     })
 
     await navigateTo(redirectTarget.value)
-  } catch (error: any) {
-    let msg = error?.data?.message || error?.message || '登录失败'
-    if (msg.includes('401') || error?.status === 401) {
-      msg = '管理员账号或密码错误。'
-    }
-    errorMessage.value = msg
+  } catch (error: unknown) {
+    showErrorToast('登录失败', getLoginErrorMessage(error))
   } finally {
     submitting.value = false
   }
@@ -66,8 +81,8 @@ async function signIn() {
 </script>
 
 <template>
-  <main class="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-10">
-    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,95,184,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(92,0,202,0.13),transparent_36%)]" />
+  <main class="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
+    <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.15),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(139,92,246,0.15),transparent_35%)]" />
     <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
     <UiCard class="relative w-full max-w-md border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-8">
@@ -88,13 +103,6 @@ async function signIn() {
         class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/12 dark:text-amber-200"
       >
         服务器还没有配置后台密码。先设置 `ADMIN_PASSWORD`，建议同时设置 `ADMIN_SESSION_SECRET`。
-      </div>
-
-      <div
-        v-else-if="errorMessage"
-        class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/12 dark:text-red-200"
-      >
-        {{ errorMessage }}
       </div>
 
       <form class="space-y-4" @submit.prevent="signIn">
@@ -129,10 +137,10 @@ async function signIn() {
           <Icon name="lucide:arrow-left" class="size-4" />
           返回前台
         </NuxtLink>
-        <button class="flex flex-row items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]" @click="refresh">
+        <UiButton variant="ghost" size="sm" class="h-auto px-0 text-[var(--text-secondary)] hover:bg-transparent hover:text-[var(--text-primary)]" @click="() => refresh()">
           <Icon name="lucide:refresh-cw" class="size-4" />
           刷新状态
-        </button>
+        </UiButton>
       </div>
       </div>
     </UiCard>

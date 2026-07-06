@@ -2,19 +2,46 @@
 import { useWindowScroll } from '@vueuse/core'
 import { primaryNavigation } from '@/utils/siteSections'
 
+interface NavbarSiteSettings {
+  siteName: string
+  siteLogo: string
+}
+
+interface NavbarSiteResponse {
+  site: NavbarSiteSettings
+}
+
 const route = useRoute()
 const { y } = useWindowScroll()
 const mobileOpen = ref(false)
 const heroNavbarOverlay = useState<boolean>('hero-navbar-overlay', () => false)
+const { data: siteConfig } = await useFetch<NavbarSiteResponse>('/api/site', {
+  key: 'navbar-site-config',
+  default: () => ({
+    site: {
+      siteName: 'mayday.life',
+      siteLogo: '',
+    },
+  }),
+})
 
 const navigation = [
   { title: '主页', path: '/' },
   ...primaryNavigation,
 ]
 
-const isTransparent = computed(() => (route.path === '/' || heroNavbarOverlay.value) && y.value < 24)
+const siteName = computed(() => siteConfig.value.site.siteName || 'mayday.life')
+const siteLogo = computed(() => siteConfig.value.site.siteLogo)
+const siteLogoFallback = computed(() => siteName.value.trim().slice(0, 1).toUpperCase() || 'M')
+const isTransparent = computed(() => {
+  if (route.path === '/') {
+    return y.value < 24
+  }
 
-watch(() => route.path, () => {
+  return heroNavbarOverlay.value && y.value < 24
+})
+
+watch(() => route.fullPath, () => {
   mobileOpen.value = false
 })
 
@@ -36,55 +63,82 @@ function navLinkClass(path: string) {
 </script>
 
 <template>
-  <header class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
-    :class="isTransparent ? 'border-b-0 bg-transparent' : 'border-b border-[var(--border)] bg-[var(--card)]/82 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.38)] backdrop-blur-xl'">
+  <header
+    class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
+    :class="isTransparent ? 'border-b-0 bg-transparent' : 'border-b border-[var(--border)] bg-[var(--card)] shadow-[0_24px_64px_-44px_rgba(15,23,42,0.38)]'"
+  >
     <div class="container" :class="{ 'pb-4': mobileOpen }">
       <div class="flex h-18 items-center justify-between gap-4 py-4">
         <NuxtLink to="/" class="group flex items-center gap-3 transition-opacity hover:opacity-85">
           <span
-            class="flex size-10 items-center justify-center rounded-full border text-xs font-semibold tracking-[0.3em] transition-colors"
-            :class="isTransparent ? 'border-white/20 bg-white/10 text-white' : 'border-[var(--border)] bg-black text-white dark:bg-white dark:text-black'">
-            M
+            class="flex size-10 items-center justify-center overflow-hidden rounded-full border text-xs font-semibold transition-colors"
+            :class="isTransparent ? 'border-white/20 bg-white/10 text-white' : 'border-[var(--border)] bg-black text-white dark:bg-white dark:text-black'"
+          >
+            <img
+              v-if="siteLogo"
+              :src="siteLogo"
+              :alt="siteName"
+              class="size-full object-cover"
+            >
+            <span v-else class="tracking-[0.3em]">
+              {{ siteLogoFallback }}
+            </span>
           </span>
           <span>
-            <span class="block text-[1.05rem] font-semibold tracking-[0.22em] uppercase"
-              :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'">
-              mayday.life
-            </span>
-            <span class="block text-[11px] tracking-[0.2em]"
-              :class="isTransparent ? 'text-white/56' : 'text-[var(--text-secondary)]'">
-              archive for the blue years
+            <span
+              class="block text-[1.05rem] font-semibold tracking-[0.22em] uppercase"
+              :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'"
+            >
+              {{ siteName }}
             </span>
           </span>
         </NuxtLink>
 
         <nav class="hidden items-center gap-2 lg:flex">
-          <NuxtLink v-for="link in navigation" :key="link.path" :to="link.path"
+          <NuxtLink
+            v-for="link in navigation"
+            :key="link.path"
+            :to="link.path"
             class="rounded-full px-3 py-2 text-sm font-medium transition-all duration-200"
-            :class="navLinkClass(link.path)">
+            :class="navLinkClass(link.path)"
+          >
             {{ link.title }}
           </NuxtLink>
         </nav>
 
         <div class="flex items-center gap-2">
           <ColorModeSwitch :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'" />
-          <button class="inline-flex size-10 items-center justify-center rounded-full border lg:hidden"
+          <button
+            class="inline-flex size-10 items-center justify-center rounded-full border lg:hidden"
             :class="isTransparent ? 'border-white/18 bg-white/10 text-white' : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)]'"
-            @click="mobileOpen = !mobileOpen">
+            @click="mobileOpen = !mobileOpen"
+          >
             <Icon :name="mobileOpen ? 'lucide:x' : 'lucide:menu'" class="size-5" />
           </button>
         </div>
       </div>
 
-      <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 -translate-y-2"
-        enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in"
-        leave-from-class="opacity-100 translate-y-0" leave-to-class="opacity-0 -translate-y-2">
-        <nav v-if="mobileOpen"
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0 -translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-2"
+      >
+        <nav
+          v-if="mobileOpen"
           class="rounded-[1.5rem] border p-3 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.48)] lg:hidden"
-          :class="isTransparent ? 'border-white/12 bg-slate-950/75 backdrop-blur-xl' : 'border-[var(--border)] bg-[var(--card)]'">
+          :class="isTransparent ? 'border-white/12 bg-slate-950/75 backdrop-blur-xl' : 'border-[var(--border)] bg-[var(--card)]'"
+        >
           <div class="grid grid-cols-2 gap-2">
-            <NuxtLink v-for="link in navigation" :key="link.path" :to="link.path"
-              class="rounded-2xl px-3 py-3 text-sm font-medium transition-all" :class="navLinkClass(link.path)">
+            <NuxtLink
+              v-for="link in navigation"
+              :key="link.path"
+              :to="link.path"
+              class="rounded-2xl px-3 py-3 text-sm font-medium transition-all"
+              :class="navLinkClass(link.path)"
+            >
               {{ link.title }}
             </NuxtLink>
           </div>

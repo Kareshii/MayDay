@@ -15,7 +15,7 @@ import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 
 type ArticleSummaryRecord = Pick<
   ArticleRecord,
-  'id' | 'slug' | 'title' | 'summary' | 'coverImage' | 'coverLayout' | 'published' | 'createdAt' | 'updatedAt'
+  'id' | 'slug' | 'title' | 'summary' | 'coverImage' | 'coverLayout' | 'published' | 'pinned' | 'createdAt' | 'updatedAt'
 >
 
 const articleCoverLayoutSet = new Set<ArticleCoverLayout>(ARTICLE_COVER_LAYOUTS)
@@ -41,6 +41,7 @@ function serializeArticleSummary(record: ArticleSummaryRecord): ManagedArticleSu
     coverImage: record.coverImage,
     coverLayout: normalizeCoverLayout(record.coverLayout),
     published: record.published,
+    pinned: record.pinned,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     path: `/detail/${record.slug}`,
@@ -75,6 +76,10 @@ async function ensureArticlesSchema() {
     await db.execute(sql.raw(`
       ALTER TABLE ${quotedTableName}
       ADD COLUMN IF NOT EXISTS cover_layout text NOT NULL DEFAULT '${defaultCoverLayout}'
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE ${quotedTableName}
+      ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false
     `))
     ensuredArticlesSchema.add(tableName)
   })().finally(() => {
@@ -118,6 +123,7 @@ function validatePayload(payload: Partial<ManagedArticlePayload>) {
     coverImage: String(payload.coverImage || '').trim(),
     coverLayout: normalizeCoverLayout(payload.coverLayout),
     published: payload.published === true,
+    pinned: payload.pinned === true,
     content,
   } satisfies ManagedArticlePayload
 }
@@ -151,11 +157,12 @@ export async function listAdminArticles() {
       coverImage: articles.coverImage,
       coverLayout: articles.coverLayout,
       published: articles.published,
+      pinned: articles.pinned,
       createdAt: articles.createdAt,
       updatedAt: articles.updatedAt,
     })
     .from(articles)
-    .orderBy(desc(articles.updatedAt))
+    .orderBy(desc(articles.pinned), desc(articles.updatedAt))
 
   return rows.map(serializeArticleSummary)
 }
@@ -173,12 +180,13 @@ export async function listPublicArticles() {
       coverImage: articles.coverImage,
       coverLayout: articles.coverLayout,
       published: articles.published,
+      pinned: articles.pinned,
       createdAt: articles.createdAt,
       updatedAt: articles.updatedAt,
     })
     .from(articles)
     .where(eq(articles.published, true))
-    .orderBy(desc(articles.updatedAt))
+    .orderBy(desc(articles.pinned), desc(articles.updatedAt))
 
   return rows.map(serializeArticleSummary)
 }
@@ -245,6 +253,7 @@ export async function createArticle(payload: ManagedArticlePayload) {
     coverLayout: article.coverLayout,
     content: article.content,
     published: article.published,
+    pinned: article.pinned,
     createdAt: now,
     updatedAt: now,
   }).returning()
@@ -277,6 +286,7 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
       coverLayout: article.coverLayout,
       content: article.content,
       published: article.published,
+      pinned: article.pinned,
       updatedAt: new Date(),
     })
     .where(eq(articles.id, id))
@@ -291,6 +301,40 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
 
   void existing
   return serializeArticle(rows[0])
+}
+
+export async function updateArticlePinned(id: string, pinned: boolean) {
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const rows = await db
+    .update(articles)
+    .set({
+      pinned,
+      updatedAt: new Date(),
+    })
+    .where(eq(articles.id, id))
+    .returning({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      summary: articles.summary,
+      coverImage: articles.coverImage,
+      coverLayout: articles.coverLayout,
+      published: articles.published,
+      pinned: articles.pinned,
+      createdAt: articles.createdAt,
+      updatedAt: articles.updatedAt,
+    })
+
+  if (!rows[0]) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Article not found',
+    })
+  }
+
+  return serializeArticleSummary(rows[0])
 }
 
 export async function deleteArticle(id: string) {
@@ -311,6 +355,7 @@ export async function getDashboardData() {
   const articles = await listAdminArticles()
   const published = articles.filter(article => article.published).length
   const drafts = articles.length - published
+  const pinned = articles.filter(article => article.pinned).length
 
   const monthMap = new Map<string, number>()
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'short' })
@@ -339,6 +384,7 @@ export async function getDashboardData() {
       total: articles.length,
       published,
       drafts,
+      pinned,
       latestUpdatedAt: articles[0]?.updatedAt || null,
     },
     byMonth,

@@ -12,6 +12,7 @@ const coverLayout = computed(() => props.article.coverLayout || DEFAULT_ARTICLE_
 const isTopHero = computed(() => coverLayout.value === 'top-hero')
 const isSplitLeft = computed(() => coverLayout.value === 'split-left')
 const coverImage = computed(() => props.article.coverImage || '/cover.jpg')
+const isHtmlContent = computed(() => /<\/?(?:a|article|blockquote|br|code|div|em|figure|figcaption|h[1-6]|hr|img|li|ol|p|pre|span|strong|table|tbody|td|th|thead|tr|ul)\b/i.test(props.article.content))
 </script>
 
 <template>
@@ -39,7 +40,7 @@ const coverImage = computed(() => props.article.coverImage || '/cover.jpg')
 
           <div class="mt-8 flex flex-wrap items-center gap-3 text-xs font-medium tracking-[0.18em] text-white/84">
             <span class="rounded-full border border-white/30 bg-white/8 px-3 py-2 backdrop-blur-sm">
-              /detail/{{ article.slug }}
+              {{ article.slug }}
             </span>
             <span class="rounded-full border border-white/30 bg-white/8 px-3 py-2 backdrop-blur-sm">
               {{ article.published ? 'Published' : 'Draft Preview' }}
@@ -51,7 +52,9 @@ const coverImage = computed(() => props.article.coverImage || '/cover.jpg')
 
     <div class="container">
       <div class="surface-card p-6 md:p-10">
-        <MDC :value="article.content" class="blog-content" />
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
+        <MDC v-else :value="article.content" class="blog-content" />
       </div>
     </div>
   </article>
@@ -84,10 +87,7 @@ const coverImage = computed(() => props.article.coverImage || '/cover.jpg')
 
           <div class="mt-8 flex flex-wrap items-center gap-3 text-xs font-medium tracking-[0.18em] text-[var(--text-secondary)]">
             <span class="rounded-full border border-[var(--border)] px-3 py-2">
-              /detail/{{ article.slug }}
-            </span>
-            <span class="rounded-full border border-[var(--border)] px-3 py-2">
-              {{ article.published ? 'Published' : 'Draft Preview' }}
+              {{ article.slug }}
             </span>
           </div>
         </div>
@@ -107,7 +107,9 @@ const coverImage = computed(() => props.article.coverImage || '/cover.jpg')
     </header>
 
     <div class="surface-card p-6 md:p-10">
-      <MDC :value="article.content" class="blog-content" />
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
+      <MDC v-else :value="article.content" class="blog-content" />
     </div>
   </article>
 </template>

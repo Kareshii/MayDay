@@ -34,10 +34,6 @@ const footerLinks = [
             </NuxtLink>
           </nav>
 
-          <div class="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-            <span>切换主题</span>
-            <ColorModeSwitch class="text-[var(--text-primary)]" />
-          </div>
         </div>
       </div>
     </div>
