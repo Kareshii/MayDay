@@ -25,7 +25,7 @@ const saving = ref(false)
 const statusFilter = ref<'all' | CommentStatus>('all')
 const { showSuccessToast, showErrorToast } = useAdminToast()
 
-const { data, pending, error, refresh } = await useFetch<{ comments: CommentItem[] }>('/api/admin/features')
+const { data, pending, error, refresh } = await useFetch<{ comments: CommentItem[] }>('/api/admin/features/comments')
 const comments = ref<CommentItem[]>([])
 
 watch(data, (value) => {

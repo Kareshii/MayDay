@@ -15,7 +15,7 @@ const {
   pending,
   savingSection,
   saveSection,
-} = await useAdminSiteSettings()
+} = await useAdminSiteSettings('seo')
 
 const seo = reactive<AdminSeoSettings>({
   title: '',

@@ -20,7 +20,7 @@ useSeoMeta({
 const saving = ref(false)
 const { showSuccessToast, showErrorToast } = useAdminToast()
 
-const { data, pending, error, refresh } = await useFetch<{ categories: CategoryItem[] }>('/api/admin/features')
+const { data, pending, error, refresh } = await useFetch<{ categories: CategoryItem[] }>('/api/admin/features/categories')
 const categories = ref<CategoryItem[]>([])
 
 watch(data, (value) => {

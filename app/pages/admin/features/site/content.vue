@@ -15,7 +15,7 @@ const {
   pending,
   savingSection,
   saveSection,
-} = await useAdminSiteSettings()
+} = await useAdminSiteSettings('content')
 
 const content = reactive<AdminContentSettings>({
   autoFetchRemoteImages: false,

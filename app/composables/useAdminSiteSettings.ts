@@ -1,3 +1,5 @@
+import type { Ref } from 'vue'
+
 export type AdminNavigationType = 'internal' | 'external'
 export type AdminThumbnailMode = 'contain' | 'longest' | 'cover'
 export type AdminSiteSettingSection = 'site' | 'seo' | 'navigation' | 'content'
@@ -54,11 +56,11 @@ export function createAdminLocalId(prefix: string) {
   return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-export async function useAdminSiteSettings() {
+export async function useAdminSiteSettings(section: AdminSiteSettingSection) {
   const savingSection = ref('')
-  const accountSaving = ref(false)
   const { showSuccessToast, showErrorToast } = useAdminToast()
-  const { data, pending, error, refresh } = await useFetch<AdminFeatureState>('/api/admin/features')
+  const { data, pending, error, refresh } = await useFetch(`/api/admin/features/${section}`)
+  const sectionData = data as Ref<Partial<AdminFeatureState> | null>
 
   async function saveSection(section: AdminSiteSettingSection, payload: unknown) {
     savingSection.value = section
@@ -78,6 +80,26 @@ export async function useAdminSiteSettings() {
       savingSection.value = ''
     }
   }
+
+  watch(error, (value) => {
+    if (value) {
+      showErrorToast('站点设置加载失败', value.message)
+    }
+  }, { immediate: true })
+
+  return {
+    data: sectionData,
+    pending,
+    error,
+    refresh,
+    savingSection,
+    saveSection,
+  }
+}
+
+export function useAdminAccountSettings() {
+  const accountSaving = ref(false)
+  const { showSuccessToast, showErrorToast } = useAdminToast()
 
   async function saveAccount(payload: {
     adminUsername: string
@@ -112,20 +134,8 @@ export async function useAdminSiteSettings() {
     }
   }
 
-  watch(error, (value) => {
-    if (value) {
-      showErrorToast('站点设置加载失败', value.message)
-    }
-  }, { immediate: true })
-
   return {
-    data,
-    pending,
-    error,
-    refresh,
-    savingSection,
     accountSaving,
-    saveSection,
     saveAccount,
   }
 }

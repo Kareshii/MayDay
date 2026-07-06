@@ -30,7 +30,7 @@ useSeoMeta({
 const saving = ref(false)
 const { showSuccessToast, showErrorToast } = useAdminToast()
 
-const { data, pending, error, refresh } = await useFetch<{ features: FeatureSettings }>('/api/admin/features')
+const { data, pending, error, refresh } = await useFetch<{ features: FeatureSettings }>('/api/admin/features/features')
 
 const features = reactive<FeatureSettings>({
   robotsText: '',

@@ -1,20 +1,18 @@
 import { isDatabaseConfigured } from '../../database/client'
 import { getDashboardData } from '../../utils/articleRepository'
-import { readAdminFeatureState } from '../../utils/adminFeatureStore'
-import { listContentImages } from '../../utils/contentImageStorage'
+import { readAdminExtensionStats } from '../../utils/adminFeatureStore'
+import { readCachedContentImageStats } from '../../utils/contentImageStorage'
 
 async function getAdminExtensionStats() {
-  const [features, images] = await Promise.all([
-    readAdminFeatureState(),
-    listContentImages(),
-  ])
+  const stats = await readAdminExtensionStats()
+  const images = readCachedContentImageStats()
 
   return {
-    categories: features.categories.length,
-    comments: features.comments.length,
-    pendingComments: features.comments.filter(comment => comment.status === 'pending').length,
-    images: images.length,
-    imageStorageSize: images.reduce((total, image) => total + image.size, 0),
+    categories: stats.categories,
+    comments: stats.comments,
+    pendingComments: stats.pendingComments,
+    images: images.count,
+    imageStorageSize: images.storageSize,
   }
 }
 
@@ -41,10 +39,13 @@ export default defineEventHandler(async () => {
     }
   }
 
-  const extensionStats = await getAdminExtensionStats()
+  const [dashboardData, extensionStats] = await Promise.all([
+    getDashboardData(),
+    getAdminExtensionStats(),
+  ])
 
   return {
-    ...await getDashboardData(),
+    ...dashboardData,
     extensionStats,
   }
 })

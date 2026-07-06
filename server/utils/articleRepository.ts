@@ -81,6 +81,22 @@ async function ensureArticlesSchema() {
       ALTER TABLE ${quotedTableName}
       ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false
     `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_published_idx`)}
+      ON ${quotedTableName} (published)
+    `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_pinned_idx`)}
+      ON ${quotedTableName} (pinned)
+    `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_created_at_idx`)}
+      ON ${quotedTableName} (created_at)
+    `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_updated_at_idx`)}
+      ON ${quotedTableName} (updated_at)
+    `))
     ensuredArticlesSchema.add(tableName)
   })().finally(() => {
     ensuringArticlesSchema.delete(tableName)
@@ -352,42 +368,72 @@ export async function deleteArticle(id: string) {
 }
 
 export async function getDashboardData() {
-  const articles = await listAdminArticles()
-  const published = articles.filter(article => article.published).length
-  const drafts = articles.length - published
-  const pinned = articles.filter(article => article.pinned).length
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const [statsRows, monthRows, recentRows] = await Promise.all([
+    db
+      .select({
+        total: sql<number>`count(*)::int`,
+        published: sql<number>`count(*) filter (where ${articles.published} = true)::int`,
+        drafts: sql<number>`count(*) filter (where ${articles.published} = false)::int`,
+        pinned: sql<number>`count(*) filter (where ${articles.pinned} = true)::int`,
+        latestUpdatedAt: sql<Date | null>`max(${articles.updatedAt})`,
+      })
+      .from(articles),
+    db
+      .select({
+        monthStart: sql<string>`to_char(date_trunc('month', ${articles.createdAt}), 'YYYY-MM-DD')`,
+        value: sql<number>`count(*)::int`,
+      })
+      .from(articles)
+      .groupBy(sql`date_trunc('month', ${articles.createdAt})`)
+      .orderBy(sql`date_trunc('month', ${articles.createdAt}) desc`)
+      .limit(6),
+    db
+      .select({
+        id: articles.id,
+        slug: articles.slug,
+        title: articles.title,
+        summary: articles.summary,
+        coverImage: articles.coverImage,
+        coverLayout: articles.coverLayout,
+        published: articles.published,
+        pinned: articles.pinned,
+        createdAt: articles.createdAt,
+        updatedAt: articles.updatedAt,
+      })
+      .from(articles)
+      .orderBy(desc(articles.pinned), desc(articles.updatedAt))
+      .limit(6),
+  ])
 
-  const monthMap = new Map<string, number>()
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'short' })
-
-  articles.forEach((article) => {
-    const date = new Date(article.createdAt)
-    const key = `${date.getFullYear()}-${date.getMonth()}`
-    monthMap.set(key, (monthMap.get(key) || 0) + 1)
-  })
-
-  const byMonth = Array.from(monthMap.entries())
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-6)
-    .map(([key, value]) => {
-      const parts = key.split('-').map(Number)
+  const byMonth = [...monthRows]
+    .reverse()
+    .map((row) => {
+      const parts = row.monthStart.split('-').map(Number)
       const year = parts[0] ?? 0
-      const month = parts[1] ?? 0
+      const month = (parts[1] ?? 1) - 1
       return {
         label: `${formatter.format(new Date(year, month, 1))} ${String(year).slice(-2)}`,
-        value,
+        value: Number(row.value) || 0,
       }
     })
+  const stats = statsRows[0]
+  const latestUpdatedAt = stats?.latestUpdatedAt
+    ? new Date(stats.latestUpdatedAt).toISOString()
+    : null
 
   return {
     stats: {
-      total: articles.length,
-      published,
-      drafts,
-      pinned,
-      latestUpdatedAt: articles[0]?.updatedAt || null,
+      total: Number(stats?.total) || 0,
+      published: Number(stats?.published) || 0,
+      drafts: Number(stats?.drafts) || 0,
+      pinned: Number(stats?.pinned) || 0,
+      latestUpdatedAt,
     },
     byMonth,
-    recentArticles: articles.slice(0, 6),
+    recentArticles: recentRows.map(serializeArticleSummary),
   }
 }

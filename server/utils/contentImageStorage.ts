@@ -38,6 +38,16 @@ interface R2Config {
 }
 
 let r2Client: S3Client | null = null
+let cachedContentImageStats: ContentImageStats | null = null
+let contentImageStatsFetchedAt = 0
+let contentImageStatsRefresh: Promise<ContentImageStats> | null = null
+
+const CONTENT_IMAGE_STATS_TTL = 5 * 60 * 1000
+
+export interface ContentImageStats {
+  count: number
+  storageSize: number
+}
 
 function getR2Config(): R2Config {
   const config = {
@@ -217,7 +227,51 @@ export async function listContentImages(): Promise<ContentImageItem[]> {
     continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined
   } while (continuationToken)
 
-  return images.sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
+  const sortedImages = images.sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
+  setCachedContentImageStats({
+    count: sortedImages.length,
+    storageSize: sortedImages.reduce((total, image) => total + image.size, 0),
+  })
+
+  return sortedImages
+}
+
+function setCachedContentImageStats(stats: ContentImageStats) {
+  cachedContentImageStats = stats
+  contentImageStatsFetchedAt = Date.now()
+}
+
+function isContentImageStatsFresh() {
+  return Boolean(cachedContentImageStats && Date.now() - contentImageStatsFetchedAt < CONTENT_IMAGE_STATS_TTL)
+}
+
+async function refreshContentImageStats() {
+  const images = await listContentImages()
+  return {
+    count: images.length,
+    storageSize: images.reduce((total, image) => total + image.size, 0),
+  }
+}
+
+export function readCachedContentImageStats(): ContentImageStats {
+  if (isContentImageStatsFresh()) {
+    return cachedContentImageStats!
+  }
+
+  if (!contentImageStatsRefresh) {
+    contentImageStatsRefresh = refreshContentImageStats()
+      .catch((error) => {
+        console.error('[content-images] stats refresh failed:', error)
+        const fallback = cachedContentImageStats || { count: 0, storageSize: 0 }
+        setCachedContentImageStats(fallback)
+        return fallback
+      })
+      .finally(() => {
+        contentImageStatsRefresh = null
+      })
+  }
+
+  return cachedContentImageStats || { count: 0, storageSize: 0 }
 }
 
 export async function saveContentImage(file: File) {
@@ -252,13 +306,22 @@ export async function saveContentImage(file: File) {
     CacheControl: config.cacheControl,
   }))
 
-  return {
+  const image = {
     name,
     url: getImageUrl(name),
     size: buffer.length,
     updatedAt: new Date().toISOString(),
     type: getImageType(name),
   } satisfies ContentImageItem
+
+  if (cachedContentImageStats) {
+    setCachedContentImageStats({
+      count: cachedContentImageStats.count + 1,
+      storageSize: cachedContentImageStats.storageSize + image.size,
+    })
+  }
+
+  return image
 }
 
 export async function deleteContentImage(name: string) {
@@ -269,4 +332,6 @@ export async function deleteContentImage(name: string) {
     Bucket: config.bucket,
     Key: getImageKey(name),
   }))
+
+  contentImageStatsFetchedAt = 0
 }

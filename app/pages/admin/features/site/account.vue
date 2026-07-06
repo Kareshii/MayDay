@@ -11,7 +11,7 @@ useSeoMeta({
 const {
   accountSaving,
   saveAccount,
-} = await useAdminSiteSettings()
+} = useAdminAccountSettings()
 
 const accountForm = reactive({
   adminUsername: '',

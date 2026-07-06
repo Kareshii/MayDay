@@ -15,7 +15,7 @@ const {
   pending,
   savingSection,
   saveSection,
-} = await useAdminSiteSettings()
+} = await useAdminSiteSettings('site')
 
 const site = reactive<AdminSiteSettings>({
   siteName: '',

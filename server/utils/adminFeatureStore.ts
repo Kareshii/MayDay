@@ -10,6 +10,7 @@ import {
   adminNavigation,
   adminSettings,
 } from '../database/schema'
+import { getConfiguredArticleTableName, getConfiguredDatabaseUrl } from './runtimeSetup'
 
 type NavigationType = 'internal' | 'external'
 type CommentStatus = 'pending' | 'approved' | 'spam'
@@ -139,6 +140,8 @@ const LEGACY_STORE_FILE = resolve(process.cwd(), '.data', 'admin-features.json')
 const MIGRATION_SETTING_KEY = 'admin_features_migrated_from_file'
 
 const nowIso = () => new Date().toISOString()
+let adminFeatureBootstrapPromise: Promise<void> | null = null
+let adminFeatureBootstrapKey: string | null = null
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   siteName: 'mayday.life',
@@ -389,6 +392,69 @@ function parseSettingValue<T>(value: string | undefined, fallback: T): T {
   } catch {
     return fallback
   }
+}
+
+function parseFeatureSettingRows(rows: { key: string, value: string }[]) {
+  const settings = new Map(rows.map(row => [row.key, row.value]))
+
+  return {
+    site: normalizeSiteSettings(parseSettingValue<Partial<SiteSettings>>(settings.get('site'), defaultState.site)),
+    seo: normalizeSeoSettings(parseSettingValue<Partial<SeoSettings>>(settings.get('seo'), defaultState.seo)),
+    content: normalizeContentSettings(parseSettingValue<Partial<ContentSettings>>(settings.get('content'), defaultState.content)),
+    features: normalizeFeatureSettings(parseSettingValue<Partial<FeatureSettings>>(
+      settings.get('features'),
+      defaultState.features,
+    )),
+  }
+}
+
+function serializeNavigationRows(rows: Array<typeof adminNavigation.$inferSelect>) {
+  return rows.length
+    ? rows.map((row, index) => normalizeNavigationItem({
+        id: row.id,
+        title: row.title,
+        path: row.path,
+        type: row.type as NavigationType,
+        parentId: row.parentId,
+        order: row.order,
+        enabled: row.enabled,
+      }, index))
+    : cloneDefaultState().navigation
+}
+
+function serializeCategoryRows(rows: Array<typeof adminCategories.$inferSelect>) {
+  return rows.map((row, index) => normalizeCategoryItem({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    parentId: row.parentId,
+    order: row.order,
+    description: row.description,
+  }, index))
+}
+
+function serializeCommentRows(rows: Array<typeof adminComments.$inferSelect>) {
+  return rows.map(row => normalizeCommentItem({
+    id: row.id,
+    author: row.author,
+    email: row.email,
+    articleSlug: row.articleSlug,
+    content: row.content,
+    status: row.status as CommentStatus,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  }))
+}
+
+function serializeFriendLinkRows(rows: Array<typeof adminFriendLinks.$inferSelect>) {
+  return rows.map((row, index) => normalizeFriendLinkItem({
+    id: row.id,
+    title: row.title,
+    url: row.url,
+    description: row.description,
+    order: row.order,
+    enabled: row.enabled,
+  }, index))
 }
 
 async function ensureAdminFeatureSchema() {
@@ -665,71 +731,45 @@ async function readStateFromDatabase() {
     db.select().from(adminFriendLinks).orderBy(asc(adminFriendLinks.order)),
   ])
 
-  const settings = new Map(settingsRows.map(row => [row.key, row.value]))
-  const features = normalizeFeatureSettings(parseSettingValue<Partial<FeatureSettings>>(
-    settings.get('features'),
-    defaultState.features,
-  ))
+  const settings = parseFeatureSettingRows(settingsRows)
 
   return normalizeState({
-    site: parseSettingValue<Partial<SiteSettings>>(settings.get('site'), defaultState.site),
-    seo: parseSettingValue<Partial<SeoSettings>>(settings.get('seo'), defaultState.seo),
-    content: parseSettingValue<Partial<ContentSettings>>(settings.get('content'), defaultState.content),
+    site: settings.site,
+    seo: settings.seo,
+    content: settings.content,
     features: {
-      ...features,
-      friendLinks: friendLinkRows.map(row => normalizeFriendLinkItem({
-        id: row.id,
-        title: row.title,
-        url: row.url,
-        description: row.description,
-        order: row.order,
-        enabled: row.enabled,
-      }, 0)),
+      ...settings.features,
+      friendLinks: serializeFriendLinkRows(friendLinkRows),
     },
-    navigation: navigationRows.length
-      ? navigationRows.map((row, index) => normalizeNavigationItem({
-          id: row.id,
-          title: row.title,
-          path: row.path,
-          type: row.type as NavigationType,
-          parentId: row.parentId,
-          order: row.order,
-          enabled: row.enabled,
-        }, index))
-      : defaultState.navigation,
-    categories: categoryRows.map((row, index) => normalizeCategoryItem({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      parentId: row.parentId,
-      order: row.order,
-      description: row.description,
-    }, index)),
-    comments: commentRows.map(row => normalizeCommentItem({
-      id: row.id,
-      author: row.author,
-      email: row.email,
-      articleSlug: row.articleSlug,
-      content: row.content,
-      status: row.status as CommentStatus,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
-    })),
+    navigation: serializeNavigationRows(navigationRows),
+    categories: serializeCategoryRows(categoryRows),
+    comments: serializeCommentRows(commentRows),
     updatedAt: nowIso(),
   })
 }
 
 async function ensureDefaultSettings() {
-  const state = await readStateFromDatabase()
-
-  await replaceSettings({
-    site: state.site,
-    seo: state.seo,
-    content: state.content,
-    features: mergeFeaturesForStorage(state.features),
-  })
-
   const db = useDatabase()
+  const rows = await db
+    .select({ key: adminSettings.key })
+    .from(adminSettings)
+    .where(inArray(adminSettings.key, SETTING_SECTIONS))
+
+  const existingKeys = new Set(rows.map(row => row.key))
+  const missingValues = SETTING_SECTIONS
+    .filter(key => !existingKeys.has(key))
+    .map(key => ({
+      key,
+      value: JSON.stringify(key === 'features'
+        ? mergeFeaturesForStorage(defaultState.features)
+        : defaultState[key]),
+      updatedAt: new Date(),
+    }))
+
+  if (missingValues.length) {
+    await db.insert(adminSettings).values(missingValues).onConflictDoNothing()
+  }
+
   const navigationCount = await db.select({ count: sql<number>`count(*)::int` }).from(adminNavigation)
 
   if (!navigationCount[0]?.count) {
@@ -737,16 +777,147 @@ async function ensureDefaultSettings() {
   }
 }
 
+function getAdminFeatureBootstrapKey() {
+  return `${getConfiguredDatabaseUrl() || ''}::${getConfiguredArticleTableName()}`
+}
+
+async function ensureAdminFeatureStoreReady() {
+  const bootstrapKey = getAdminFeatureBootstrapKey()
+
+  if (!adminFeatureBootstrapPromise || adminFeatureBootstrapKey !== bootstrapKey) {
+    adminFeatureBootstrapKey = bootstrapKey
+    adminFeatureBootstrapPromise = (async () => {
+      await ensureAdminFeatureSchema()
+      await migrateLegacyFileIfNeeded()
+      await ensureDefaultSettings()
+    })().catch((error) => {
+      adminFeatureBootstrapPromise = null
+      adminFeatureBootstrapKey = null
+      throw error
+    })
+  }
+
+  await adminFeatureBootstrapPromise
+}
+
 export async function readAdminFeatureState() {
-  await ensureAdminFeatureSchema()
-  await migrateLegacyFileIfNeeded()
-  await ensureDefaultSettings()
+  await ensureAdminFeatureStoreReady()
   return await readStateFromDatabase()
 }
 
+export async function readAdminSettingSections() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const [settingsRows, navigationRows] = await Promise.all([
+    db
+      .select()
+      .from(adminSettings)
+      .where(inArray(adminSettings.key, ['site', 'seo', 'content'])),
+    db.select().from(adminNavigation).orderBy(asc(adminNavigation.order)),
+  ])
+  const settings = parseFeatureSettingRows(settingsRows)
+
+  return {
+    site: settings.site,
+    seo: settings.seo,
+    navigation: serializeNavigationRows(navigationRows),
+    content: settings.content,
+  }
+}
+
+export async function readAdminSiteSettings() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminSettings).where(eq(adminSettings.key, 'site')).limit(1)
+  const settings = parseFeatureSettingRows(rows)
+
+  return settings.site
+}
+
+export async function readAdminSeoSettings() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminSettings).where(eq(adminSettings.key, 'seo')).limit(1)
+  const settings = parseFeatureSettingRows(rows)
+
+  return settings.seo
+}
+
+export async function readAdminContentSettings() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminSettings).where(eq(adminSettings.key, 'content')).limit(1)
+  const settings = parseFeatureSettingRows(rows)
+
+  return settings.content
+}
+
+export async function readAdminNavigation() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminNavigation).orderBy(asc(adminNavigation.order))
+
+  return serializeNavigationRows(rows)
+}
+
+export async function readAdminCategories() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminCategories).orderBy(asc(adminCategories.order))
+
+  return serializeCategoryRows(rows)
+}
+
+export async function readAdminComments() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminComments).orderBy(sql`${adminComments.createdAt} desc`)
+
+  return serializeCommentRows(rows)
+}
+
+export async function readAdminFeatureSettings() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const [settingsRows, friendLinkRows] = await Promise.all([
+    db.select().from(adminSettings).where(eq(adminSettings.key, 'features')).limit(1),
+    db.select().from(adminFriendLinks).orderBy(asc(adminFriendLinks.order)),
+  ])
+  const settings = parseFeatureSettingRows(settingsRows)
+
+  return {
+    ...settings.features,
+    friendLinks: serializeFriendLinkRows(friendLinkRows),
+  }
+}
+
+export async function readAdminExtensionStats() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const [categoryCount, commentCount, pendingCommentCount] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(adminCategories),
+    db.select({ count: sql<number>`count(*)::int` }).from(adminComments),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(adminComments)
+      .where(eq(adminComments.status, 'pending')),
+  ])
+
+  return {
+    categories: categoryCount[0]?.count || 0,
+    comments: commentCount[0]?.count || 0,
+    pendingComments: pendingCommentCount[0]?.count || 0,
+  }
+}
+
+export async function initializeAdminFeatureStore() {
+  adminFeatureBootstrapPromise = null
+  adminFeatureBootstrapKey = null
+  await ensureAdminFeatureStoreReady()
+}
+
 export async function updateAdminFeatureSection<K extends AdminFeatureSection>(key: K, value: unknown) {
-  await ensureAdminFeatureSchema()
-  await migrateLegacyFileIfNeeded()
+  await ensureAdminFeatureStoreReady()
 
   const current = await readStateFromDatabase()
   const next = normalizeState({

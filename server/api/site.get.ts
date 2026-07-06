@@ -2,7 +2,8 @@ import { isDatabaseConfigured } from '../database/client'
 import {
   DEFAULT_SEO_SETTINGS,
   DEFAULT_SITE_SETTINGS,
-  readAdminFeatureState,
+  readAdminSeoSettings,
+  readAdminSiteSettings,
 } from '../utils/adminFeatureStore'
 
 export default defineEventHandler(async () => {
@@ -13,18 +14,21 @@ export default defineEventHandler(async () => {
     }
   }
 
-  const state = await readAdminFeatureState()
+  const [site, seo] = await Promise.all([
+    readAdminSiteSettings(),
+    readAdminSeoSettings(),
+  ])
 
   return {
     site: {
-      siteName: state.site.siteName,
-      siteLogo: state.site.siteLogo,
-      homeHeroTitleLine1: state.site.homeHeroTitleLine1,
-      homeHeroTitleLine2: state.site.homeHeroTitleLine2,
-      homeHeroSubtitle: state.site.homeHeroSubtitle,
-      siteEnabled: state.site.siteEnabled,
-      closedMessage: state.site.closedMessage,
+      siteName: site.siteName,
+      siteLogo: site.siteLogo,
+      homeHeroTitleLine1: site.homeHeroTitleLine1,
+      homeHeroTitleLine2: site.homeHeroTitleLine2,
+      homeHeroSubtitle: site.homeHeroSubtitle,
+      siteEnabled: site.siteEnabled,
+      closedMessage: site.closedMessage,
     },
-    seo: state.seo,
+    seo,
   }
 })

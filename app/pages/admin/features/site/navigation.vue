@@ -16,12 +16,12 @@ const {
   pending,
   savingSection,
   saveSection,
-} = await useAdminSiteSettings()
+} = await useAdminSiteSettings('navigation')
 
 const navigation = ref<AdminNavigationItem[]>([])
 
 watch(data, (value) => {
-  navigation.value = value?.navigation.map(item => ({ ...item })) || []
+  navigation.value = value?.navigation?.map(item => ({ ...item })) || []
 }, { immediate: true })
 
 function addNavigation() {

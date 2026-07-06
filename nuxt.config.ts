@@ -61,6 +61,12 @@ export default defineNuxtConfig({
   routeRules: {
     '/design': { ssr: false },
   },
+  nitro: {
+    replace: {
+      // Nitro 2.12's default replacement breaks generated names like window$1.
+      'typeof window': 'typeof window',
+    },
+  },
   alias: {
     '@/language': fileURLToPath(new URL('./app/language', import.meta.url)),
   },
