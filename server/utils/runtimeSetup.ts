@@ -6,14 +6,31 @@ import {
   timingSafeEqual,
 } from 'node:crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 
 const DEFAULT_ADMIN_USERNAME = 'admin'
 const DEFAULT_ARTICLES_TABLE = 'articles'
 const DEFAULT_LOCAL_HOST = '127.0.0.1'
 const DEFAULT_REMOTE_PORT = 5432
-const RUNTIME_SETUP_FILE = resolve(process.cwd(), '.data', 'runtime-setup.json')
-const RUNTIME_SETUP_KEY_FILE = resolve(process.cwd(), '.data', 'runtime-setup.key')
+
+function getRuntimeSetupDir() {
+  const configuredDir = process.env.RUNTIME_SETUP_DIR || process.env.MAYDAY_DATA_DIR
+
+  if (configuredDir) {
+    return resolve(configuredDir)
+  }
+
+  if (process.env.VERCEL) {
+    return resolve(tmpdir(), 'mayday.life', '.data')
+  }
+
+  return resolve(process.cwd(), '.data')
+}
+
+const RUNTIME_SETUP_DIR = getRuntimeSetupDir()
+const RUNTIME_SETUP_FILE = resolve(RUNTIME_SETUP_DIR, 'runtime-setup.json')
+const RUNTIME_SETUP_KEY_FILE = resolve(RUNTIME_SETUP_DIR, 'runtime-setup.key')
 
 export type DatabaseConnectionMode = 'local' | 'remote'
 
