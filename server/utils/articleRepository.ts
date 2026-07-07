@@ -1,6 +1,6 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
 import { createError } from 'h3'
-import { getArticlesTable, type ArticleRecord } from '../database/schema'
+import { articleViewEvents, getArticlesTable, type ArticleRecord } from '../database/schema'
 import { useDatabase } from '../database/client'
 import { getConfiguredArticleTableName } from './runtimeSetup'
 import {
@@ -15,7 +15,7 @@ import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 
 type ArticleSummaryRecord = Pick<
   ArticleRecord,
-  'id' | 'slug' | 'title' | 'summary' | 'coverImage' | 'coverLayout' | 'published' | 'pinned' | 'createdAt' | 'updatedAt'
+  'id' | 'slug' | 'title' | 'summary' | 'categoryId' | 'coverImage' | 'coverLayout' | 'viewCount' | 'published' | 'pinned' | 'createdAt' | 'updatedAt'
 >
 
 export interface PublicArticleSearchResult {
@@ -48,8 +48,10 @@ function serializeArticleSummary(record: ArticleSummaryRecord): ManagedArticleSu
     title: record.title,
     summary: record.summary,
     description: record.summary,
+    categoryId: record.categoryId,
     coverImage: record.coverImage,
     coverLayout: normalizeCoverLayout(record.coverLayout),
+    viewCount: Number(record.viewCount) || 0,
     published: record.published,
     pinned: record.pinned,
     createdAt: record.createdAt.toISOString(),
@@ -109,7 +111,24 @@ async function ensureArticlesSchema() {
     `))
     await db.execute(sql.raw(`
       ALTER TABLE ${quotedTableName}
+      ADD COLUMN IF NOT EXISTS category_id text NOT NULL DEFAULT ''
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE ${quotedTableName}
       ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false
+    `))
+    await db.execute(sql.raw(`
+      ALTER TABLE ${quotedTableName}
+      ADD COLUMN IF NOT EXISTS view_count integer NOT NULL DEFAULT 0
+    `))
+    await db.execute(sql.raw(`
+      CREATE TABLE IF NOT EXISTS article_view_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        article_id uuid NOT NULL,
+        visitor_hash text NOT NULL,
+        viewed_on text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
     `))
     await db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_published_idx`)}
@@ -120,12 +139,28 @@ async function ensureArticlesSchema() {
       ON ${quotedTableName} (pinned)
     `))
     await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_category_id_idx`)}
+      ON ${quotedTableName} (category_id)
+    `))
+    await db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_created_at_idx`)}
       ON ${quotedTableName} (created_at)
     `))
     await db.execute(sql.raw(`
       CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${tableName}_updated_at_idx`)}
       ON ${quotedTableName} (updated_at)
+    `))
+    await db.execute(sql.raw(`
+      CREATE UNIQUE INDEX IF NOT EXISTS article_view_events_unique_idx
+      ON article_view_events (article_id, visitor_hash, viewed_on)
+    `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS article_view_events_article_idx
+      ON article_view_events (article_id)
+    `))
+    await db.execute(sql.raw(`
+      CREATE INDEX IF NOT EXISTS article_view_events_viewed_on_idx
+      ON article_view_events (viewed_on)
     `))
     ensuredArticlesSchema.add(tableName)
   })().finally(() => {
@@ -164,20 +199,13 @@ export async function initializeArticleRepositorySchema() {
 
 function validatePayload(payload: Partial<ManagedArticlePayload>) {
   const title = String(payload.title || '').trim()
-  const slug = normalizeArticleSlug(String(payload.slug || title))
+  const slug = normalizeArticleSlug(String(payload.slug || title)) || `article-${Date.now()}`
   const content = String(payload.content || '').trim()
 
   if (!title) {
     throw createError({
       statusCode: 400,
       statusMessage: 'Title is required',
-    })
-  }
-
-  if (!slug) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Slug is required',
     })
   }
 
@@ -192,6 +220,7 @@ function validatePayload(payload: Partial<ManagedArticlePayload>) {
     title,
     slug,
     summary: String(payload.summary || '').trim(),
+    categoryId: String(payload.categoryId || '').trim(),
     coverImage: String(payload.coverImage || '').trim(),
     coverLayout: normalizeCoverLayout(payload.coverLayout),
     published: payload.published === true,
@@ -229,8 +258,10 @@ export async function listAdminArticles() {
       slug: articles.slug,
       title: articles.title,
       summary: articles.summary,
+      categoryId: articles.categoryId,
       coverImage: articles.coverImage,
       coverLayout: articles.coverLayout,
+      viewCount: articles.viewCount,
       published: articles.published,
       pinned: articles.pinned,
       createdAt: articles.createdAt,
@@ -252,8 +283,10 @@ export async function listPublicArticles() {
       slug: articles.slug,
       title: articles.title,
       summary: articles.summary,
+      categoryId: articles.categoryId,
       coverImage: articles.coverImage,
       coverLayout: articles.coverLayout,
+      viewCount: articles.viewCount,
       published: articles.published,
       pinned: articles.pinned,
       createdAt: articles.createdAt,
@@ -373,10 +406,12 @@ export async function createArticle(payload: ManagedArticlePayload) {
       title: article.title,
       summary: article.summary,
       coverImage: article.coverImage,
+      categoryId: article.categoryId,
       coverLayout: article.coverLayout,
       content: article.content,
       published: article.published,
       pinned: article.pinned,
+      viewCount: 0,
       createdAt: now,
       updatedAt: now,
     }).returning()
@@ -406,6 +441,7 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
         slug: article.slug,
         title: article.title,
         summary: article.summary,
+        categoryId: article.categoryId,
         coverImage: article.coverImage,
         coverLayout: article.coverLayout,
         content: article.content,
@@ -443,8 +479,10 @@ export async function updateArticlePinned(id: string, pinned: boolean) {
       slug: articles.slug,
       title: articles.title,
       summary: articles.summary,
+      categoryId: articles.categoryId,
       coverImage: articles.coverImage,
       coverLayout: articles.coverLayout,
+      viewCount: articles.viewCount,
       published: articles.published,
       pinned: articles.pinned,
       createdAt: articles.createdAt,
@@ -459,6 +497,66 @@ export async function updateArticlePinned(id: string, pinned: boolean) {
   }
 
   return serializeArticleSummary(rows[0])
+}
+
+export async function recordPublicArticleView(slug: string, visitorHash: string, viewedOn: string) {
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const articleRows = await db
+    .select({
+      id: articles.id,
+      viewCount: articles.viewCount,
+    })
+    .from(articles)
+    .where(and(eq(articles.slug, slug), eq(articles.published, true)))
+    .limit(1)
+  const article = articleRows[0]
+
+  if (!article) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Article not found',
+    })
+  }
+
+  const insertedRows = await db
+    .insert(articleViewEvents)
+    .values({
+      articleId: article.id,
+      visitorHash,
+      viewedOn,
+    })
+    .onConflictDoNothing({
+      target: [
+        articleViewEvents.articleId,
+        articleViewEvents.visitorHash,
+        articleViewEvents.viewedOn,
+      ],
+    })
+    .returning({ id: articleViewEvents.id })
+
+  if (!insertedRows[0]) {
+    return {
+      counted: false,
+      viewCount: Number(article.viewCount) || 0,
+    }
+  }
+
+  const rows = await db
+    .update(articles)
+    .set({
+      viewCount: sql`${articles.viewCount} + 1`,
+    })
+    .where(eq(articles.id, article.id))
+    .returning({
+      viewCount: articles.viewCount,
+    })
+
+  return {
+    counted: true,
+    viewCount: Number(rows[0]?.viewCount ?? article.viewCount + 1) || 0,
+  }
 }
 
 export async function deleteArticle(id: string) {
@@ -504,8 +602,10 @@ export async function getDashboardData() {
         slug: articles.slug,
         title: articles.title,
         summary: articles.summary,
+        categoryId: articles.categoryId,
         coverImage: articles.coverImage,
         coverLayout: articles.coverLayout,
+        viewCount: articles.viewCount,
         published: articles.published,
         pinned: articles.pinned,
         createdAt: articles.createdAt,

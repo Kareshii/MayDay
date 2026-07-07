@@ -10,8 +10,10 @@ export interface ManagedArticleSummary {
   title: string
   summary: string
   description: string
+  categoryId: string
   coverImage: string
   coverLayout: ArticleCoverLayout
+  viewCount: number
   published: boolean
   pinned: boolean
   createdAt: string
@@ -27,6 +29,7 @@ export interface ManagedArticlePayload {
   title: string
   slug: string
   summary: string
+  categoryId: string
   coverImage: string
   coverLayout: ArticleCoverLayout
   published: boolean

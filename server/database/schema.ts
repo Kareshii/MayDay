@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 import { getConfiguredArticleTableName } from '../utils/runtimeSetup'
 
 export interface ArticleRecord {
@@ -6,11 +6,13 @@ export interface ArticleRecord {
   slug: string
   title: string
   summary: string
+  categoryId: string
   coverImage: string
   coverLayout: string
   content: string
   published: boolean
   pinned: boolean
+  viewCount: number
   createdAt: Date
   updatedAt: Date
 }
@@ -93,20 +95,35 @@ function createArticlesTable(tableName: string) {
     slug: text('slug').notNull().unique(),
     title: text('title').notNull(),
     summary: text('summary').default('').notNull(),
+    categoryId: text('category_id').default('').notNull(),
     coverImage: text('cover_image').default('').notNull(),
     coverLayout: text('cover_layout').default('split-right').notNull(),
     content: text('content').notNull(),
     published: boolean('published').default(false).notNull(),
     pinned: boolean('pinned').default(false).notNull(),
+    viewCount: integer('view_count').default(0).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   }, table => [
     index(`${tableName}_slug_idx`).on(table.slug),
+    index(`${tableName}_category_id_idx`).on(table.categoryId),
     index(`${tableName}_published_idx`).on(table.published),
     index(`${tableName}_pinned_idx`).on(table.pinned),
     index(`${tableName}_updated_at_idx`).on(table.updatedAt),
   ])
 }
+
+const articleViewEvents = pgTable('article_view_events', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  articleId: uuid('article_id').notNull(),
+  visitorHash: text('visitor_hash').notNull(),
+  viewedOn: text('viewed_on').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, table => [
+  uniqueIndex('article_view_events_unique_idx').on(table.articleId, table.visitorHash, table.viewedOn),
+  index('article_view_events_article_idx').on(table.articleId),
+  index('article_view_events_viewed_on_idx').on(table.viewedOn),
+])
 
 export function getArticlesTable() {
   const tableName = getConfiguredArticleTableName()
@@ -127,6 +144,7 @@ export function getDatabaseSchema() {
     adminCategories,
     adminComments,
     adminFriendLinks,
+    articleViewEvents,
   }
 }
 
@@ -140,4 +158,5 @@ export {
   adminCategories,
   adminComments,
   adminFriendLinks,
+  articleViewEvents,
 }

@@ -9,6 +9,13 @@ import { normalizeArticleSlug } from '~~/shared/utils/articleSlug'
 import PostArticleDetail from '@/components/posts/PostArticleDetail.vue'
 import TinyMceEditor from '@/components/admin/TinyMceEditor.client.vue'
 
+interface CategoryItem {
+  id: string
+  name: string
+  parentId: string
+  order: number
+}
+
 const props = defineProps<{
   article?: ManagedArticle | null
   disabled?: boolean
@@ -58,6 +65,7 @@ const form = reactive<ManagedArticlePayload>({
   title: '',
   slug: '',
   summary: '',
+  categoryId: '',
   coverImage: '',
   coverLayout: DEFAULT_ARTICLE_COVER_LAYOUT,
   published: false,
@@ -65,10 +73,39 @@ const form = reactive<ManagedArticlePayload>({
   content: defaultContent,
 })
 
-const slugEdited = ref(false)
 const formDisabled = computed(() => Boolean(props.loading || props.disabled))
 const settingsOpen = ref(true)
 const layoutPreviewOpen = ref(false)
+const { data: categoryData, pending: categoriesPending } = useFetch<{ categories: CategoryItem[] }>('/api/admin/features/categories', {
+  default: () => ({ categories: [] }),
+})
+const categoryOptions = computed(() => {
+  const categories = [...(categoryData.value?.categories || [])]
+  const map = new Map<string, CategoryItem[]>()
+
+  categories.forEach((category) => {
+    const parentId = category.parentId || ''
+
+    if (!map.has(parentId)) {
+      map.set(parentId, [])
+    }
+
+    map.get(parentId)!.push(category)
+  })
+
+  map.forEach(group => group.sort((left, right) => left.order - right.order))
+
+  const result: Array<CategoryItem & { depth: number }> = []
+  const walk = (parentId: string, depth: number) => {
+    for (const category of map.get(parentId) || []) {
+      result.push({ ...category, depth })
+      walk(category.id, depth + 1)
+    }
+  }
+
+  walk('', 0)
+  return result
+})
 
 const previewTarget = computed(() => {
   if (!props.article?.slug) {
@@ -109,9 +146,11 @@ const previewArticle = computed<ManagedArticle>(() => {
     slug,
     title,
     summary,
+    categoryId: payload.categoryId,
     description: summary,
     coverImage: payload.coverImage || '/cover.jpg',
     coverLayout: payload.coverLayout,
+    viewCount: props.article?.viewCount || 0,
     published: payload.published,
     pinned: payload.pinned,
     content: payload.content || defaultContent,
@@ -121,31 +160,47 @@ const previewArticle = computed<ManagedArticle>(() => {
   }
 })
 
+function createPreviewHash(value: string) {
+  let hash = 0
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(31, hash) + value.charCodeAt(index) | 0
+  }
+
+  return hash.toString(36)
+}
+
+const previewRenderKey = computed(() => [
+  previewArticle.value.id,
+  previewArticle.value.slug,
+  previewArticle.value.title,
+  previewArticle.value.summary,
+  previewArticle.value.coverLayout,
+  previewArticle.value.coverImage,
+  previewArticle.value.content.length,
+  createPreviewHash(previewArticle.value.content),
+].join('|'))
+
 watch(
   () => props.article,
   (article) => {
     form.title = article?.title || ''
     form.slug = article?.slug || ''
     form.summary = article?.summary || ''
+    form.categoryId = article?.categoryId || ''
     form.coverImage = article?.coverImage || ''
     form.coverLayout = article?.coverLayout || DEFAULT_ARTICLE_COVER_LAYOUT
     form.published = article?.published ?? false
     form.pinned = article?.pinned ?? false
     form.content = article?.content || defaultContent
-    slugEdited.value = Boolean(article?.slug)
   },
   { immediate: true },
 )
 
 watch(() => form.title, (value) => {
-  if (!slugEdited.value) {
+  if (!props.article?.slug) {
     form.slug = normalizeArticleSlug(value)
   }
-})
-
-watch(() => form.slug, (value) => {
-  const normalized = normalizeArticleSlug(form.title)
-  slugEdited.value = value !== '' && value !== normalized
 })
 
 function buildPayload(): ManagedArticlePayload {
@@ -153,6 +208,7 @@ function buildPayload(): ManagedArticlePayload {
     title: form.title.trim(),
     slug: normalizeArticleSlug(form.slug || form.title),
     summary: form.summary.trim(),
+    categoryId: form.categoryId.trim(),
     coverImage: form.coverImage.trim(),
     coverLayout: form.coverLayout,
     published: form.published,
@@ -333,13 +389,25 @@ defineExpose({
                   </label>
 
                   <label class="block space-y-2">
-                    <span class="text-xs font-medium text-[var(--text-secondary)]">Slug</span>
-                    <UiInput
-                      v-model="form.slug"
-                      :disabled="formDisabled"
-                      placeholder="my-first-post"
-                    />
+                    <span class="text-xs font-medium text-[var(--text-secondary)]">分类</span>
+                    <select
+                      v-model="form.categoryId"
+                      :disabled="formDisabled || categoriesPending"
+                      class="h-10 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-65"
+                    >
+                      <option value="">
+                        {{ categoriesPending ? '正在加载分类...' : '未分类' }}
+                      </option>
+                      <option
+                        v-for="category in categoryOptions"
+                        :key="category.id"
+                        :value="category.id"
+                      >
+                        {{ `${'— '.repeat(category.depth)}${category.name}` }}
+                      </option>
+                    </select>
                   </label>
+
                   <label class="block space-y-2">
                     <span class="text-xs font-medium text-[var(--text-secondary)]">摘要</span>
                     <UiTextarea
@@ -459,7 +527,7 @@ defineExpose({
           </div>
 
           <div class="min-h-0 flex-1 overflow-auto py-6">
-            <PostArticleDetail :article="previewArticle" />
+            <PostArticleDetail :key="previewRenderKey" :article="previewArticle" />
           </div>
         </div>
       </div>

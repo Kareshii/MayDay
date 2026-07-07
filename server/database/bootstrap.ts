@@ -61,6 +61,7 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
   const client = createSetupDatabaseClient(connection)
   const articlesTable = quoteIdentifier(connection.articleTableName)
   const slugIndex = quoteIdentifier(`${connection.articleTableName}_slug_idx`)
+  const categoryIndex = quoteIdentifier(`${connection.articleTableName}_category_id_idx`)
   const publishedIndex = quoteIdentifier(`${connection.articleTableName}_published_idx`)
   const updatedAtIndex = quoteIdentifier(`${connection.articleTableName}_updated_at_idx`)
 
@@ -88,11 +89,13 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
         slug text NOT NULL UNIQUE,
         title text NOT NULL,
         summary text NOT NULL DEFAULT '',
+        category_id text NOT NULL DEFAULT '',
         cover_image text NOT NULL DEFAULT '',
         cover_layout text NOT NULL DEFAULT 'split-right',
         content text NOT NULL,
         published boolean NOT NULL DEFAULT false,
         pinned boolean NOT NULL DEFAULT false,
+        view_count integer NOT NULL DEFAULT 0,
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now()
       )
@@ -159,9 +162,22 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
       )
     `)
 
+    await client.unsafe(`
+      CREATE TABLE IF NOT EXISTS article_view_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        article_id uuid NOT NULL,
+        visitor_hash text NOT NULL,
+        viewed_on text NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `)
+
     await client.unsafe(`ALTER TABLE ${articlesTable} ADD COLUMN IF NOT EXISTS cover_layout text NOT NULL DEFAULT 'split-right'`)
+    await client.unsafe(`ALTER TABLE ${articlesTable} ADD COLUMN IF NOT EXISTS category_id text NOT NULL DEFAULT ''`)
     await client.unsafe(`ALTER TABLE ${articlesTable} ADD COLUMN IF NOT EXISTS pinned boolean NOT NULL DEFAULT false`)
+    await client.unsafe(`ALTER TABLE ${articlesTable} ADD COLUMN IF NOT EXISTS view_count integer NOT NULL DEFAULT 0`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${slugIndex} ON ${articlesTable} (slug)`)
+    await client.unsafe(`CREATE INDEX IF NOT EXISTS ${categoryIndex} ON ${articlesTable} (category_id)`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${publishedIndex} ON ${articlesTable} (published)`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${quoteIdentifier(`${connection.articleTableName}_pinned_idx`)} ON ${articlesTable} (pinned)`)
     await client.unsafe(`CREATE INDEX IF NOT EXISTS ${updatedAtIndex} ON ${articlesTable} (updated_at)`)
@@ -189,6 +205,9 @@ export async function bootstrapDatabase(connection: DatabaseConnectionConfig) {
     await client.unsafe('CREATE INDEX IF NOT EXISTS admin_comments_created_at_idx ON admin_comments (created_at)')
     await client.unsafe('CREATE INDEX IF NOT EXISTS admin_friend_links_order_idx ON admin_friend_links (sort_order)')
     await client.unsafe('CREATE INDEX IF NOT EXISTS admin_friend_links_enabled_idx ON admin_friend_links (enabled)')
+    await client.unsafe('CREATE UNIQUE INDEX IF NOT EXISTS article_view_events_unique_idx ON article_view_events (article_id, visitor_hash, viewed_on)')
+    await client.unsafe('CREATE INDEX IF NOT EXISTS article_view_events_article_idx ON article_view_events (article_id)')
+    await client.unsafe('CREATE INDEX IF NOT EXISTS article_view_events_viewed_on_idx ON article_view_events (viewed_on)')
   } catch (error) {
     throw toDatabaseSetupError(error, 'PostgreSQL initialization failed')
   } finally {

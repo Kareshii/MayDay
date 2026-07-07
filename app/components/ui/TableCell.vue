@@ -12,7 +12,7 @@ const props = defineProps<Props>()
 <template>
   <Primitive
     as="td"
-    :class="cn('px-4 py-4 align-top', props.class)"
+    :class="cn('px-4 py-2', props.class)"
   >
     <slot />
   </Primitive>

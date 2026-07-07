@@ -21,8 +21,11 @@ const lightboxImage = ref<LightboxImage | null>(null)
 const lightboxScale = ref(1)
 const lightboxOffset = reactive({ x: 0, y: 0 })
 const lightboxTransform = computed(() => `translate3d(${lightboxOffset.x}px, ${lightboxOffset.y}px, 0) scale(${lightboxScale.value})`)
+const backTopVisible = ref(false)
 let observer: IntersectionObserver | null = null
 let cleanupHandlers: Array<() => void> = []
+let backTopTarget: HTMLElement | Window | null = null
+let cleanupBackTopScroll: (() => void) | null = null
 const pointerPositions = new Map<number, { x: number, y: number }>()
 let panStart = { x: 0, y: 0 }
 let panOffsetStart = { x: 0, y: 0 }
@@ -157,6 +160,69 @@ function toggleLightboxZoom() {
   lightboxScale.value = 2
 }
 
+function getScrollParent(element: HTMLElement) {
+  let parent = element.parentElement
+
+  while (parent && parent !== document.body) {
+    const style = window.getComputedStyle(parent)
+    const canScroll = /(auto|scroll|overlay)/.test(style.overflowY)
+
+    if (canScroll && parent.scrollHeight > parent.clientHeight) {
+      return parent
+    }
+
+    parent = parent.parentElement
+  }
+
+  return window
+}
+
+function getScrollTop(target: HTMLElement | Window) {
+  return target === window ? window.scrollY : (target as HTMLElement).scrollTop
+}
+
+function updateBackTopVisibility() {
+  if (!backTopTarget) {
+    backTopVisible.value = false
+    return
+  }
+
+  backTopVisible.value = getScrollTop(backTopTarget) > 480
+}
+
+function cleanupBackTop() {
+  cleanupBackTopScroll?.()
+  cleanupBackTopScroll = null
+  backTopTarget = null
+  backTopVisible.value = false
+}
+
+async function setupBackTop() {
+  await nextTick()
+  cleanupBackTop()
+
+  const root = contentRef.value
+  if (!root || !import.meta.client) {
+    return
+  }
+
+  backTopTarget = getScrollParent(root)
+  backTopTarget.addEventListener('scroll', updateBackTopVisibility, { passive: true })
+  cleanupBackTopScroll = () => {
+    backTopTarget?.removeEventListener('scroll', updateBackTopVisibility)
+  }
+  updateBackTopVisibility()
+}
+
+function scrollBackToTop() {
+  const target = backTopTarget || window
+
+  target.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
+
 function cleanupEnhancements() {
   observer?.disconnect()
   observer = null
@@ -283,14 +349,17 @@ async function enhanceArticle() {
 
 watch(() => props.contentKey, () => {
   void enhanceArticle()
+  void setupBackTop()
 }, { immediate: true, flush: 'post' })
 
 onMounted(() => {
   void enhanceArticle()
+  void setupBackTop()
 })
 
 onBeforeUnmount(() => {
   cleanupEnhancements()
+  cleanupBackTop()
   resetLightboxTransform()
 })
 </script>
@@ -302,7 +371,7 @@ onBeforeUnmount(() => {
     </div>
 
     <aside v-if="tocItems.length" class="hidden xl:block">
-      <div class="sticky top-28 rounded-[1.4rem] border border-[var(--border)] bg-[color:var(--card)]/[0.82] p-5 shadow-[0_24px_64px_-52px_rgba(15,23,42,0.42)] backdrop-blur-xl">
+      <div class="sticky top-20 rounded-[4px 4px 0 0] border border-[var(--border)] bg-[color:var(--card)]/[0.82] p-5 shadow-[0_24px_64px_-52px_rgba(15,23,42,0.42)] backdrop-blur-xl">
         <p class="section-kicker">目录</p>
         <nav class="mt-4 space-y-1">
           <a
@@ -363,6 +432,28 @@ onBeforeUnmount(() => {
             @dblclick.stop="toggleLightboxZoom"
           >
         </div>
+      </Transition>
+    </Teleport>
+
+    <Teleport to="body">
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="translate-y-2 opacity-0"
+        enter-to-class="translate-y-0 opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="translate-y-0 opacity-100"
+        leave-to-class="translate-y-2 opacity-0"
+      >
+        <button
+          v-if="backTopVisible"
+          type="button"
+          class="fixed bottom-5 right-5 z-[90] flex size-11 items-center justify-center rounded-full border border-[var(--border)] bg-[color:var(--card)]/[0.9] text-[var(--text-primary)] shadow-[0_18px_50px_-34px_rgba(15,23,42,0.72)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:bottom-8 md:right-8"
+          aria-label="回到顶部"
+          title="回到顶部"
+          @click="scrollBackToTop"
+        >
+          <Icon name="lucide:arrow-up" class="size-5" />
+        </button>
       </Transition>
     </Teleport>
   </div>

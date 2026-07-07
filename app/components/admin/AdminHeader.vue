@@ -155,7 +155,7 @@ async function openSite() {
               <UiAvatar
                 as="button"
                 type="button"
-                class="size-8 cursor-pointer text-xs transition-colors hover:bg-[var(--surface-low)] data-[state=open]:bg-[var(--surface-low)]"
+                class="size-10 cursor-pointer text-xs transition-colors hover:bg-[var(--surface-low)] data-[state=open]:bg-[var(--surface-low)]"
               >
                 <UiAvatarFallback>{{ adminAvatarFallback }}</UiAvatarFallback>
               </UiAvatar>

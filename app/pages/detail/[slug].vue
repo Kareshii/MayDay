@@ -37,9 +37,50 @@ if (error.value) {
 
 const article = computed(() => data.value?.article)
 const heroNavbarOverlay = useState<boolean>('hero-navbar-overlay', () => false)
+const recordedViewSlug = ref('')
+
+function getVisitorId() {
+  const storageKey = 'mayday_article_visitor_id'
+  const existing = window.localStorage.getItem(storageKey)
+
+  if (existing) {
+    return existing
+  }
+
+  const next = globalThis.crypto?.randomUUID?.() || `visitor-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  window.localStorage.setItem(storageKey, next)
+  return next
+}
+
+async function recordArticleView() {
+  if (!article.value || preview.value || recordedViewSlug.value === article.value.slug) {
+    return
+  }
+
+  recordedViewSlug.value = article.value.slug
+
+  const response = await $fetch<{
+    counted: boolean
+    skipped?: boolean
+    viewCount: number | null
+  }>(`/api/posts/${encodeURIComponent(article.value.slug)}/view`, {
+    method: 'POST',
+    body: {
+      visitorId: getVisitorId(),
+    },
+  }).catch(() => null)
+
+  if (typeof response?.viewCount === 'number' && data.value?.article) {
+    data.value.article.viewCount = response.viewCount
+  }
+}
 
 watchEffect(() => {
   heroNavbarOverlay.value = article.value?.coverLayout === 'top-hero'
+})
+
+onMounted(() => {
+  void recordArticleView()
 })
 
 onUnmounted(() => {

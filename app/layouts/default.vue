@@ -7,6 +7,10 @@ const mainClass = computed(() => {
     return 'min-h-screen'
   }
 
+  if (route.path.startsWith('/detail/')) {
+    return 'min-h-screen pb-18'
+  }
+
   if (heroNavbarOverlay.value) {
     return 'min-h-screen pb-18'
   }
