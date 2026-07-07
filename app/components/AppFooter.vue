@@ -1,11 +1,32 @@
 <script setup lang="ts">
 import { primaryNavigation } from '@/utils/siteSections'
 
+interface FooterSiteSettings {
+  copyright: string
+  icpNumber: string
+}
+
+interface FooterSiteResponse {
+  site: FooterSiteSettings
+}
+
 const currentYear = new Date().getFullYear()
 const footerLinks = [
   ...primaryNavigation,
   { title: '内容管理', path: '/admin' },
 ]
+const { data: siteConfig } = await useFetch<FooterSiteResponse>('/api/site', {
+  key: 'footer-site-config',
+  default: () => ({
+    site: {
+      copyright: `Copyright © ${currentYear} mayday.life`,
+      icpNumber: '',
+    },
+  }),
+})
+
+const footerCopyright = computed(() => siteConfig.value.site.copyright || `Copyright © ${currentYear} mayday.life`)
+const icpNumber = computed(() => siteConfig.value.site.icpNumber)
 </script>
 
 <template>
@@ -18,8 +39,17 @@ const footerLinks = [
             把还保留的互动、收藏和文章入口，整理成可以反复回来的地方。
           </p>
           <p class="text-xs text-[var(--text-secondary)] lg:text-[13px]">
-            Copyright © {{ currentYear }} mayday.life
+            {{ footerCopyright }}
           </p>
+          <a
+            v-if="icpNumber"
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noreferrer"
+            class="mt-1 inline-block text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            {{ icpNumber }}
+          </a>
         </div>
 
         <div class="flex flex-col gap-2 lg:items-end">

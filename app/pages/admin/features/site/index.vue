@@ -20,6 +20,7 @@ const {
 const site = reactive<AdminSiteSettings>({
   siteName: '',
   siteLogo: '',
+  homeHeroImage: '',
   homeHeroTitleLine1: '',
   homeHeroTitleLine2: '',
   homeHeroSubtitle: '',
@@ -76,6 +77,15 @@ watch(data, (value) => {
           </div>
           <div class="md:w-1/2">
             <UiInput v-model="site.siteLogo" placeholder="https://..." />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+          <div class="md:w-1/3">
+            <h4 class="text-sm font-medium text-[var(--text-primary)]">首页首屏图片 URL</h4>
+          </div>
+          <div class="md:w-1/2">
+            <UiInput v-model="site.homeHeroImage" placeholder="/cover.jpg" />
           </div>
         </div>
 

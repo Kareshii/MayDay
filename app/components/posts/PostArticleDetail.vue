@@ -3,6 +3,7 @@ import {
   DEFAULT_ARTICLE_COVER_LAYOUT,
   type ManagedArticle,
 } from '~~/shared/types/articles'
+import ArticleReadingEnhancer from './ArticleReadingEnhancer.vue'
 
 const props = defineProps<{
   article: ManagedArticle
@@ -51,15 +52,15 @@ const isHtmlContent = computed(() => /<\/?(?:a|article|blockquote|br|code|div|em
     </header>
 
     <div class="container">
-      <div class="surface-card p-6 md:p-10">
+      <ArticleReadingEnhancer :content-key="article.id">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
         <MDC v-else :value="article.content" class="blog-content" />
-      </div>
+      </ArticleReadingEnhancer>
     </div>
   </article>
 
-  <article v-else class="container space-y-8">
+  <article v-else class="container space-y-8 mt-8">
     <header class="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
       <div class="grid gap-6 p-6 md:p-10 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
         <div
@@ -106,10 +107,10 @@ const isHtmlContent = computed(() => /<\/?(?:a|article|blockquote|br|code|div|em
       </div>
     </header>
 
-    <div class="surface-card p-6 md:p-10">
+    <ArticleReadingEnhancer :content-key="article.id">
       <!-- eslint-disable-next-line vue/no-v-html -->
       <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
       <MDC v-else :value="article.content" class="blog-content" />
-    </div>
+    </ArticleReadingEnhancer>
   </article>
 </template>

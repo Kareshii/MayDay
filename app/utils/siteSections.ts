@@ -20,24 +20,12 @@ export const siteSections: SiteSection[] = [
     navTitle: '主页',
     title: '纯真之后，继续唱',
     eyebrow: 'MAYDAY ARCHIVE',
-    description: '把测验、文章、收藏和互动页面收进同一座五月天档案馆。',
+    description: '把文章、收藏和互动页面收进同一座五月天档案馆。',
     image: coverImage,
     badgeClass: 'border-white/20 bg-white/10 text-white/80',
     overlayClass: 'from-slate-950/88 via-slate-950/58 to-slate-950/30',
     cardClass:
       'hover:border-cyan-400/45 hover:shadow-[0_28px_90px_-55px_rgba(34,211,238,0.8)]',
-  },
-  {
-    path: '/quiz',
-    navTitle: '测验',
-    title: '五月天知识测验',
-    eyebrow: 'QUIZ',
-    description: '不是一篇文章，而是一场能立刻参与的测试，看看你到底有多铁。',
-    image: coverImage,
-    badgeClass: 'border-violet-200/30 bg-violet-100/15 text-violet-50',
-    overlayClass: 'from-[#110b1e]/94 via-[#312e81]/60 to-[#8b5cf6]/18',
-    cardClass:
-      'hover:border-violet-300/40 hover:shadow-[0_28px_90px_-55px_rgba(139,92,246,0.72)]',
   },
   {
     path: '/posts',
@@ -84,7 +72,7 @@ export const primaryNavigation = siteSections.filter(section => section.path !==
 
 export const showcaseSections = siteSections.filter(section => section.path !== '/')
 
-export const featuredShowcase = showcaseSections.find(section => section.path === '/quiz') ?? showcaseSections[0]
+export const featuredShowcase = showcaseSections[0]
 
 export function getSiteSection(path: string) {
   return siteSections.find(section => section.path === path)

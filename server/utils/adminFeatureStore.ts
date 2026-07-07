@@ -19,6 +19,7 @@ type ThumbnailMode = 'contain' | 'longest' | 'cover'
 export interface SiteSettings {
   siteName: string
   siteLogo: string
+  homeHeroImage: string
   homeHeroTitleLine1: string
   homeHeroTitleLine2: string
   homeHeroSubtitle: string
@@ -146,6 +147,7 @@ let adminFeatureBootstrapKey: string | null = null
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   siteName: 'mayday.life',
   siteLogo: '',
+  homeHeroImage: '/cover.jpg',
   homeHeroTitleLine1: 'Hi，Kareshi',
   homeHeroTitleLine2: '继续唱。',
   homeHeroSubtitle: '星星在闪烁，你会怎么说。',
@@ -260,8 +262,11 @@ function normalizeSiteSettings(input: Partial<SiteSettings> = {}): SiteSettings 
   return {
     siteName: normalizeString(input.siteName) || DEFAULT_SITE_SETTINGS.siteName,
     siteLogo: normalizeString(input.siteLogo),
+    homeHeroImage: normalizeString(input.homeHeroImage) || DEFAULT_SITE_SETTINGS.homeHeroImage,
     homeHeroTitleLine1: normalizeString(input.homeHeroTitleLine1) || DEFAULT_SITE_SETTINGS.homeHeroTitleLine1,
-    homeHeroTitleLine2: normalizeString(input.homeHeroTitleLine2) || DEFAULT_SITE_SETTINGS.homeHeroTitleLine2,
+    homeHeroTitleLine2: input.homeHeroTitleLine2 === undefined
+      ? DEFAULT_SITE_SETTINGS.homeHeroTitleLine2
+      : normalizeString(input.homeHeroTitleLine2),
     homeHeroSubtitle: normalizeString(input.homeHeroSubtitle) || DEFAULT_SITE_SETTINGS.homeHeroSubtitle,
     icpNumber: normalizeString(input.icpNumber),
     copyright: normalizeString(input.copyright) || DEFAULT_SITE_SETTINGS.copyright,

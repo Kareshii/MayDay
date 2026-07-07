@@ -7,6 +7,7 @@ export type AdminSiteSettingSection = 'site' | 'seo' | 'navigation' | 'content'
 export interface AdminSiteSettings {
   siteName: string
   siteLogo: string
+  homeHeroImage: string
   homeHeroTitleLine1: string
   homeHeroTitleLine2: string
   homeHeroSubtitle: string

@@ -109,7 +109,7 @@ watch(error, (value) => {
                 流量来源洞察
               </p>
               <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                以最近文章发布量模拟趋势条形图
+                以最近文章发布量模拟来源构成
               </p>
             </div>
             <UiBadge variant="secondary">

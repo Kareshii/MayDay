@@ -6,8 +6,9 @@ import { getConfiguredArticleTableName, getConfiguredDatabaseUrl } from '../util
 
 function createDatabase(databaseUrl: string) {
   const client = postgres(databaseUrl, {
-    max: 1,
+    max: 5,
     prepare: false,
+    onnotice: () => {},
   })
 
   return drizzle(client, { schema: getDatabaseSchema() })

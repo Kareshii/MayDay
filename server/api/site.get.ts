@@ -23,9 +23,12 @@ export default defineEventHandler(async () => {
     site: {
       siteName: site.siteName,
       siteLogo: site.siteLogo,
+      homeHeroImage: site.homeHeroImage,
       homeHeroTitleLine1: site.homeHeroTitleLine1,
       homeHeroTitleLine2: site.homeHeroTitleLine2,
       homeHeroSubtitle: site.homeHeroSubtitle,
+      icpNumber: site.icpNumber,
+      copyright: site.copyright,
       siteEnabled: site.siteEnabled,
       closedMessage: site.closedMessage,
     },

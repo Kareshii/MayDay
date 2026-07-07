@@ -11,7 +11,6 @@ export const useMaydayData = () => {
   const lyrics = computed(() => maydayData.lyrics)
   const countdowns = computed(() => maydayData.countdowns)
   const fanCreations = computed(() => maydayData.fanCreations)
-  const quizQuestions = computed(() => maydayData.quizQuestions)
   const messages = computed(() => maydayData.messages)
 
   // 获取按年代分组的歌曲
@@ -65,7 +64,6 @@ export const useMaydayData = () => {
     lyrics,
     countdowns,
     fanCreations,
-    quizQuestions,
     messages,
     
     // 计算属性

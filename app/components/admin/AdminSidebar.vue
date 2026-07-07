@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useElementSize, useScroll } from '@vueuse/core'
+
 const route = useRoute()
 
 const props = defineProps<{
@@ -15,6 +17,7 @@ type NavItem = {
   title: string
   to: string
   icon: string
+  exact?: boolean
   children?: NavItem[]
 }
 
@@ -44,7 +47,7 @@ const navItems: NavItem[] = [
     to: '/admin/features/site',
     icon: 'lucide:sliders-horizontal',
     children: [
-      { title: '全局设置', to: '/admin/features/site', icon: 'lucide:globe-2' },
+      { title: '全局设置', to: '/admin/features/site', icon: 'lucide:globe-2', exact: true },
       { title: 'SEO 设置', to: '/admin/features/site/seo', icon: 'lucide:search' },
       { title: '导航设置', to: '/admin/features/site/navigation', icon: 'lucide:menu' },
       { title: '内容设置', to: '/admin/features/site/content', icon: 'lucide:image' },
@@ -56,6 +59,12 @@ const navItems: NavItem[] = [
 ]
 
 const expandedMenus = ref<Record<string, boolean>>({})
+const navMaskRef = useTemplateRef<HTMLElement>('navMaskRef')
+const navScrollRef = useTemplateRef<HTMLElement>('navScrollRef')
+const { arrivedState } = useScroll(navScrollRef)
+const { width: navMaskWidth, height: navMaskHeight } = useElementSize(navMaskRef)
+const showNavMaskStart = computed(() => !arrivedState.top)
+const showNavMaskEnd = computed(() => !arrivedState.bottom)
 
 function parseTo(to: string) {
   const [path, queryString = ''] = to.split('?')
@@ -67,11 +76,15 @@ function parseTo(to: string) {
   }
 }
 
-function isActive(to: string) {
+function isActive(to: string, exact = false) {
   const target = parseTo(to)
 
   if (target.status) {
     return route.path === target.path && route.query.status === target.status
+  }
+
+  if (exact) {
+    return route.path === target.path
   }
 
   return target.path === '/admin'
@@ -80,7 +93,7 @@ function isActive(to: string) {
 }
 
 function isGroupActive(item: NavItem): boolean {
-  return isActive(item.to) || Boolean(item.children?.some(child => isGroupActive(child)))
+  return isActive(item.to, item.exact) || Boolean(item.children?.some(child => isGroupActive(child)))
 }
 
 function getItemKey(item: NavItem, parents: string[] = []) {
@@ -112,6 +125,12 @@ function toggleMenu(key: string) {
   }
 }
 
+function refreshNavMask() {
+  void nextTick(() => {
+    navScrollRef.value?.dispatchEvent(new Event('scroll'))
+  })
+}
+
 watch(
   () => route.fullPath,
   () => {
@@ -125,6 +144,12 @@ watch(
   },
   { immediate: true },
 )
+
+watch([navMaskWidth, navMaskHeight, () => props.collapsed, expandedMenus], refreshNavMask, {
+  deep: true,
+})
+
+onMounted(refreshNavMask)
 </script>
 
 <template>
@@ -150,7 +175,7 @@ watch(
       : '-translate-x-full pointer-events-none lg:pointer-events-auto lg:translate-x-0'"
   >
     <div
-      class="flex h-full min-h-0 flex-col overflow-hidden border-r border-[var(--border-soft)] bg-[var(--surface-card)] p-4 shadow-none transition-[padding] duration-200"
+      class="flex h-full min-h-0 flex-col overflow-hidden border-r border-[var(--border-soft)] bg-[var(--surface-card)] py-4 px-2 shadow-none transition-[padding] duration-200"
       :class="props.collapsed ? 'lg:px-3 lg:py-4' : ''"
     >
       <div class="flex items-center gap-2">
@@ -183,24 +208,36 @@ watch(
         </UiButton>
       </div>
 
-      <nav class="mt-8 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1 [scrollbar-width:thin]">
-        <AdminSidebarNavItem
-          v-for="item in navItems"
-          :key="getItemKey(item)"
-          :item="item"
-          :item-key="getItemKey(item)"
-          :expanded-keys="expandedMenus"
-          :collapsed="props.collapsed"
-          @close="emit('close')"
-          @toggle="toggleMenu"
-        />
-      </nav>
+      <div
+        ref="navMaskRef"
+        class="cms-sidebar-scroll-mask mt-8 min-h-0 flex-1"
+        :class="{
+          'is-start-visible': showNavMaskStart,
+          'is-end-visible': showNavMaskEnd,
+        }"
+      >
+        <nav
+          ref="navScrollRef"
+          class="cms-sidebar-nav-scroll h-full min-h-0 space-y-2 overflow-y-auto overscroll-contain py-2"
+        >
+          <AdminSidebarNavItem
+            v-for="item in navItems"
+            :key="getItemKey(item)"
+            :item="item"
+            :item-key="getItemKey(item)"
+            :expanded-keys="expandedMenus"
+            :collapsed="props.collapsed"
+            @close="emit('close')"
+            @toggle="toggleMenu"
+          />
+        </nav>
+      </div>
 
       <UiButton
         variant="ghost"
         size="icon"
         class="mt-4 hidden shrink-0 border border-[var(--border-soft)] bg-[var(--surface-card)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] lg:inline-flex"
-        :class="props.collapsed ? 'lg:self-center' : 'lg:self-start'"
+        :class="props.collapsed ? 'lg:self-center' : 'lg:self-end'"
         :aria-label="props.collapsed ? '展开侧边栏' : '收起侧边栏'"
         :title="props.collapsed ? '展开侧边栏' : '收起侧边栏'"
         @click="emit('toggleCollapse')"
@@ -210,3 +247,47 @@ watch(
     </div>
   </aside>
 </template>
+
+<style scoped>
+.cms-sidebar-scroll-mask {
+  --mask-scroll-container-gradient-color: var(--surface-card);
+  position: relative;
+  overflow: hidden;
+}
+
+.cms-sidebar-scroll-mask::before,
+.cms-sidebar-scroll-mask::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  z-index: 1;
+  height: 3rem;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.cms-sidebar-scroll-mask::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--mask-scroll-container-gradient-color), transparent);
+}
+
+.cms-sidebar-scroll-mask::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--mask-scroll-container-gradient-color), transparent);
+}
+
+.cms-sidebar-scroll-mask.is-start-visible::before,
+.cms-sidebar-scroll-mask.is-end-visible::after {
+  opacity: 1;
+}
+
+.cms-sidebar-nav-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.cms-sidebar-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+</style>

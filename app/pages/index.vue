@@ -6,6 +6,7 @@ import { mojoItems } from '@/utils/mojoData'
 
 interface PublicSiteSettings {
   siteName: string
+  homeHeroImage: string
   homeHeroTitleLine1: string
   homeHeroTitleLine2: string
   homeHeroSubtitle: string
@@ -26,7 +27,7 @@ definePageMeta({
   layout: 'full-width',
 })
 
-const { countdowns, quizQuestions } = useMaydayData()
+const { countdowns } = useMaydayData()
 const { y } = useWindowScroll()
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
@@ -34,32 +35,33 @@ const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
   default: () => ({
     site: {
       siteName: 'mayday.life',
+      homeHeroImage: '/cover.jpg',
       homeHeroTitleLine1: 'Hi，Kareshi',
       homeHeroTitleLine2: '继续唱。',
       homeHeroSubtitle: '星星在闪烁，你会怎么说。',
     },
     seo: {
       title: 'Hi,',
-      description: '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
+      description: '一个用 Vue 写成的五月天档案馆首页，把文章、收藏和互动页面重新编排成 blog-next 风格。',
       keywords: 'mayday, 五月天, blog',
     },
   }),
 })
 
 const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
-const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 || '继续唱。')
+const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 ?? '继续唱。')
 const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
+const heroImage = computed(() => siteConfig.value.site.homeHeroImage || '/cover.jpg')
 
 useSeoMeta({
   title: () => siteConfig.value.seo.title || siteConfig.value.site.siteName || 'Hi,',
-  description: () => siteConfig.value.seo.description || '一个用 Vue 写成的五月天档案馆首页，把测验、文章、收藏和互动页面重新编排成 blog-next 风格。',
+  description: () => siteConfig.value.seo.description || '一个用 Vue 写成的五月天档案馆首页，把文章、收藏和互动页面重新编排成 blog-next 风格。',
   keywords: () => siteConfig.value.seo.keywords,
 })
 
 const statTargets = computed(() => [
   { label: 'SECTIONS', value: showcaseSections.length },
   { label: 'COUNTDOWNS', value: countdowns.value.length },
-  { label: 'QUIZ', value: quizQuestions.value.length },
   { label: 'MOJOS', value: mojoItems.length },
 ])
 
@@ -106,10 +108,6 @@ const rollCueEnter = computed(() => (prefersReducedMotion.value
 
 const animatedStats = ref(statTargets.value.map(() => 0))
 let statsRaf = 0
-
-function formatStat(value: number) {
-  return value.toString().padStart(2, '0')
-}
 
 function animateStats() {
   const targets = statTargets.value.map(item => item.value)
@@ -195,7 +193,7 @@ onBeforeUnmount(() => {
   <div class="relative overflow-hidden">
     <section class="relative h-[100svh] overflow-hidden">
       <img
-        src="/cover.jpg"
+        :src="heroImage"
         alt="Mayday cover"
         class="hero-parallax-layer absolute inset-x-0 -top-[12%] h-[116%] w-full object-cover"
         :style="heroImageStyle"
@@ -207,14 +205,11 @@ onBeforeUnmount(() => {
 
       <div class="container relative z-10 flex h-full flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
         <div class="max-w-4xl space-y-6">
-          <span class="hero-entrance inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-[0.24em] text-white/72 backdrop-blur-sm" style="--enter-delay: 60ms">
-            <span class="size-1.5 rounded-full bg-white/60" />
-            MAYDAY ARCHIVE
-          </span>
 
-          <h1 class="hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
+
+          <h1 class="mt-4 hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
             <span class="glitch-text block" :data-text="heroTitleLine1">{{ heroTitleLine1 }}</span>
-            <span class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
+            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
           </h1>
 
           <div class="hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">
@@ -223,42 +218,6 @@ onBeforeUnmount(() => {
             </p>
           </div>
 
-          <div class="mt-10 grid max-w-3xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div
-              v-for="(item, index) in statTargets"
-              :key="item.label"
-              class="hero-entrance rounded-[1.6rem] border border-white/12 bg-white/7 px-5 py-5 backdrop-blur-sm"
-              :style="{ '--enter-delay': `${420 + index * 90}ms` }"
-            >
-              <div class="text-4xl font-semibold tracking-tight text-white tabular-nums">
-                {{ formatStat(animatedStats[index] ?? item.value) }}
-              </div>
-              <div class="mt-2 text-[11px] tracking-[0.28em] text-white/48">
-                {{ item.label }}
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-entrance mt-10 flex flex-wrap items-center gap-3" style="--enter-delay: 760ms">
-            <NuxtLink
-              to="/quiz"
-              class="rounded-full bg-white px-7 py-3 text-sm font-semibold text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/88"
-            >
-              开始五月天测验
-            </NuxtLink>
-            <NuxtLink
-              to="/mojo"
-              class="rounded-full border border-white/22 bg-white/10 px-7 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/18"
-            >
-              打开 Mojo Family
-            </NuxtLink>
-            <NuxtLink
-              to="/balls"
-              class="rounded-full border border-white/12 px-7 py-3 text-sm font-semibold text-white/80 transition-colors hover:text-white"
-            >
-              保留原本五球页面
-            </NuxtLink>
-          </div>
         </div>
 
         <a
@@ -268,7 +227,6 @@ onBeforeUnmount(() => {
           href="#chapters"
           class="home-roll-cue absolute bottom-7 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 text-xs tracking-[0.24em] text-white/58 transition-colors hover:text-white/78 md:bottom-9"
         >
-          ROLL
           <Icon name="lucide:arrow-down" class="roll-arrow size-4" />
         </a>
       </div>
@@ -277,32 +235,30 @@ onBeforeUnmount(() => {
     <section id="chapters" class="container relative z-10 min-h-[100svh] scroll-mt-18 pt-12 pb-20 md:pt-16 md:pb-28">
       <NuxtLink v-reveal="120" :to="featuredSection.path" class="group block">
         <article
-          class="overflow-hidden rounded-[2rem] border border-white/12 bg-slate-950 text-white shadow-[0_40px_100px_-48px_rgba(15,23,42,0.88)] transition-all duration-300"
+          class="relative overflow-hidden rounded-[2.5rem] border border-[var(--border-soft)] bg-[#0a0a0a] text-white shadow-[0_32px_80px_-24px_rgba(0,0,0,0.5)] transition-all duration-700 hover:-translate-y-2 hover:shadow-[0_40px_100px_-24px_rgba(0,0,0,0.7)] hover:border-white/20"
           :class="featuredSection.cardClass"
         >
-          <div class="relative min-h-[420px] md:min-h-[520px]">
+          <!-- Shimmer effect on hover -->
+          <div class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 mix-blend-overlay transition-opacity duration-700 group-hover:opacity-100" />
+          
+          <div class="relative min-h-[420px] md:min-h-[560px]">
             <img
               :src="featuredSection.image"
               :alt="featuredSection.title"
-              class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              class="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
             >
-            <div class="absolute inset-0 bg-gradient-to-r" :class="featuredSection.overlayClass" />
-            <div class="absolute inset-x-0 bottom-0 p-7 md:p-10">
-              <span
-                class="inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.24em]"
-                :class="featuredSection.badgeClass"
-              >
-                {{ featuredSection.eyebrow }}
-              </span>
-              <h3 class="mt-4 max-w-2xl text-3xl font-semibold tracking-tight md:text-5xl">
+            <div class="absolute inset-0 bg-gradient-to-t" :class="featuredSection.overlayClass" />
+            <div class="absolute inset-0" />
+            <div class="absolute inset-x-0 bottom-0 z-20 p-8 md:p-12 lg:p-16">
+              <h3 class="mt-6 max-w-2xl text-4xl font-bold tracking-tight drop-shadow-lg md:text-6xl">
                 {{ featuredSection.title }}
               </h3>
-              <p class="mt-3 max-w-2xl text-sm leading-7 text-white/72 md:text-base">
+              <p class="mt-5 max-w-2xl text-base leading-relaxed text-white/80 md:text-lg">
                 {{ featuredSection.description }}
               </p>
-              <div class="mt-6 inline-flex items-center gap-2 text-sm font-medium text-white">
+              <div class="mt-8 inline-flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white/20">
                 打开这一章
-                <Icon name="lucide:arrow-up-right" class="size-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                <Icon name="lucide:arrow-right" class="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </div>
             </div>
           </div>
@@ -318,35 +274,29 @@ onBeforeUnmount(() => {
           class="group block"
         >
           <article
-            class="overflow-hidden rounded-[1.8rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_24px_64px_-52px_rgba(15,23,42,0.45)] transition-all duration-300"
+            class="surface-card relative flex h-full flex-col overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-[var(--border-strong)] hover:shadow-[0_24px_64px_-12px_rgba(15,23,42,0.15)] dark:hover:shadow-[0_24px_64px_-12px_rgba(255,255,255,0.05)]"
             :class="section.cardClass"
           >
-            <div class="relative aspect-[4/3] overflow-hidden bg-slate-950">
+            <div class="relative aspect-[4/3] w-full overflow-hidden">
               <img
                 :src="section.image"
                 :alt="section.title"
-                class="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
               >
-              <div class="absolute inset-0 bg-gradient-to-t" :class="section.overlayClass" />
-              <div class="absolute inset-x-0 bottom-0 p-5 text-white">
-                <span
-                  class="inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.22em]"
-                  :class="section.badgeClass"
-                >
-                  {{ section.eyebrow }}
-                </span>
-                <h3 class="mt-3 text-2xl font-semibold tracking-tight">
+              <div class="absolute inset-0 bg-gradient-to-t" :class="section.overlayClass || 'from-black/60 to-transparent'" />
+              <div class="absolute inset-x-0 bottom-0 p-6 text-white">
+                <h3 class="mt-3.5 text-2xl font-bold tracking-tight drop-shadow-md">
                   {{ section.title }}
                 </h3>
               </div>
             </div>
-            <div class="p-6">
-              <p class="text-sm leading-7 text-[var(--text-secondary)]">
+            <div class="flex flex-1 flex-col justify-between p-6">
+              <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
                 {{ section.description }}
               </p>
-              <div class="mt-5 inline-flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
+              <div class="inline-flex items-center gap-2 text-sm font-bold text-[var(--text-primary)] transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
                 继续阅读
-                <Icon name="lucide:arrow-right" class="size-4 transition-transform duration-200 group-hover:translate-x-1" />
+                <Icon name="lucide:arrow-right" class="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </div>
             </div>
           </article>
@@ -356,49 +306,81 @@ onBeforeUnmount(() => {
 
     <section class="container pb-24 md:pb-32">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div v-reveal="60" class="surface-card p-8 md:p-10">
-          <p class="section-kicker">COUNTDOWN</p>
-          <div class="mt-8">
+        <!-- Countdown Module (Static Hover Glow) -->
+        <div v-reveal="60" class="surface-card group relative overflow-hidden p-8 transition-all duration-700 hover:border-cyan-500/30 hover:shadow-xl dark:hover:border-cyan-500/20 md:p-10">
+          <div class="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-cyan-500/5 blur-3xl transition-colors duration-700 group-hover:bg-cyan-500/10"/>
+          
+          <p class="section-kicker relative z-10 flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
+            <Icon name="lucide:timer" class="size-4" /> 
+            COUNTDOWN
+          </p>
+          <div class="relative z-10 mt-8">
             <CountdownBoard />
           </div>
         </div>
 
         <div class="space-y-6">
-          <div v-reveal="180" class="surface-card space-y-4 p-8">
-            <p class="section-kicker">NOTE</p>
-            <blockquote class="border-l-2 border-[var(--border-strong)] pl-4 text-lg leading-8 text-[var(--text-primary)]">
+          <!-- NOTE Module (Static Hover Glow) -->
+          <div v-reveal="180" class="surface-card group relative overflow-hidden p-8 transition-all duration-700 hover:border-purple-500/30 hover:shadow-xl dark:hover:border-purple-500/20">
+            <div class="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-purple-500/5 blur-3xl transition-colors duration-700 group-hover:bg-purple-500/10"/>
+            
+            <p class="section-kicker relative z-10 flex items-center gap-2 text-purple-600 dark:text-purple-400">
+              <Icon name="lucide:quote" class="size-4" /> 
+              NOTE
+            </p>
+            <blockquote class="relative z-10 mt-5 rounded-r-xl border-l-4 border-purple-500/40 bg-purple-500/5 py-4 pl-5 text-lg font-medium leading-relaxed text-[var(--text-primary)] transition-colors duration-700 group-hover:border-purple-500/60 dark:border-purple-400/50 dark:bg-purple-500/10">
               “无垠的蓝色年代，相伴的每一秒钟，分离的每一滴泪，都陪你穿越二十多年。”
             </blockquote>
-            <p class="text-sm leading-7 text-[var(--text-secondary)]">
+            <p class="relative z-10 mt-5 text-sm leading-relaxed text-[var(--text-secondary)]">
               首页不再只是 markdown 内容输出，而是一张完整的入口海报。原来的内容语气仍然留在这里。
             </p>
           </div>
 
           <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
+            <!-- Mojo Module (Interactive Link) -->
             <NuxtLink
               v-reveal="260"
               to="/mojo"
-              class="surface-card block p-7 transition-transform duration-300 hover:-translate-y-1"
+              class="surface-card group relative block overflow-hidden p-7 transition-all duration-500 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-2xl dark:hover:border-amber-500/30"
             >
-              <p class="section-kicker">COLLECTION</p>
-              <h3 class="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+              <div class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-amber-500/5 blur-3xl transition-colors duration-700 group-hover:bg-amber-500/15"/>
+              
+              <div class="absolute right-6 top-6 text-amber-500/0 transition-all duration-500 ease-out group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-amber-500/80">
+                <Icon name="lucide:arrow-up-right" class="size-5" />
+              </div>
+
+              <p class="section-kicker relative z-10 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <Icon name="lucide:sparkles" class="size-4" /> 
+                COLLECTION
+              </p>
+              <h3 class="relative z-10 mt-4 text-2xl font-bold tracking-tight text-[var(--text-primary)] transition-colors duration-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
                 Mojo Family
               </h3>
-              <p class="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+              <p class="relative z-10 mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
                 收集页保留原本的乐趣，但现在和首页卡片系统在视觉上更统一。
               </p>
             </NuxtLink>
 
+            <!-- Original Page Module (Interactive Link) -->
             <NuxtLink
               v-reveal="340"
               to="/balls"
-              class="surface-card block p-7 transition-transform duration-300 hover:-translate-y-1"
+              class="surface-card group relative block overflow-hidden p-7 transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-2xl dark:hover:border-blue-500/30"
             >
-              <p class="section-kicker">ORIGINAL PAGE</p>
-              <h3 class="mt-3 text-2xl font-semibold tracking-tight text-[var(--text-primary)]">
+              <div class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-blue-500/5 blur-3xl transition-colors duration-700 group-hover:bg-blue-500/15"/>
+              
+              <div class="absolute right-6 top-6 text-blue-500/0 transition-all duration-500 ease-out group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-blue-500/80">
+                <Icon name="lucide:arrow-up-right" class="size-5" />
+              </div>
+
+              <p class="section-kicker relative z-10 flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                <Icon name="lucide:box" class="size-4" /> 
+                ORIGINAL PAGE
+              </p>
+              <h3 class="relative z-10 mt-4 text-2xl font-bold tracking-tight text-[var(--text-primary)] transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 五球盲盒
               </h3>
-              <p class="mt-3 text-sm leading-7 text-[var(--text-secondary)]">
+              <p class="relative z-10 mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
                 用户要求保留原本的 balls 页面，所以它没有被做成新的文章模版，而是继续保持独立互动页。
               </p>
             </NuxtLink>

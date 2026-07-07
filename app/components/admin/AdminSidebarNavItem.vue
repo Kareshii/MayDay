@@ -3,6 +3,7 @@ type NavItem = {
   title: string
   to: string
   icon: string
+  exact?: boolean
   children?: NavItem[]
 }
 
@@ -41,7 +42,7 @@ const rowClasses = computed(() => {
       : 'text-[var(--text-secondary)] hover:bg-[var(--surface-high)] hover:text-[var(--text-primary)]'
   }
 
-  return isActive(props.item.to)
+  return isActive(props.item.to, props.item.exact)
     ? 'bg-[var(--primary-soft)] text-[var(--primary)]'
     : 'text-[var(--text-secondary)] hover:bg-[var(--surface-high)] hover:text-[var(--text-primary)]'
 })
@@ -84,11 +85,15 @@ function parseTo(to: string) {
   }
 }
 
-function isActive(to: string) {
+function isActive(to: string, exact = false) {
   const target = parseTo(to)
 
   if (target.status) {
     return route.path === target.path && route.query.status === target.status
+  }
+
+  if (exact) {
+    return route.path === target.path
   }
 
   return target.path === '/admin'
@@ -97,7 +102,7 @@ function isActive(to: string) {
 }
 
 function isGroupActive(item: NavItem): boolean {
-  return isActive(item.to) || Boolean(item.children?.some(child => isGroupActive(child)))
+  return isActive(item.to, item.exact) || Boolean(item.children?.some(child => isGroupActive(child)))
 }
 
 function toggleChildren() {
@@ -111,56 +116,65 @@ function getChildKey(child: NavItem) {
 
 <template>
   <div class="space-y-1">
-    <div
-      class="group flex items-center transition-all duration-300"
+    <button
+      v-if="hasChildren"
+      type="button"
+      class="group flex min-w-0 items-center transition-all duration-300"
       :class="[
         rowShapeClasses,
         rowClasses,
-        props.collapsed ? 'lg:justify-center lg:hover:translate-x-0' : '',
+        linkClasses,
+        props.collapsed ? 'mx-auto size-11 justify-center gap-0 px-0 py-0 hover:translate-x-0' : 'w-full',
       ]"
+      :aria-label="props.collapsed ? props.item.title : undefined"
+      :aria-expanded="expanded"
+      @click="toggleChildren"
     >
-      <NuxtLink
-        :to="props.item.to"
-        class="flex min-w-0 flex-1 items-center transition-all duration-300"
-        :class="[
-          linkClasses,
-          props.collapsed ? 'lg:flex-none lg:justify-center lg:gap-0 lg:px-0' : '',
-        ]"
-        :aria-label="props.collapsed ? props.item.title : undefined"
-        :title="props.collapsed ? props.item.title : undefined"
-        @click="emit('close')"
+      <Icon
+        :name="props.item.icon"
+        class="shrink-0 transition-transform duration-200"
+        :class="props.depth === 0 ? 'size-4' : 'size-3.5'"
+      />
+      <span
+        v-if="!props.collapsed"
+        class="min-w-0 flex-1 truncate text-left transition-all duration-200"
       >
-        <Icon
-          :name="props.item.icon"
-          class="shrink-0 transition-transform duration-200"
-          :class="props.depth === 0 ? 'size-4' : 'size-3.5'"
-        />
-        <span
-          class="min-w-0 truncate transition-all duration-200"
-          :class="props.collapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'"
-        >
-          {{ props.item.title }}
-        </span>
-      </NuxtLink>
+        {{ props.item.title }}
+      </span>
+      <Icon
+        v-if="!props.collapsed"
+        name="lucide:chevron-right"
+        class="ml-auto size-4 shrink-0 text-[var(--text-secondary)] transition-transform duration-200 group-hover:text-[var(--text-primary)]"
+        :class="expanded ? 'rotate-90' : ''"
+      />
+    </button>
 
-      <UiButton
-        v-if="hasChildren"
-        type="button"
-        variant="ghost"
-        size="icon"
-        class="mr-2 size-7 shrink-0 text-[var(--text-secondary)] hover:bg-[var(--surface-highest)] hover:text-[var(--text-primary)]"
-        :class="props.collapsed ? 'lg:hidden' : ''"
-        :aria-label="expanded ? `收起${props.item.title}` : `展开${props.item.title}`"
-        :aria-expanded="expanded"
-        @click.stop="toggleChildren"
+    <NuxtLink
+      v-else
+      :to="props.item.to"
+      class="group flex min-w-0 items-center transition-all duration-300"
+      :class="[
+        rowShapeClasses,
+        rowClasses,
+        linkClasses,
+        props.collapsed ? 'mx-auto size-11 justify-center gap-0 px-0 py-0 hover:translate-x-0' : 'w-full',
+      ]"
+      :aria-label="props.collapsed ? props.item.title : undefined"
+      :title="props.collapsed ? props.item.title : undefined"
+      @click="emit('close')"
+    >
+      <Icon
+        :name="props.item.icon"
+        class="shrink-0 transition-transform duration-200"
+        :class="props.depth === 0 ? 'size-4' : 'size-3.5'"
+      />
+      <span
+        v-if="!props.collapsed"
+        class="min-w-0 truncate transition-all duration-200"
       >
-        <Icon
-          name="lucide:chevron-right"
-          class="size-4 transition-transform duration-200"
-          :class="expanded ? 'rotate-90' : ''"
-        />
-      </UiButton>
-    </div>
+        {{ props.item.title }}
+      </span>
+    </NuxtLink>
 
     <Transition
       enter-active-class="transition duration-150 ease-out"
@@ -171,9 +185,9 @@ function getChildKey(child: NavItem) {
       leave-to-class="-translate-y-1 opacity-0"
     >
       <div
-        v-if="hasChildren && expanded"
+        v-if="hasChildren && expanded && !props.collapsed"
         class="space-y-1 transition-all duration-200"
-        :class="[childIndentClasses, props.collapsed ? 'lg:hidden' : '']"
+        :class="childIndentClasses"
       >
         <AdminSidebarNavItem
           v-for="child in props.item.children"

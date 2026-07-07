@@ -18,9 +18,19 @@ type ArticleSummaryRecord = Pick<
   'id' | 'slug' | 'title' | 'summary' | 'coverImage' | 'coverLayout' | 'published' | 'pinned' | 'createdAt' | 'updatedAt'
 >
 
+export interface PublicArticleSearchResult {
+  id: string
+  title: string
+  summary: string
+  excerpt: string
+  path: string
+  updatedAt: string
+}
+
 const articleCoverLayoutSet = new Set<ArticleCoverLayout>(ARTICLE_COVER_LAYOUTS)
 const ensuredArticlesSchema = new Set<string>()
 const ensuringArticlesSchema = new Map<string, Promise<void>>()
+const articleSchemaErrorCodes = new Set(['42P01', '42703'])
 
 function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`
@@ -53,6 +63,26 @@ function serializeArticle(record: ArticleRecord): ManagedArticle {
     ...serializeArticleSummary(record),
     content: record.content,
   }
+}
+
+function stripSearchText(value: string) {
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[`*_#>\-[\]()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function createSearchExcerpt(content: string, query: string) {
+  const text = stripSearchText(content)
+
+  if (!query) {
+    return text.slice(0, 120)
+  }
+
+  const index = text.toLowerCase().indexOf(query.toLowerCase())
+  const start = index > 32 ? index - 32 : 0
+  return text.slice(start, start + 140)
 }
 
 async function ensureArticlesSchema() {
@@ -106,6 +136,32 @@ async function ensureArticlesSchema() {
   await task
 }
 
+function isArticleSchemaError(error: unknown) {
+  return Boolean(
+    error
+    && typeof error === 'object'
+    && 'code' in error
+    && articleSchemaErrorCodes.has(String(error.code)),
+  )
+}
+
+async function withArticleSchemaFallback<T>(task: () => Promise<T>) {
+  try {
+    return await task()
+  } catch (error) {
+    if (!isArticleSchemaError(error)) {
+      throw error
+    }
+
+    await ensureArticlesSchema()
+    return await task()
+  }
+}
+
+export async function initializeArticleRepositorySchema() {
+  await ensureArticlesSchema()
+}
+
 function validatePayload(payload: Partial<ManagedArticlePayload>) {
   const title = String(payload.title || '').trim()
   const slug = normalizeArticleSlug(String(payload.slug || title))
@@ -144,20 +200,23 @@ function validatePayload(payload: Partial<ManagedArticlePayload>) {
   } satisfies ManagedArticlePayload
 }
 
-async function findBySlug(slug: string) {
-  await ensureArticlesSchema()
+async function findBySlugRecord(slug: string) {
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.slug, slug)).limit(1)
   return rows[0] ?? null
 }
 
-async function findById(id: string) {
-  await ensureArticlesSchema()
+async function findByIdRecord(id: string) {
   const db = useDatabase()
   const articles = getArticlesTable()
   const rows = await db.select().from(articles).where(eq(articles.id, id)).limit(1)
   return rows[0] ?? null
+}
+
+async function findById(id: string) {
+  await ensureArticlesSchema()
+  return await findByIdRecord(id)
 }
 
 export async function listAdminArticles() {
@@ -207,6 +266,53 @@ export async function listPublicArticles() {
   return rows.map(serializeArticleSummary)
 }
 
+export async function searchPublicArticles(query: string, limit = 12): Promise<PublicArticleSearchResult[]> {
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const normalizedQuery = query.trim().toLowerCase()
+  const rows = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      summary: articles.summary,
+      content: articles.content,
+      updatedAt: articles.updatedAt,
+    })
+    .from(articles)
+    .where(eq(articles.published, true))
+    .orderBy(desc(articles.updatedAt))
+
+  return rows
+    .map((article) => {
+      const title = stripSearchText(article.title)
+      const summary = stripSearchText(article.summary)
+      const content = stripSearchText(article.content)
+      const haystack = `${title} ${summary} ${content}`.toLowerCase()
+      const titleMatched = normalizedQuery && title.toLowerCase().includes(normalizedQuery)
+      const summaryMatched = normalizedQuery && summary.toLowerCase().includes(normalizedQuery)
+      const contentMatched = normalizedQuery && content.toLowerCase().includes(normalizedQuery)
+
+      return {
+        id: article.id,
+        title,
+        summary,
+        excerpt: createSearchExcerpt(article.content, normalizedQuery),
+        path: `/detail/${article.slug}`,
+        updatedAt: article.updatedAt.toISOString(),
+        score: normalizedQuery
+          ? Number(titleMatched) * 4 + Number(summaryMatched) * 2 + Number(contentMatched)
+          : 1,
+        matched: normalizedQuery ? haystack.includes(normalizedQuery) : true,
+      }
+    })
+    .filter(item => item.matched)
+    .sort((left, right) => right.score - left.score || right.updatedAt.localeCompare(left.updatedAt))
+    .slice(0, limit)
+    .map(({ score, matched, ...item }) => item)
+}
+
 export async function getAdminArticle(id: string) {
   const record = await findById(id)
 
@@ -247,54 +353,22 @@ export async function getPublicArticleBySlug(slug: string, includeDraft = false)
 }
 
 export async function createArticle(payload: ManagedArticlePayload) {
-  await ensureArticlesSchema()
-  const db = useDatabase()
-  const articles = getArticlesTable()
   const article = validatePayload(payload)
-  const existing = await findBySlug(article.slug)
 
-  if (existing) {
-    throw createError({
-      statusCode: 409,
-      statusMessage: 'An article with this slug already exists',
-    })
-  }
+  return await withArticleSchemaFallback(async () => {
+    const db = useDatabase()
+    const articles = getArticlesTable()
+    const existing = await findBySlugRecord(article.slug)
 
-  const now = new Date()
-  const rows = await db.insert(articles).values({
-    slug: article.slug,
-    title: article.title,
-    summary: article.summary,
-    coverImage: article.coverImage,
-    coverLayout: article.coverLayout,
-    content: article.content,
-    published: article.published,
-    pinned: article.pinned,
-    createdAt: now,
-    updatedAt: now,
-  }).returning()
+    if (existing) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'An article with this slug already exists',
+      })
+    }
 
-  return serializeArticle(rows[0]!)
-}
-
-export async function updateArticle(id: string, payload: ManagedArticlePayload) {
-  await ensureArticlesSchema()
-  const db = useDatabase()
-  const articles = getArticlesTable()
-  const existing = await getAdminArticle(id)
-  const article = validatePayload(payload)
-  const conflict = await findBySlug(article.slug)
-
-  if (conflict && conflict.id !== id) {
-    throw createError({
-      statusCode: 409,
-      statusMessage: 'An article with this slug already exists',
-    })
-  }
-
-  const rows = await db
-    .update(articles)
-    .set({
+    const now = new Date()
+    const rows = await db.insert(articles).values({
       slug: article.slug,
       title: article.title,
       summary: article.summary,
@@ -303,20 +377,54 @@ export async function updateArticle(id: string, payload: ManagedArticlePayload) 
       content: article.content,
       published: article.published,
       pinned: article.pinned,
-      updatedAt: new Date(),
-    })
-    .where(eq(articles.id, id))
-    .returning()
+      createdAt: now,
+      updatedAt: now,
+    }).returning()
 
-  if (!rows[0]) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Article not found',
-    })
-  }
+    return serializeArticle(rows[0]!)
+  })
+}
 
-  void existing
-  return serializeArticle(rows[0])
+export async function updateArticle(id: string, payload: ManagedArticlePayload) {
+  const article = validatePayload(payload)
+
+  return await withArticleSchemaFallback(async () => {
+    const db = useDatabase()
+    const articles = getArticlesTable()
+    const conflict = await findBySlugRecord(article.slug)
+
+    if (conflict && conflict.id !== id) {
+      throw createError({
+        statusCode: 409,
+        statusMessage: 'An article with this slug already exists',
+      })
+    }
+
+    const rows = await db
+      .update(articles)
+      .set({
+        slug: article.slug,
+        title: article.title,
+        summary: article.summary,
+        coverImage: article.coverImage,
+        coverLayout: article.coverLayout,
+        content: article.content,
+        published: article.published,
+        pinned: article.pinned,
+        updatedAt: new Date(),
+      })
+      .where(eq(articles.id, id))
+      .returning()
+
+    if (!rows[0]) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Article not found',
+      })
+    }
+
+    return serializeArticle(rows[0])
+  })
 }
 
 export async function updateArticlePinned(id: string, pinned: boolean) {

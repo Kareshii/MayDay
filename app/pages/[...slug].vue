@@ -3,7 +3,8 @@
  * Document driven is removed in Content v3.
  * This page is a simple/full-feature replacement of document driven.
  */
-import { getSiteSection, showcaseSections } from '@/utils/siteSections'
+import ArticleReadingEnhancer from '@/components/posts/ArticleReadingEnhancer.vue'
+import { getSiteSection } from '@/utils/siteSections'
 
 const route = useRoute()
 
@@ -20,7 +21,6 @@ if (!page.value) {
 
 const section = computed(() => getSiteSection(route.path))
 const pageDescription = computed(() => page.value?.seo?.description || page.value?.description || '')
-const relatedSections = computed(() => showcaseSections.filter(item => item.path !== route.path).slice(0, 4))
 const heroImage = computed(() => section.value?.image || page.value?.coverImage || '/cover.jpg')
 const heroBadge = computed(() => section.value?.badgeClass || 'border-white/20 bg-white/10 text-white/72')
 const heroLabel = computed(() => section.value?.navTitle || 'MAYDAY')
@@ -89,8 +89,8 @@ useSeoMeta({
       </div>
     </header>
 
-    <div class="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
-      <div class="surface-card space-y-8 p-6 md:p-10">
+    <div class="mt-8">
+      <ArticleReadingEnhancer :content-key="route.path">
         <div
           v-if="pageDescription"
           class="rounded-[1.4rem] border-l-4 border-black/70 bg-black/[0.035] p-5 text-lg leading-8 text-[var(--text-secondary)] dark:border-white/70 dark:bg-white/[0.035]"
@@ -103,29 +103,7 @@ useSeoMeta({
           :value="page"
           class="blog-content"
         />
-      </div>
-
-      <aside class="hidden xl:block">
-        <div class="sticky top-28 space-y-3 rounded-[1.6rem] border border-[var(--border)] bg-[var(--card)] p-6 shadow-[0_24px_64px_-52px_rgba(15,23,42,0.42)]">
-          <p class="section-kicker">EXPLORE</p>
-          <NuxtLink
-            v-for="item in relatedSections"
-            :key="item.path"
-            :to="item.path"
-            class="group block rounded-[1.25rem] border border-transparent px-4 py-4 transition-all hover:border-[var(--border)] hover:bg-black/[0.025] dark:hover:bg-white/[0.03]"
-          >
-            <p class="text-xs font-semibold tracking-[0.18em] text-[var(--text-secondary)]">
-              {{ item.eyebrow }}
-            </p>
-            <p class="mt-2 text-base font-semibold text-[var(--text-primary)]">
-              {{ item.title }}
-            </p>
-            <p class="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              {{ item.description }}
-            </p>
-          </NuxtLink>
-        </div>
-      </aside>
+      </ArticleReadingEnhancer>
     </div>
   </article>
 </template>

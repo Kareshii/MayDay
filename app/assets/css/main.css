@@ -11,7 +11,7 @@
 }
 
 :root {
-  --bg-primary: #f6f3ee;
+  --bg-primary: #f8fafc;
   --text-primary: #161618;
   --text-secondary: #666669;
   --accent-color: #111827;
@@ -679,7 +679,7 @@ input[type="reset"]:disabled,
   --card-shadow: none;
   --surface-shadow: none;
   --selection-bg: rgba(59, 130, 246, 0.2);
-  --cms-sidebar-width: 18rem;
+  --cms-sidebar-width: 240px;
   --cms-sidebar-collapsed-width: 5rem;
   background-color: var(--bg-primary);
   background-image: none;

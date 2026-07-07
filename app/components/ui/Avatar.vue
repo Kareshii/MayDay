@@ -8,7 +8,7 @@ const attrs = useAttrs()
 <template>
   <AvatarRoot
     v-bind="attrs"
-    :class="cn('relative flex size-9 shrink-0 overflow-hidden rounded-full border border-[var(--border-soft)] bg-[var(--surface-high)] text-[var(--text-primary)]', attrs.class as string)"
+    :class="cn('relative flex shrink-0 overflow-hidden rounded-full border border-[var(--border-soft)] bg-[var(--surface-high)] text-[var(--text-primary)]', attrs.class as string)"
   >
     <slot />
   </AvatarRoot>

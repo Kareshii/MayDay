@@ -21,6 +21,7 @@ useSeoMeta({
   <div :class="['min-h-dvh text-[var(--text-primary)]', isAdminRoute ? 'cms-theme' : 'bg-[var(--bg-primary)]']">
     <Html lang="zh-CN" />
     <AppNavbar v-if="showSiteChrome" />
+    <GlobalCommandPalette v-if="showSiteChrome" />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
