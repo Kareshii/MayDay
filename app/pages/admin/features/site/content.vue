@@ -65,14 +65,14 @@ watch(data, (value) => {
             <h4 class="text-sm font-medium text-[var(--text-primary)]">远程图片策略</h4>
           </div>
           <div class="flex items-center gap-6 md:w-1/2">
-            <label class="flex cursor-pointer items-center gap-2">
+            <UiLabel class="flex cursor-pointer items-center gap-2">
               <UiCheckbox v-model="content.autoFetchRemoteImages" />
               <span class="text-sm text-[var(--text-primary)]">自动抓取本地化</span>
-            </label>
-            <label class="flex cursor-pointer items-center gap-2">
+            </UiLabel>
+            <UiLabel class="flex cursor-pointer items-center gap-2">
               <UiCheckbox v-model="content.compressImages" />
               <span class="text-sm text-[var(--text-primary)]">开启压缩</span>
-            </label>
+            </UiLabel>
           </div>
         </div>
 
@@ -81,10 +81,10 @@ watch(data, (value) => {
             <h4 class="text-sm font-medium text-[var(--text-primary)]">外链策略</h4>
           </div>
           <div class="flex items-center gap-6 md:w-1/2">
-            <label class="flex cursor-pointer items-center gap-2">
+            <UiLabel class="flex cursor-pointer items-center gap-2">
               <UiCheckbox v-model="content.filterExternalLinks" />
               <span class="text-sm text-[var(--text-primary)]">自动添加 nofollow</span>
-            </label>
+            </UiLabel>
           </div>
         </div>
 
@@ -110,11 +110,16 @@ watch(data, (value) => {
             <UiInput v-model.number="content.thumbnailHeight" type="number" placeholder="高" class="w-20 text-center" />
             <span class="text-xs text-[var(--text-secondary)]">px</span>
 
-            <select v-model="content.thumbnailMode" class="ml-2 h-10 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 text-sm text-[var(--text-primary)]">
-              <option value="cover">中心裁剪 (Cover)</option>
-              <option value="contain">等比缩放 (Contain)</option>
-              <option value="longest">最长边缩放</option>
-            </select>
+            <UiSelect v-model="content.thumbnailMode">
+              <UiSelectTrigger class="ml-2 w-44 border-[var(--border-soft)]">
+                <UiSelectValue placeholder="缩略图模式" />
+              </UiSelectTrigger>
+              <UiSelectContent>
+                <UiSelectItem value="cover">中心裁剪 (Cover)</UiSelectItem>
+                <UiSelectItem value="contain">等比缩放 (Contain)</UiSelectItem>
+                <UiSelectItem value="longest">最长边缩放</UiSelectItem>
+              </UiSelectContent>
+            </UiSelect>
           </div>
         </div>
 

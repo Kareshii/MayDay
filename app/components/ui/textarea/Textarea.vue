@@ -9,6 +9,9 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+  class: '',
+  disabled: false,
+  modelValue: undefined,
   variant: 'default',
 })
 defineEmits(['update:modelValue'])

@@ -60,6 +60,7 @@ const coverLayoutOptions: Array<{
     description: '封面图铺满上半区域，标题摘要叠加在图上。',
   },
 ]
+const CATEGORY_NONE_VALUE = '__none__'
 
 const form = reactive<ManagedArticlePayload>({
   title: '',
@@ -105,6 +106,15 @@ const categoryOptions = computed(() => {
 
   walk('', 0)
   return result
+})
+
+const selectedCategoryId = computed({
+  get() {
+    return form.categoryId || CATEGORY_NONE_VALUE
+  },
+  set(value: string) {
+    form.categoryId = value === CATEGORY_NONE_VALUE ? '' : value
+  },
 })
 
 const previewTarget = computed(() => {
@@ -370,45 +380,46 @@ defineExpose({
                 </div>
 
                 <div class="space-y-5 p-4">
-                  <label class="flex items-start gap-3">
+                  <UiLabel class="flex items-start gap-3">
                     <UiCheckbox v-model="form.published" :disabled="formDisabled" />
                     <span>
                       <span class="block text-sm font-semibold text-[var(--text-primary)]">
                         发布到前台
                       </span>
                     </span>
-                  </label>
+                  </UiLabel>
 
-                  <label class="flex items-start gap-3">
+                  <UiLabel class="flex items-start gap-3">
                     <UiCheckbox v-model="form.pinned" :disabled="formDisabled" />
                     <span>
                       <span class="block text-sm font-semibold text-[var(--text-primary)]">
                         置顶文章
                       </span>
                     </span>
-                  </label>
+                  </UiLabel>
 
-                  <label class="block space-y-2">
+                  <UiLabel class="block space-y-2">
                     <span class="text-xs font-medium text-[var(--text-secondary)]">分类</span>
-                    <select
-                      v-model="form.categoryId"
-                      :disabled="formDisabled || categoriesPending"
-                      class="h-10 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-65"
-                    >
-                      <option value="">
-                        {{ categoriesPending ? '正在加载分类...' : '未分类' }}
-                      </option>
-                      <option
-                        v-for="category in categoryOptions"
-                        :key="category.id"
-                        :value="category.id"
-                      >
-                        {{ `${'— '.repeat(category.depth)}${category.name}` }}
-                      </option>
-                    </select>
-                  </label>
+                    <UiSelect v-model="selectedCategoryId" :disabled="formDisabled || categoriesPending">
+                      <UiSelectTrigger>
+                        <UiSelectValue :placeholder="categoriesPending ? '正在加载分类...' : '选择分类'" />
+                      </UiSelectTrigger>
+                      <UiSelectContent>
+                        <UiSelectItem :value="CATEGORY_NONE_VALUE">
+                          {{ categoriesPending ? '正在加载分类...' : '未分类' }}
+                        </UiSelectItem>
+                        <UiSelectItem
+                          v-for="category in categoryOptions"
+                          :key="category.id"
+                          :value="category.id"
+                        >
+                          {{ `${'— '.repeat(category.depth)}${category.name}` }}
+                        </UiSelectItem>
+                      </UiSelectContent>
+                    </UiSelect>
+                  </UiLabel>
 
-                  <label class="block space-y-2">
+                  <UiLabel class="block space-y-2">
                     <span class="text-xs font-medium text-[var(--text-secondary)]">摘要</span>
                     <UiTextarea
                       v-model="form.summary"
@@ -416,16 +427,16 @@ defineExpose({
                       placeholder="用于文章列表和 SEO 的简短摘要"
                       class="min-h-[118px]"
                     />
-                  </label>
+                  </UiLabel>
 
-                  <label class="block space-y-2">
+                  <UiLabel class="block space-y-2">
                     <span class="text-xs font-medium text-[var(--text-secondary)]">封面图 URL</span>
                     <UiInput
                       v-model="form.coverImage"
                       :disabled="formDisabled"
                       placeholder="https://example.com/cover.jpg"
                     />
-                  </label>
+                  </UiLabel>
 
                   <div
                     v-if="form.coverImage"

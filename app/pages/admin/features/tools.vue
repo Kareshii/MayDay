@@ -130,14 +130,19 @@ watch(error, (value) => {
           Sitemap 管理
         </p>
         <div class="mt-4 grid gap-4 md:grid-cols-2">
-          <label class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
+          <UiLabel class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
             <UiCheckbox v-model="features.sitemapEnabled" />
             <span class="text-sm font-medium text-[var(--text-primary)]">启用 Sitemap</span>
-          </label>
-          <select v-model="features.sitemapFormat" class="h-10 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-3 text-sm text-[var(--text-primary)]">
-            <option value="txt">TXT</option>
-            <option value="xml">XML</option>
-          </select>
+          </UiLabel>
+          <UiSelect v-model="features.sitemapFormat">
+            <UiSelectTrigger class="border-[var(--border-soft)]">
+              <UiSelectValue placeholder="Sitemap 格式" />
+            </UiSelectTrigger>
+            <UiSelectContent>
+              <UiSelectItem value="txt">TXT</UiSelectItem>
+              <UiSelectItem value="xml">XML</UiSelectItem>
+            </UiSelectContent>
+          </UiSelect>
         </div>
       </UiCard>
 
@@ -179,10 +184,10 @@ watch(error, (value) => {
               <UiInput v-model="link.url" variant="ghost" class="text-[var(--text-secondary)]" placeholder="https://example.com" />
               <UiInput v-model.number="link.order" variant="ghost" type="number" placeholder="排序" />
               <div class="flex items-center justify-end gap-3 px-2">
-                <label class="flex cursor-pointer items-center gap-2">
+                <UiLabel class="flex cursor-pointer items-center gap-2">
                   <UiCheckbox v-model="link.enabled" />
                   <span class="text-sm text-[var(--text-secondary)]">显示</span>
-                </label>
+                </UiLabel>
                 <UiButton variant="ghost" size="icon" class="text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" @click="removeFriendLink(link.id)">
                   <Icon name="lucide:trash-2" class="size-4" />
                 </UiButton>

@@ -31,6 +31,7 @@ export default defineEventHandler(async () => {
       copyright: site.copyright,
       siteEnabled: site.siteEnabled,
       closedMessage: site.closedMessage,
+      maintenanceStatusCode: site.maintenanceStatusCode,
     },
     seo,
   }

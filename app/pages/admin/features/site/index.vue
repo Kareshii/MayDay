@@ -29,6 +29,7 @@ const site = reactive<AdminSiteSettings>({
   adminPath: '/admin',
   siteEnabled: true,
   closedMessage: '',
+  maintenanceStatusCode: 503,
 })
 
 watch(data, (value) => {
@@ -149,10 +150,10 @@ watch(data, (value) => {
             <h4 class="text-sm font-medium text-[var(--text-primary)]">网站状态</h4>
           </div>
           <div class="flex items-center md:w-1/2">
-            <label class="flex cursor-pointer items-center gap-2">
+            <UiLabel class="flex cursor-pointer items-center gap-2">
               <UiCheckbox v-model="site.siteEnabled" />
               <span class="text-sm text-[var(--text-primary)]">{{ site.siteEnabled ? '已开启' : '已关闭' }}</span>
-            </label>
+            </UiLabel>
           </div>
         </div>
 
@@ -162,6 +163,23 @@ watch(data, (value) => {
           </div>
           <div class="md:w-1/2">
             <UiInput v-model="site.closedMessage" placeholder="网站维护中..." :disabled="site.siteEnabled" />
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-4 py-5 md:flex-row md:items-center md:justify-between">
+          <div class="md:w-1/3">
+            <h4 class="text-sm font-medium text-[var(--text-primary)]">维护状态码</h4>
+            <p class="mt-1 text-xs text-[var(--text-secondary)]">网站关闭时返回，默认 503。</p>
+          </div>
+          <div class="md:w-1/2">
+            <UiInput
+              v-model="site.maintenanceStatusCode"
+              type="number"
+              min="400"
+              max="599"
+              step="1"
+              placeholder="503"
+            />
           </div>
         </div>
       </div>

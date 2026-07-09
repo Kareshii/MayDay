@@ -28,6 +28,7 @@ export interface SiteSettings {
   adminPath: string
   siteEnabled: boolean
   closedMessage: string
+  maintenanceStatusCode: number
 }
 
 export interface SeoSettings {
@@ -156,6 +157,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   adminPath: '/admin',
   siteEnabled: true,
   closedMessage: '网站维护中，请稍后再访问。',
+  maintenanceStatusCode: 503,
 }
 
 export const DEFAULT_SEO_SETTINGS: SeoSettings = {
@@ -230,6 +232,11 @@ function normalizeNumber(value: unknown, fallback: number) {
   return Number.isFinite(numberValue) && numberValue >= 0 ? numberValue : fallback
 }
 
+function normalizeHttpErrorStatus(value: unknown, fallback: number) {
+  const statusCode = Math.trunc(Number(value))
+  return statusCode >= 400 && statusCode <= 599 ? statusCode : fallback
+}
+
 function normalizeString(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -273,6 +280,10 @@ function normalizeSiteSettings(input: Partial<SiteSettings> = {}): SiteSettings 
     adminPath: normalizeString(input.adminPath) || DEFAULT_SITE_SETTINGS.adminPath,
     siteEnabled: normalizeBoolean(input.siteEnabled, true),
     closedMessage: normalizeString(input.closedMessage) || DEFAULT_SITE_SETTINGS.closedMessage,
+    maintenanceStatusCode: normalizeHttpErrorStatus(
+      input.maintenanceStatusCode,
+      DEFAULT_SITE_SETTINGS.maintenanceStatusCode,
+    ),
   }
 }
 

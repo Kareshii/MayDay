@@ -16,6 +16,7 @@ export interface AdminSiteSettings {
   adminPath: string
   siteEnabled: boolean
   closedMessage: string
+  maintenanceStatusCode: number
 }
 
 export interface AdminSeoSettings {

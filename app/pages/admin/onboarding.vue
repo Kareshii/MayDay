@@ -354,7 +354,7 @@ watch(error, (value) => {
 
         <div v-if="currentStep.key === 'database'" class="space-y-5">
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库主机
               </span>
@@ -365,9 +365,9 @@ watch(error, (value) => {
                 autocomplete="off"
                 spellcheck="false"
               />
-            </label>
+            </UiLabel>
 
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 端口
               </span>
@@ -378,10 +378,10 @@ watch(error, (value) => {
                 autocomplete="off"
                 inputmode="numeric"
               />
-            </label>
+            </UiLabel>
           </div>
 
-          <label class="block space-y-2">
+          <UiLabel class="block space-y-2">
             <span class="text-sm font-medium text-[var(--text-primary)]">
               数据库名称
             </span>
@@ -392,10 +392,10 @@ watch(error, (value) => {
               autocomplete="off"
               spellcheck="false"
             />
-          </label>
+          </UiLabel>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库用户名
               </span>
@@ -405,9 +405,9 @@ watch(error, (value) => {
                 placeholder="postgres"
                 autocomplete="username"
               />
-            </label>
+            </UiLabel>
 
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库密码
               </span>
@@ -418,10 +418,10 @@ watch(error, (value) => {
                 placeholder="输入数据库密码"
                 autocomplete="new-password"
               />
-            </label>
+            </UiLabel>
           </div>
 
-          <label class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
+          <UiLabel class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
             <UiCheckbox
               v-model="form.databaseSsl"
               :disabled="submitting || inferredDatabaseMode === 'local'"
@@ -435,7 +435,7 @@ watch(error, (value) => {
                 远程数据库默认启用，连接信息会在服务器端加密保存。
               </span>
             </span>
-          </label>
+          </UiLabel>
 
           <div
             class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4 text-sm leading-6 text-[var(--text-secondary)]"
@@ -449,7 +449,7 @@ watch(error, (value) => {
 
         <div v-else class="space-y-5">
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 管理员用户名
               </span>
@@ -459,7 +459,7 @@ watch(error, (value) => {
                 autocomplete="username"
                 placeholder="admin"
               />
-            </label>
+            </UiLabel>
 
             <div
               class="rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-3 text-sm leading-6 text-[var(--text-secondary)]"
@@ -469,7 +469,7 @@ watch(error, (value) => {
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 管理员密码
               </span>
@@ -480,9 +480,9 @@ watch(error, (value) => {
                 autocomplete="new-password"
                 placeholder="至少 8 位"
               />
-            </label>
+            </UiLabel>
 
-            <label class="block space-y-2">
+            <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 确认密码
               </span>
@@ -493,7 +493,7 @@ watch(error, (value) => {
                 autocomplete="new-password"
                 placeholder="再次输入密码"
               />
-            </label>
+            </UiLabel>
           </div>
 
           <div

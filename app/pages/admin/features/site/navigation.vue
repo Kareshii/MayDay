@@ -84,18 +84,23 @@ function removeNavigation(id: string) {
               <UiInput v-model="item.title" variant="ghost" class="font-medium text-[var(--text-primary)]" placeholder="导航标题" />
               <UiInput v-model="item.path" variant="ghost" class="text-[var(--text-secondary)]" placeholder="/posts 或 https://..." />
 
-              <select v-model="item.type" class="h-9 w-full rounded-lg border border-transparent bg-transparent px-2 text-sm text-[var(--text-primary)] outline-none transition hover:bg-[var(--surface-hover)] focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-2 focus:ring-[var(--focus-ring)]">
-                <option value="internal">站内链接</option>
-                <option value="external">站外链接</option>
-              </select>
+              <UiSelect v-model="item.type">
+                <UiSelectTrigger class="h-9 rounded-lg border-transparent bg-transparent px-2 hover:bg-[var(--surface-hover)] focus:bg-[var(--surface-card)]">
+                  <UiSelectValue placeholder="链接类型" />
+                </UiSelectTrigger>
+                <UiSelectContent>
+                  <UiSelectItem value="internal">站内链接</UiSelectItem>
+                  <UiSelectItem value="external">站外链接</UiSelectItem>
+                </UiSelectContent>
+              </UiSelect>
 
               <UiInput v-model.number="item.order" variant="ghost" type="number" placeholder="排序" class="text-center" />
 
               <div class="flex items-center justify-end gap-3 px-2">
-                <label class="flex cursor-pointer items-center gap-2">
+                <UiLabel class="flex cursor-pointer items-center gap-2">
                   <UiCheckbox v-model="item.enabled" />
                   <span class="text-xs text-[var(--text-secondary)]">显示</span>
-                </label>
+                </UiLabel>
                 <UiButton variant="ghost" size="icon" class="text-red-500 opacity-0 group-hover:opacity-100 focus-within:opacity-100 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" @click="removeNavigation(item.id)">
                   <Icon name="lucide:trash-2" class="size-4" />
                 </UiButton>

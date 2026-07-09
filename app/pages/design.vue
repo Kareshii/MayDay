@@ -753,7 +753,7 @@ function onDrop(e: DragEvent) {
                 <div v-if="activeObject" class="p-4 space-y-6">
                     <!-- Color -->
                     <div v-if="activeObject.type !== 'image'">
-                        <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">填充颜色</label>
+                        <UiLabel class="text-xs font-semibold text-gray-500 uppercase mb-2 block">填充颜色</UiLabel>
                         <div class="flex gap-2 items-center">
                             <input type="color" v-model="objectColor" class="w-8 h-8 p-0 border-0 rounded overflow-hidden cursor-pointer" />
                             <span class="text-sm font-mono text-gray-600">{{ objectColor }}</span>
@@ -762,13 +762,13 @@ function onDrop(e: DragEvent) {
 
                     <!-- Opacity -->
                     <div>
-                         <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">不透明度 {{ objectOpacity }}%</label>
+                         <UiLabel class="text-xs font-semibold text-gray-500 uppercase mb-2 block">不透明度 {{ objectOpacity }}%</UiLabel>
                          <input type="range" v-model.number="objectOpacity" min="0" max="100" class="w-full" />
                     </div>
 
                     <!-- Layout -->
                     <div>
-                         <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">变换</label>
+                         <UiLabel class="text-xs font-semibold text-gray-500 uppercase mb-2 block">变换</UiLabel>
                          <div class="grid grid-cols-2 gap-2">
                              <button @click="flip('X')" class="py-1 px-2 border rounded text-xs hover:bg-gray-50">水平翻转</button>
                              <button @click="flip('Y')" class="py-1 px-2 border rounded text-xs hover:bg-gray-50">垂直翻转</button>
@@ -780,7 +780,7 @@ function onDrop(e: DragEvent) {
                 <!-- Drawing Settings (when drawing tool active) -->
                 <div v-else-if="currentTool === 'draw'" class="p-4 space-y-6">
                     <div>
-                        <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">画笔颜色</label>
+                        <UiLabel class="text-xs font-semibold text-gray-500 uppercase mb-2 block">画笔颜色</UiLabel>
                         <div class="flex gap-2 flex-wrap">
                             <button 
                                 v-for="c in ['#000000', '#EF4444', '#22C55E', '#3B82F6', '#F59E0B']"
@@ -793,7 +793,7 @@ function onDrop(e: DragEvent) {
                         </div>
                     </div>
                      <div>
-                         <label class="text-xs font-semibold text-gray-500 uppercase mb-2 block">画笔大小 {{ brushSize }}px</label>
+                         <UiLabel class="text-xs font-semibold text-gray-500 uppercase mb-2 block">画笔大小 {{ brushSize }}px</UiLabel>
                          <input type="range" v-model.number="brushSize" min="1" max="50" class="w-full" />
                     </div>
                 </div>

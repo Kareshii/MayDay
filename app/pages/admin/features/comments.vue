@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ManagedArticleSummary } from '~~/shared/types/articles'
+
 type CommentStatus = 'pending' | 'approved' | 'spam'
 
 interface CommentItem {
@@ -11,6 +13,8 @@ interface CommentItem {
   createdAt: string
   updatedAt: string
 }
+
+const ARTICLE_NONE_VALUE = '__none__'
 
 definePageMeta({
   layout: 'admin',
@@ -26,7 +30,12 @@ const statusFilter = ref<'all' | CommentStatus>('all')
 const { showSuccessToast, showErrorToast } = useAdminToast()
 
 const { data, pending, error, refresh } = await useFetch<{ comments: CommentItem[] }>('/api/admin/features/comments')
+const { data: articleData, pending: articlesPending } = await useFetch<{ articles: ManagedArticleSummary[] }>('/api/admin/articles', {
+  default: () => ({ articles: [] }),
+})
 const comments = ref<CommentItem[]>([])
+const editingCommentId = ref<string>('')
+const editingCommentData = ref<CommentItem | null>(null)
 
 watch(data, (value) => {
   comments.value = (value?.comments || []).map(item => ({ ...item }))
@@ -36,6 +45,42 @@ const filteredComments = computed(() => {
   return statusFilter.value === 'all'
     ? comments.value
     : comments.value.filter(comment => comment.status === statusFilter.value)
+})
+
+const articleOptions = computed(() => (articleData.value?.articles || [])
+  .filter(article => article.slug)
+  .map(article => ({
+    slug: article.slug,
+    title: article.title || article.slug,
+  })))
+
+const editableArticleOptions = computed(() => {
+  const options = [...articleOptions.value]
+  const selectedSlug = editingCommentData.value?.articleSlug
+
+  if (selectedSlug && !options.some(article => article.slug === selectedSlug)) {
+    options.push({
+      slug: selectedSlug,
+      title: selectedSlug,
+    })
+  }
+
+  return options
+})
+
+const articleTitleBySlug = computed(() => {
+  return new Map(articleOptions.value.map(article => [article.slug, article.title]))
+})
+
+const editingArticleSlug = computed({
+  get() {
+    return editingCommentData.value?.articleSlug || ARTICLE_NONE_VALUE
+  },
+  set(value: string) {
+    if (editingCommentData.value) {
+      editingCommentData.value.articleSlug = value === ARTICLE_NONE_VALUE ? '' : value
+    }
+  },
 })
 
 function createLocalId() {
@@ -48,7 +93,7 @@ function addComment() {
     id: createLocalId(),
     author: '匿名访客',
     email: '',
-    articleSlug: '',
+    articleSlug: articleOptions.value[0]?.slug || '',
     content: '这是一条待审核评论。',
     status: 'pending',
     createdAt: now,
@@ -57,20 +102,22 @@ function addComment() {
   statusFilter.value = 'all'
 }
 
+function getArticleDisplayName(slug: string) {
+  return slug ? articleTitleBySlug.value.get(slug) || slug : '未关联文章'
+}
+
 function removeComment(id: string) {
   comments.value = comments.value.filter(item => item.id !== id)
 }
 
 function updateCommentStatus(id: string, status: CommentStatus) {
   const index = comments.value.findIndex(c => c.id === id)
-  if (index !== -1) {
-    comments.value[index].status = status
+  const comment = comments.value[index]
+
+  if (comment) {
+    comment.status = status
   }
 }
-
-// Quick Edit state
-const editingCommentId = ref<string>('')
-const editingCommentData = ref<CommentItem | null>(null)
 
 function startEditComment(comment: CommentItem) {
   editingCommentId.value = comment.id
@@ -170,30 +217,51 @@ watch(error, (value) => {
         <div v-if="editingCommentId === comment.id && editingCommentData" class="rounded-2xl border-2 border-[var(--primary)] bg-[var(--surface-card)] p-5 shadow-sm transition-all">
           <div class="mb-4 text-sm font-bold text-[var(--primary)]">编辑评论</div>
           <div class="grid gap-4 md:grid-cols-2">
-            <label class="block space-y-1">
+            <UiLabel class="block space-y-1">
               <span class="text-xs font-medium text-[var(--text-secondary)]">作者</span>
               <UiInput v-model="editingCommentData.author" />
-            </label>
-            <label class="block space-y-1">
+            </UiLabel>
+            <UiLabel class="block space-y-1">
               <span class="text-xs font-medium text-[var(--text-secondary)]">邮箱</span>
               <UiInput v-model="editingCommentData.email" />
-            </label>
-            <label class="block space-y-1">
-              <span class="text-xs font-medium text-[var(--text-secondary)]">文章 Slug</span>
-              <UiInput v-model="editingCommentData.articleSlug" />
-            </label>
-            <label class="block space-y-1">
+            </UiLabel>
+            <UiLabel class="block space-y-1">
+              <span class="text-xs font-medium text-[var(--text-secondary)]">文章</span>
+              <UiSelect v-model="editingArticleSlug" :disabled="articlesPending || !editableArticleOptions.length">
+                <UiSelectTrigger>
+                  <UiSelectValue :placeholder="articlesPending ? '正在加载文章...' : '选择文章'" />
+                </UiSelectTrigger>
+                <UiSelectContent>
+                  <UiSelectItem :value="ARTICLE_NONE_VALUE">
+                    未关联文章
+                  </UiSelectItem>
+                  <UiSelectItem
+                    v-for="article in editableArticleOptions"
+                    :key="article.slug"
+                    :value="article.slug"
+                  >
+                    {{ article.title }}
+                  </UiSelectItem>
+                </UiSelectContent>
+              </UiSelect>
+            </UiLabel>
+            <UiLabel class="block space-y-1">
               <span class="text-xs font-medium text-[var(--text-secondary)]">状态</span>
-              <select v-model="editingCommentData.status" class="h-10 w-full rounded-xl border border-[var(--border-strong)] bg-[var(--surface-card)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--focus-ring)]">
-                <option value="pending">待审核</option>
-                <option value="approved">已通过</option>
-                <option value="spam">垃圾</option>
-              </select>
-            </label>
-            <label class="block space-y-1 md:col-span-2">
+              <UiSelect v-model="editingCommentData.status">
+                <UiSelectTrigger>
+                  <UiSelectValue placeholder="选择状态" />
+                </UiSelectTrigger>
+                <UiSelectContent>
+                  <UiSelectItem value="pending">待审核</UiSelectItem>
+                  <UiSelectItem value="approved">已通过</UiSelectItem>
+                  <UiSelectItem value="spam">垃圾</UiSelectItem>
+                </UiSelectContent>
+              </UiSelect>
+            </UiLabel>
+            <UiLabel class="block space-y-1 md:col-span-2">
               <span class="text-xs font-medium text-[var(--text-secondary)]">评论内容</span>
               <UiTextarea v-model="editingCommentData.content" class="min-h-24" />
-            </label>
+            </UiLabel>
           </div>
           <div class="mt-4 flex justify-end gap-2">
             <UiButton variant="secondary" size="sm" @click="cancelEditComment">取消</UiButton>
@@ -221,7 +289,7 @@ watch(error, (value) => {
               
               <div class="mt-1 text-xs text-[var(--text-muted)]">
                 {{ new Date(comment.createdAt).toLocaleString() }} 
-                于 <span class="font-medium text-[var(--text-primary)]">{{ comment.articleSlug || '未关联文章' }}</span>
+                于 <span class="font-medium text-[var(--text-primary)]">{{ getArticleDisplayName(comment.articleSlug) }}</span>
               </div>
 
               <div class="mt-3 text-sm leading-relaxed text-[var(--text-primary)] whitespace-pre-wrap">

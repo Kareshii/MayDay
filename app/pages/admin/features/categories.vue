@@ -23,6 +23,7 @@ useSeoMeta({
 })
 
 const PAGE_SIZE = 10
+const PARENT_NONE_VALUE = '__none__'
 
 const saving = ref(false)
 const categories = ref<CategoryItem[]>([])
@@ -158,6 +159,15 @@ const parentOptions = computed(() => {
     : new Set<string>()
 
   return treeCategories.value.filter(category => !excludedIds.has(category.id))
+})
+
+const selectedParentId = computed({
+  get() {
+    return currentCategory.value.parentId || PARENT_NONE_VALUE
+  },
+  set(value: string) {
+    currentCategory.value.parentId = value === PARENT_NONE_VALUE ? '' : value
+  },
 })
 
 const headerActions = computed(() => [
@@ -445,47 +455,49 @@ async function saveCategories() {
             <!-- Body -->
             <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-2">
               <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <label class="block space-y-2">
+                <UiLabel class="block space-y-2">
                   <span class="text-sm font-medium text-[var(--text-primary)]">名称 <span class="text-red-500">*</span></span>
                   <UiInput v-model="currentCategory.name" placeholder="例如：技术分享" required class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
-                </label>
+                </UiLabel>
 
-                <label class="block space-y-2">
+                <UiLabel class="block space-y-2">
                   <span class="text-sm font-medium text-[var(--text-primary)]">别名 (Slug)</span>
                   <UiInput v-model="currentCategory.slug" placeholder="例如：tech" class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
-                </label>
+                </UiLabel>
               </div>
 
               <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <label class="block space-y-2">
+                <UiLabel class="block space-y-2">
                   <span class="text-sm font-medium text-[var(--text-primary)]">父级分类</span>
-                  <select
-                    v-model="currentCategory.parentId"
-                    class="h-10 w-full rounded-xl border border-transparent bg-[var(--surface-low)] px-3 text-sm text-[var(--text-primary)] outline-none transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-2 focus:ring-[var(--primary)]"
-                  >
-                    <option value="">
-                      无
-                    </option>
-                    <option
-                      v-for="parent in parentOptions"
-                      :key="parent.id"
-                      :value="parent.id"
-                    >
-                      {{ `${'— '.repeat(parent.depth)}${parent.name}` }}
-                    </option>
-                  </select>
-                </label>
+                  <UiSelect v-model="selectedParentId">
+                    <UiSelectTrigger class="border-transparent bg-[var(--surface-low)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]">
+                      <UiSelectValue placeholder="选择父级分类" />
+                    </UiSelectTrigger>
+                    <UiSelectContent>
+                      <UiSelectItem :value="PARENT_NONE_VALUE">
+                        无
+                      </UiSelectItem>
+                      <UiSelectItem
+                        v-for="parent in parentOptions"
+                        :key="parent.id"
+                        :value="parent.id"
+                      >
+                        {{ `${'— '.repeat(parent.depth)}${parent.name}` }}
+                      </UiSelectItem>
+                    </UiSelectContent>
+                  </UiSelect>
+                </UiLabel>
 
-                <label class="block space-y-2">
+                <UiLabel class="block space-y-2">
                   <span class="text-sm font-medium text-[var(--text-primary)]">排序 (越小越靠前)</span>
                   <UiInput v-model.number="currentCategory.order" type="number" min="1" class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
-                </label>
+                </UiLabel>
               </div>
 
-              <label class="block space-y-2">
+              <UiLabel class="block space-y-2">
                 <span class="text-sm font-medium text-[var(--text-primary)]">描述</span>
                 <UiTextarea v-model="currentCategory.description" placeholder="分类说明（可选）" class="min-h-24 resize-none border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
-              </label>
+              </UiLabel>
             </div>
 
             <!-- Footer -->

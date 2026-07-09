@@ -106,7 +106,7 @@ async function signIn() {
       </div>
 
       <form class="space-y-4" @submit.prevent="signIn">
-        <label class="block space-y-2">
+        <UiLabel class="block space-y-2">
           <span class="text-sm font-medium text-[var(--text-primary)]">用户名</span>
           <UiInput
             v-model="form.username"
@@ -114,9 +114,9 @@ async function signIn() {
             placeholder="admin"
             :disabled="submitting || !sessionInfo?.configured"
           />
-        </label>
+        </UiLabel>
 
-        <label class="block space-y-2">
+        <UiLabel class="block space-y-2">
           <span class="text-sm font-medium text-[var(--text-primary)]">密码</span>
           <UiInput
             v-model="form.password"
@@ -125,7 +125,7 @@ async function signIn() {
             placeholder="输入后台密码"
             :disabled="submitting || !sessionInfo?.configured"
           />
-        </label>
+        </UiLabel>
 
         <UiButton class="mt-2 w-full" type="submit" :disabled="submitting || !sessionInfo?.configured">
           {{ submitting ? '登录中...' : '登录后台' }}

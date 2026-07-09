@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { DirectiveBinding } from 'vue'
+import type { ManagedArticleSummary } from '~~/shared/types/articles'
 import { useMediaQuery, useWindowScroll } from '@vueuse/core'
+import { CardBody, CardContainer, CardItem } from '~/components/inspira/ui/card-3d'
 import { featuredShowcase, showcaseSections } from '@/utils/siteSections'
 import { mojoItems } from '@/utils/mojoData'
 
@@ -48,6 +50,11 @@ const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
   }),
 })
 
+const { data: postsData } = await useFetch<{ articles: ManagedArticleSummary[] }>('/api/posts', {
+  key: 'home-featured-posts',
+  default: () => ({ articles: [] }),
+})
+
 const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
 const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 ?? '继续唱。')
 const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
@@ -76,6 +83,19 @@ const featuredSection = featuredShowcase ?? showcaseSections[0] ?? {
   cardClass: '',
 }
 const secondarySections = showcaseSections.filter(section => section.path !== featuredSection.path)
+const homeArticles = computed(() => (postsData.value?.articles || []).slice(0, 3))
+
+function getArticleRoute(article: ManagedArticleSummary) {
+  return article.path || `/detail/${article.slug}`
+}
+
+function getArticleCover(article: ManagedArticleSummary) {
+  return article.coverImage || '/cover.jpg'
+}
+
+function getArticleSummary(article: ManagedArticleSummary) {
+  return article.summary || article.description || '暂无摘要。'
+}
 
 const heroImageStyle = computed(() => ({
   transform: prefersReducedMotion.value
@@ -232,38 +252,89 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <section id="chapters" class="container relative z-10 min-h-[100svh] scroll-mt-18 pt-12 pb-20 md:pt-16 md:pb-28">
-      <NuxtLink v-reveal="120" :to="featuredSection.path" class="group block">
-        <article
-          class="relative overflow-hidden rounded-[2.5rem] border border-[var(--border-soft)] bg-[#0a0a0a] text-white shadow-[0_32px_80px_-24px_rgba(0,0,0,0.5)] transition-all duration-700 hover:-translate-y-2 hover:shadow-[0_40px_100px_-24px_rgba(0,0,0,0.7)] hover:border-white/20"
-          :class="featuredSection.cardClass"
+    <section id="chapters" class="relative z-10 mx-auto min-h-[100svh] w-full max-w-[96rem] scroll-mt-18 px-4 pt-12 pb-20 sm:px-6 md:pt-16 md:pb-28">
+      <div v-reveal="120" class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="section-kicker flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
+            <Icon name="lucide:book-open-text" class="size-4" />
+            POSTS
+          </p>
+          <h2 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
+            文章
+          </h2>
+        </div>
+
+        <NuxtLink
+          to="/posts"
+          class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
         >
-          <!-- Shimmer effect on hover -->
-          <div class="pointer-events-none absolute inset-0 z-10 bg-gradient-to-tr from-transparent via-white/5 to-transparent opacity-0 mix-blend-overlay transition-opacity duration-700 group-hover:opacity-100" />
-          
-          <div class="relative min-h-[420px] md:min-h-[560px]">
-            <img
-              :src="featuredSection.image"
-              :alt="featuredSection.title"
-              class="absolute inset-0 h-full w-full object-cover transition-transform duration-1000 ease-out group-hover:scale-105"
-            >
-            <div class="absolute inset-0 bg-gradient-to-t" :class="featuredSection.overlayClass" />
-            <div class="absolute inset-0" />
-            <div class="absolute inset-x-0 bottom-0 z-20 p-8 md:p-12 lg:p-16">
-              <h3 class="mt-6 max-w-2xl text-4xl font-bold tracking-tight drop-shadow-lg md:text-6xl">
-                {{ featuredSection.title }}
-              </h3>
-              <p class="mt-5 max-w-2xl text-base leading-relaxed text-white/80 md:text-lg">
-                {{ featuredSection.description }}
-              </p>
-              <div class="mt-8 inline-flex items-center gap-2.5 rounded-full bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 group-hover:bg-white/20">
-                打开这一章
-                <Icon name="lucide:arrow-right" class="size-4 transition-transform duration-300 group-hover:translate-x-1" />
+          查看全部
+          <Icon name="lucide:arrow-right" class="size-4" />
+        </NuxtLink>
+      </div>
+
+      <div
+        v-if="homeArticles.length"
+        class="mt-8 grid gap-6 lg:grid-cols-2 2xl:grid-cols-3"
+      >
+        <NuxtLink
+          v-for="(article, index) in homeArticles"
+          :key="article.id"
+          v-reveal="{ delay: 180 + index * 90 }"
+          :to="getArticleRoute(article)"
+          class="group/article block focus:outline-none"
+        >
+          <CardContainer container-class="h-full">
+            <CardBody class="group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 group-hover/article:border-cyan-500/40 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
+              <CardItem
+                :translate-z="50"
+                class="line-clamp-1 w-full text-xl font-bold text-neutral-600 dark:text-white"
+              >
+                {{ article.title }}
+              </CardItem>
+
+              <CardItem
+                as="p"
+                :translate-z="60"
+                class="mt-2 line-clamp-1 w-full max-w-sm text-sm text-neutral-500 dark:text-neutral-300"
+              >
+                {{ getArticleSummary(article) }}
+              </CardItem>
+
+              <CardItem
+                :translate-z="100"
+                class="mt-4 w-full"
+              >
+                <img
+                  :src="getArticleCover(article)"
+                  :alt="article.title"
+                  class="h-60 w-full rounded-xl object-cover group-hover/card:shadow-xl"
+                  width="1000"
+                  height="1000"
+                >
+              </CardItem>
+
+              <div class="mt-12 flex items-center justify-between" style="transform-style: preserve-3d;">
+                <CardItem
+                  :translate-z="20"
+                  as="span"
+                  class="rounded-xl px-4 py-2 text-xs font-normal text-neutral-700 dark:text-white"
+                >
+                  阅读文章 →
+                </CardItem>
               </div>
-            </div>
-          </div>
-        </article>
-      </NuxtLink>
+            </CardBody>
+          </CardContainer>
+        </NuxtLink>
+      </div>
+
+      <div
+        v-else
+        v-reveal="180"
+        class="mt-8 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-card)] p-8 text-sm text-[var(--text-secondary)]"
+      >
+        还没有已发布的文章。
+      </div>
 
       <div class="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <NuxtLink

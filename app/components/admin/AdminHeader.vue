@@ -102,7 +102,7 @@ async function openSite() {
           </p>
         </div>
 
-        <label
+        <UiLabel
           v-if="headerSearch"
           class="relative ml-5 hidden w-[min(22rem,34vw)] min-w-56 shrink-0 md:block"
           :aria-label="headerSearch.label || headerSearch.placeholder || '搜索'"
@@ -115,7 +115,7 @@ async function openSite() {
             class="h-8 w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)] pl-8 pr-3 text-xs text-[var(--text-primary)] outline-none transition-all duration-300 placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-2 focus:ring-[var(--focus-ring)]"
             @input="updateSearch(($event.target as HTMLInputElement).value)"
           >
-        </label>
+        </UiLabel>
       </div>
 
       <div class="flex h-full shrink-0 items-center justify-end gap-1.5 px-2 lg:px-4">
@@ -181,7 +181,7 @@ async function openSite() {
     </div>
 
     <div v-if="headerSearch || headerActions.length" class="space-y-2 border-t border-[var(--border-soft)] px-3 py-2 md:hidden">
-      <label
+      <UiLabel
         v-if="headerSearch"
         class="relative block w-full min-w-0"
         :aria-label="headerSearch.label || headerSearch.placeholder || '搜索'"
@@ -194,7 +194,7 @@ async function openSite() {
           class="h-8 w-full rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)] pl-8 pr-3 text-xs text-[var(--text-primary)] outline-none transition-all duration-300 placeholder:text-[var(--text-muted)] focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-2 focus:ring-[var(--focus-ring)]"
           @input="updateSearch(($event.target as HTMLInputElement).value)"
         >
-      </label>
+      </UiLabel>
 
       <div v-if="headerActions.length" class="flex min-w-0 gap-1.5 overflow-x-auto pb-0.5">
         <template v-for="(action, index) in headerActions" :key="getActionKey(action, index)">
