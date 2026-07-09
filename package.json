@@ -11,7 +11,8 @@
   "scripts": {
     "preinstall": "node ./scripts/check-node-sqlite.mjs",
     "dev": "nuxi dev --host",
-    "build": "nuxi build",
+    "build": "node ./scripts/build.mjs",
+    "build:nuxt": "nuxi build",
     "generate": "nuxi generate",
     "preview": "nuxi preview",
     "lint": "eslint .",
