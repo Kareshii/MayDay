@@ -10,6 +10,11 @@ let buildDone = false
 let finished = false
 let outputTail = ''
 
+const successMarkers = [
+  'build:done',
+  'You can deploy this build using',
+]
+
 function complete(code) {
   if (finished) {
     return
@@ -28,9 +33,9 @@ function handleOutput(stream, chunk) {
   const text = chunk.toString()
   stream.write(chunk)
 
-  outputTail = (outputTail + text).slice(-200)
+  outputTail = (outputTail + text).slice(-1000)
 
-  if (!buildDone && outputTail.includes('build:done')) {
+  if (!buildDone && successMarkers.some(marker => outputTail.includes(marker))) {
     buildDone = true
     setTimeout(() => complete(0), 2000)
   }

@@ -32,7 +32,10 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@vueuse/motion/nuxt',
   ],
-
+  sourcemap: {
+    server: false,
+    client: false,
+  },
   css: ['assets/css/main.css'],
   components: {
     dirs: [
