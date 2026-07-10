@@ -21,6 +21,14 @@ export interface ManagedArticleSummary {
   path: string
 }
 
+export interface AdminArticleListResponse {
+  configMissing: boolean
+  articles: ManagedArticleSummary[]
+  total: number
+  page: number
+  page_size: number
+}
+
 export interface ManagedArticle extends ManagedArticleSummary {
   content: string
 }

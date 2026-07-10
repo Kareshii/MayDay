@@ -365,7 +365,10 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="grid gap-8 xl:grid-cols-[minmax(0,1fr)_16rem]">
+  <div
+    class="grid gap-8"
+    :class="tocItems.length ? 'xl:grid-cols-[minmax(0,1fr)_16rem]' : 'xl:grid-cols-1'"
+  >
     <div ref="contentRef" class="surface-card p-6 md:p-10">
       <slot />
     </div>

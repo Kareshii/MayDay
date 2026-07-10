@@ -162,8 +162,8 @@ watch(settingsError, (value) => {
 </script>
 
 <template>
-  <div class="cms-page cms-editor-page space-y-4">
-    <AdminPageHeader title="新建文章"  :actions="headerActions" />
+  <div class="cms-page cms-editor-page space-y-3">
+    <AdminPageHeader title="新建文章" subtitle="创建草稿或直接发布" :actions="headerActions" />
 
     <ArticleEditorForm
       ref="formRef"

@@ -1,4 +1,4 @@
-import type { Ref } from 'vue'
+import { toRaw, type Ref } from 'vue'
 
 export type AdminNavigationType = 'internal' | 'external'
 export type AdminThumbnailMode = 'contain' | 'longest' | 'cover'
@@ -58,29 +58,83 @@ export function createAdminLocalId(prefix: string) {
   return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+interface AdminSaveOptions {
+  showSuccess?: boolean
+}
+
 export async function useAdminSiteSettings(section: AdminSiteSettingSection) {
   const savingSection = ref('')
   const { showSuccessToast, showErrorToast } = useAdminToast()
   const { data, pending, error, refresh } = await useFetch(`/api/admin/features/${section}`)
   const sectionData = data as Ref<Partial<AdminFeatureState> | null>
+  let queuedSave: {
+    section: AdminSiteSettingSection
+    payload: unknown
+    showSuccess: boolean
+  } | null = null
+  let saveLoop: Promise<boolean> | null = null
 
-  async function saveSection(section: AdminSiteSettingSection, payload: unknown) {
-    savingSection.value = section
+  function clonePayload<T>(payload: T): T {
+    return structuredClone(toRaw(payload))
+  }
 
-    try {
-      await $fetch(`/api/admin/features/${section}`, {
-        method: 'PUT',
-        body: {
-          [section]: payload,
-        },
-      })
-      await refresh()
-      showSuccessToast('保存成功')
-    } catch (err) {
-      showErrorToast('保存失败', getRequestErrorMessage(err, '保存失败'))
-    } finally {
-      savingSection.value = ''
+  function runSaveLoop() {
+    if (saveLoop) {
+      return saveLoop
     }
+
+    saveLoop = (async () => {
+      let succeeded = true
+
+      while (queuedSave) {
+        const request = queuedSave
+        queuedSave = null
+        savingSection.value = request.section
+
+        try {
+          await $fetch(`/api/admin/features/${request.section}`, {
+            method: 'PUT',
+            body: {
+              [request.section]: request.payload,
+            },
+          })
+
+          if (request.showSuccess) {
+            showSuccessToast('保存成功')
+          }
+        } catch (err) {
+          succeeded = false
+          showErrorToast('保存失败', getRequestErrorMessage(err, '保存失败'))
+        }
+      }
+
+      return succeeded
+    })()
+
+    void saveLoop.finally(() => {
+      saveLoop = null
+      savingSection.value = ''
+
+      if (queuedSave) {
+        void runSaveLoop()
+      }
+    })
+
+    return saveLoop
+  }
+
+  async function saveSection(
+    nextSection: AdminSiteSettingSection,
+    payload: unknown,
+    options: AdminSaveOptions = {},
+  ) {
+    queuedSave = {
+      section: nextSection,
+      payload: clonePayload(payload),
+      showSuccess: options.showSuccess ?? true,
+    }
+
+    return await runSaveLoop()
   }
 
   watch(error, (value) => {

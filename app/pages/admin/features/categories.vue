@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import {
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogOverlay,
+  DialogPortal,
+  DialogRoot,
+  DialogTitle,
+} from 'reka-ui'
+
 interface CategoryItem {
   id: string
   name: string
@@ -32,7 +42,7 @@ const dialogOpen = ref(false)
 const isEditing = ref(false)
 const { showSuccessToast, showErrorToast } = useAdminToast()
 
-const { data, pending, error, refresh } = await useFetch<{ categories: CategoryItem[] }>('/api/admin/features/categories')
+const { data, pending, error } = await useFetch<{ categories: CategoryItem[] }>('/api/admin/features/categories')
 
 function createLocalId() {
   return globalThis.crypto?.randomUUID?.() || `category-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -125,6 +135,11 @@ const pageStart = computed(() => {
 })
 
 const pageEnd = computed(() => Math.min(currentPage.value * PAGE_SIZE, treeCategories.value.length))
+const rootCategoryCount = computed(() => categories.value.filter(category => !category.parentId).length)
+const nestedCategoryCount = computed(() => categories.value.length - rootCategoryCount.value)
+const maxCategoryDepth = computed(() => {
+  return treeCategories.value.reduce((depth, category) => Math.max(depth, category.depth + 1), 0)
+})
 
 watch(totalPages, (value) => {
   currentPage.value = Math.min(currentPage.value, value)
@@ -172,11 +187,11 @@ const selectedParentId = computed({
 
 const headerActions = computed(() => [
   {
-    label: '保存分类',
-    icon: 'lucide:save',
-    variant: 'outline' as const,
+    label: '新建分类',
+    icon: 'lucide:plus',
+    variant: 'default' as const,
     disabled: saving.value || pending.value,
-    onClick: saveCategories,
+    onClick: openCreateDialog,
   },
 ])
 
@@ -217,7 +232,7 @@ function normalizeCurrentCategory() {
   }
 }
 
-function submitCategory() {
+async function submitCategory() {
   const category = normalizeCurrentCategory()
 
   if (!category.name) {
@@ -225,50 +240,77 @@ function submitCategory() {
     return
   }
 
+  let nextCategories: CategoryItem[]
+
   if (isEditing.value) {
     const index = categories.value.findIndex(item => item.id === category.id)
 
-    if (index !== -1) {
-      categories.value[index] = category
+    if (index === -1) {
+      showErrorToast('保存失败', '分类不存在或已被删除')
+      return
     }
+
+    nextCategories = categories.value.map(item => item.id === category.id ? category : item)
   } else {
-    categories.value.push(category)
-    currentPage.value = totalPages.value
+    nextCategories = [...categories.value, category]
   }
 
-  closeDialog()
+  const saved = await persistCategories(
+    nextCategories,
+    isEditing.value ? '分类已更新' : '分类已创建',
+  )
+
+  if (saved) {
+    currentPage.value = isEditing.value ? currentPage.value : totalPages.value
+    closeDialog()
+  }
 }
 
-function removeCategory(id: string) {
-  if (import.meta.client && !window.confirm('确认删除这个分类吗？子分类会变为无父级，保存后生效。')) {
+async function removeCategory(id: string) {
+  if (saving.value) {
     return
   }
 
-  categories.value = categories.value
+  if (import.meta.client && !window.confirm('确认删除这个分类吗？子分类会变为无父级。')) {
+    return
+  }
+
+  const nextCategories = categories.value
     .filter(item => item.id !== id)
     .map(item => item.parentId === id ? { ...item, parentId: '' } : item)
 
-  if (currentCategory.value.id === id) {
-    closeDialog()
-  }
+  const saved = await persistCategories(nextCategories, '分类已删除')
 
-  currentPage.value = Math.min(currentPage.value, totalPages.value)
+  if (saved) {
+    if (currentCategory.value.id === id) {
+      closeDialog()
+    }
+
+    currentPage.value = Math.min(currentPage.value, totalPages.value)
+  }
 }
 
-async function saveCategories() {
+async function persistCategories(nextCategories: CategoryItem[], successMessage: string) {
+  if (saving.value) {
+    return false
+  }
+
   saving.value = true
 
   try {
-    await $fetch('/api/admin/features/categories', {
+    const response = await $fetch<{ categories: CategoryItem[] }>('/api/admin/features/categories', {
       method: 'PUT',
       body: {
-        categories: categories.value,
+        categories: nextCategories,
       },
     })
-    await refresh()
-    showSuccessToast('分类已保存')
+
+    categories.value = response.categories.map(item => ({ ...item }))
+    showSuccessToast(successMessage)
+    return true
   } catch (err) {
     showErrorToast('保存失败', getRequestErrorMessage(err, '保存失败'))
+    return false
   } finally {
     saving.value = false
   }
@@ -276,243 +318,272 @@ async function saveCategories() {
 </script>
 
 <template>
-  <div class="cms-page space-y-3">
-    <AdminPageHeader title="分类管理" subtitle="" :actions="headerActions" />
+  <div class="cms-page space-y-4">
+    <AdminPageHeader title="分类管理" subtitle="文章分类与层级结构" :actions="headerActions" />
 
-    <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-6 py-14 text-center text-sm text-[var(--text-secondary)]">
-      正在加载分类...
+    <div v-if="pending" class="flex min-h-56 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
+      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
+        正在加载分类
+      </div>
     </div>
 
-    <UiCard v-else class="overflow-hidden p-0">
-      <div class="flex flex-col gap-3 border-b border-[var(--border-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm font-semibold text-[var(--text-primary)]">
-            分类列表
-          </p>
-          <p class="mt-1 text-xs text-[var(--text-secondary)]">
-            共 {{ treeCategories.length }} 个分类
-          </p>
+    <template v-else>
+      <section class="grid overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] sm:grid-cols-3">
+        <div class="flex min-h-28 items-center gap-4 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
+          <div class="grid size-10 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+            <Icon name="lucide:folders" class="size-5" />
+          </div>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">分类总数</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-[var(--text-primary)]">{{ treeCategories.length }}</p>
+          </div>
         </div>
-        <UiButton size="sm" class="h-8 gap-1.5 px-2.5 text-xs" @click="openCreateDialog">
-          <Icon name="lucide:plus" class="size-3.5" />
-          新建分类
-        </UiButton>
-      </div>
+        <div class="flex min-h-28 items-center gap-4 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
+          <div class="grid size-10 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <Icon name="lucide:folder-root" class="size-5" />
+          </div>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">一级分类</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-[var(--text-primary)]">{{ rootCategoryCount }}</p>
+          </div>
+        </div>
+        <div class="flex min-h-28 items-center gap-4 px-5 py-4">
+          <div class="grid size-10 shrink-0 place-items-center rounded-md bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+            <Icon name="lucide:git-branch" class="size-5" />
+          </div>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">子分类</p>
+            <p class="mt-1 text-2xl font-bold tabular-nums text-[var(--text-primary)]">{{ nestedCategoryCount }}</p>
+          </div>
+        </div>
+      </section>
 
-      <div v-if="!treeCategories.length" class="px-6 py-14 text-center text-sm text-[var(--text-secondary)]">
-        暂无分类。
-      </div>
+      <UiCard class="overflow-hidden p-0">
+        <div class="flex items-center justify-between gap-4 border-b border-[var(--border-soft)] px-5 py-4">
+          <div class="flex min-w-0 items-center gap-3">
+            <div class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
+              <Icon name="lucide:list-tree" class="size-4" />
+            </div>
+            <div class="min-w-0">
+              <h2 class="text-sm font-semibold text-[var(--text-primary)]">分类结构</h2>
+              <p class="mt-0.5 text-xs text-[var(--text-secondary)]">{{ maxCategoryDepth }} 级层级</p>
+            </div>
+          </div>
+          <UiButton size="sm" class="h-8 gap-1.5 px-2.5 text-xs" :disabled="saving" @click="openCreateDialog">
+            <Icon name="lucide:plus" class="size-3.5" />
+            新建分类
+          </UiButton>
+        </div>
 
-      <div v-else class="overflow-x-auto">
-        <UiTable class="min-w-[900px]">
-          <UiTableHeader>
-            <UiTableRow class="hover:bg-transparent">
-              <UiTableHead class="px-6">
-                名称
-              </UiTableHead>
-              <UiTableHead class="w-[12rem]">
-                父级
-              </UiTableHead>
-              <UiTableHead class="w-[12rem]">
-                别名
-              </UiTableHead>
-              <UiTableHead class="w-[6rem]">
-                排序
-              </UiTableHead>
-              <UiTableHead>
-                描述
-              </UiTableHead>
-              <UiTableHead class="w-[10rem] px-6 text-right">
-                操作
-              </UiTableHead>
-            </UiTableRow>
-          </UiTableHeader>
-          <UiTableBody>
-            <UiTableRow
+        <div v-if="!treeCategories.length" class="grid min-h-72 place-items-center px-6 text-center">
+          <div>
+            <div class="mx-auto grid size-11 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
+              <Icon name="lucide:folder-plus" class="size-5" />
+            </div>
+            <p class="mt-4 text-sm font-semibold text-[var(--text-primary)]">暂无分类</p>
+            <UiButton size="sm" class="mt-4" :disabled="saving" @click="openCreateDialog">
+              <Icon name="lucide:plus" class="size-4" />
+              新建分类
+            </UiButton>
+          </div>
+        </div>
+
+        <div v-else>
+          <div class="hidden grid-cols-[minmax(16rem,1.4fr)_minmax(9rem,0.7fr)_minmax(8rem,0.6fr)_5rem_minmax(12rem,1fr)_5rem] gap-4 border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-5 py-2.5 text-[11px] font-semibold text-[var(--text-secondary)] xl:grid">
+            <span>名称</span>
+            <span>父级</span>
+            <span>别名</span>
+            <span>排序</span>
+            <span>描述</span>
+            <span class="text-right">操作</span>
+          </div>
+
+          <div class="divide-y divide-[var(--border-soft)]">
+            <div
               v-for="item in paginatedCategories"
               :key="item.id"
+              class="group grid min-w-0 gap-3 px-4 py-4 transition-colors hover:bg-[var(--surface-low)] sm:px-5 xl:grid-cols-[minmax(16rem,1.4fr)_minmax(9rem,0.7fr)_minmax(8rem,0.6fr)_5rem_minmax(12rem,1fr)_5rem] xl:items-center xl:gap-4"
             >
-              <UiTableCell class="px-6 py-4">
-                <div class="flex items-center gap-2 font-semibold text-[var(--text-primary)]">
-                  <span
-                    v-if="item.depth > 0"
-                    class="select-none text-[var(--text-muted)]"
-                  >
-                    {{ '— '.repeat(item.depth) }}
-                  </span>
-                  <Icon name="lucide:folder" class="size-4 text-[var(--primary)]" />
-                  <span>{{ item.name }}</span>
+              <div class="min-w-0" :style="{ paddingInlineStart: `${Math.min(item.depth, 4) * 18}px` }">
+                <div class="flex min-w-0 items-center gap-2.5">
+                  <Icon v-if="item.depth > 0" name="lucide:corner-down-right" class="size-3.5 shrink-0 text-[var(--text-muted)]" />
+                  <div :class="['grid size-8 shrink-0 place-items-center rounded-md', item.depth === 0 ? 'bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300' : 'bg-[var(--surface-high)] text-[var(--text-secondary)]']">
+                    <Icon :name="item.depth === 0 ? 'lucide:folder' : 'lucide:folder-tree'" class="size-4" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <p class="truncate text-sm font-semibold text-[var(--text-primary)]">{{ item.name }}</p>
+                      <span class="shrink-0 rounded-md border border-[var(--border-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">
+                        {{ item.depth + 1 }} 级
+                      </span>
+                    </div>
+                    <p class="mt-0.5 truncate font-mono text-[11px] text-[var(--text-muted)] xl:hidden">{{ item.slug }}</p>
+                  </div>
                 </div>
-              </UiTableCell>
-              <UiTableCell class="text-[var(--text-secondary)]">
-                {{ item.parentName }}
-              </UiTableCell>
-              <UiTableCell class="font-medium text-[var(--text-secondary)]">
+              </div>
+
+              <div class="flex min-w-0 items-center gap-2 text-xs text-[var(--text-secondary)]">
+                <Icon name="lucide:folder-input" class="size-3.5 shrink-0 text-[var(--text-muted)]" />
+                <span class="min-w-0 flex-1 truncate">{{ item.parentName }}</span>
+                <span class="shrink-0 tabular-nums text-[var(--text-muted)] xl:hidden">排序 {{ item.order }}</span>
+              </div>
+
+              <code class="hidden truncate rounded-md bg-[var(--surface-high)] px-2 py-1 font-mono text-[11px] text-[var(--text-secondary)] xl:block">
                 {{ item.slug }}
-              </UiTableCell>
-              <UiTableCell class="text-[var(--text-secondary)]">
-                {{ item.order }}
-              </UiTableCell>
-              <UiTableCell class="max-w-[22rem] text-[var(--text-secondary)]">
-                <span class="line-clamp-1">
-                  {{ item.description || '—' }}
+              </code>
+
+              <div class="hidden xl:block">
+                <span class="inline-grid size-7 place-items-center rounded-md border border-[var(--border-soft)] text-xs font-semibold tabular-nums text-[var(--text-secondary)]">
+                  {{ item.order }}
                 </span>
-              </UiTableCell>
-              <UiTableCell class="px-6">
-                <div class="flex justify-end gap-2">
-                  <UiButton variant="ghost" size="sm" @click="editCategory(item)">
-                    编辑
-                  </UiButton>
-                  <UiButton variant="ghost" size="sm" class="text-red-600 hover:text-red-500" @click="removeCategory(item.id)">
-                    删除
-                  </UiButton>
-                </div>
-              </UiTableCell>
-            </UiTableRow>
-          </UiTableBody>
-        </UiTable>
+              </div>
 
-        <div class="flex flex-col gap-3 border-t border-[var(--border-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p class="text-sm text-[var(--text-secondary)]">
-            显示 {{ pageStart }} - {{ pageEnd }} / {{ treeCategories.length }}
-          </p>
-          <UiPagination
-            :page="currentPage"
-            :items-per-page="PAGE_SIZE"
-            :total="treeCategories.length"
-            :sibling-count="1"
-            show-edges
-            @update:page="goToPage"
-          >
-            <UiPaginationPrev>
-              <Icon name="lucide:chevron-left" class="size-4" />
-              上一页
-            </UiPaginationPrev>
-            <UiPaginationList v-slot="{ items }">
-              <template
-                v-for="(item, index) in items"
-                :key="item.type === 'page' ? item.value : `ellipsis-${index}`"
-              >
-                <UiPaginationListItem
-                  v-if="item.type === 'page'"
-                  :value="item.value"
+              <p class="line-clamp-2 min-w-0 text-xs leading-5 text-[var(--text-secondary)]">
+                {{ item.description || '暂无描述' }}
+              </p>
+
+              <div class="flex items-center justify-end gap-1">
+                <UiButton
+                  variant="ghost"
+                  size="icon"
+                  class="size-8"
+                  :disabled="saving"
+                  aria-label="编辑分类"
+                  title="编辑分类"
+                  @click="editCategory(item)"
                 >
-                  {{ item.value }}
-                </UiPaginationListItem>
-                <UiPaginationEllipsis v-else />
-              </template>
-            </UiPaginationList>
-            <UiPaginationNext>
-              下一页
-              <Icon name="lucide:chevron-right" class="size-4" />
-            </UiPaginationNext>
-          </UiPagination>
-        </div>
-      </div>
-    </UiCard>
+                  <Icon name="lucide:pencil" class="size-4" />
+                </UiButton>
+                <UiButton
+                  variant="ghost"
+                  size="icon"
+                  class="size-8 text-red-600 hover:text-red-500 dark:text-red-400"
+                  :disabled="saving"
+                  aria-label="删除分类"
+                  title="删除分类"
+                  @click="removeCategory(item.id)"
+                >
+                  <Icon name="lucide:trash-2" class="size-4" />
+                </UiButton>
+              </div>
+            </div>
+          </div>
 
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition-opacity duration-300 ease-out"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition-opacity duration-200 ease-in"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="dialogOpen"
-          class="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm sm:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label="分类编辑"
-          @mousedown.self="closeDialog"
-        >
-          <form
-            class="flex max-h-[calc(100dvh-4rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-[var(--surface-card)] shadow-lg animate-in fade-in-0 zoom-in-95 duration-300 ease-out"
-            @submit.prevent="submitCategory"
-          >
-            <!-- Header -->
-            <div class="flex shrink-0 items-center justify-between px-6 py-5">
+          <div class="flex flex-col gap-3 border-t border-[var(--border-soft)] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <p class="text-xs tabular-nums text-[var(--text-secondary)]">
+              显示 {{ pageStart }} - {{ pageEnd }} / {{ treeCategories.length }}
+            </p>
+            <UiPagination
+              v-if="treeCategories.length > PAGE_SIZE"
+              :page="currentPage"
+              :items-per-page="PAGE_SIZE"
+              :total="treeCategories.length"
+              :sibling-count="1"
+              show-edges
+              @update:page="goToPage"
+            >
+              <UiPaginationPrev>
+                <Icon name="lucide:chevron-left" class="size-4" />
+                上一页
+              </UiPaginationPrev>
+              <UiPaginationList v-slot="{ items }">
+                <template v-for="(item, index) in items" :key="item.type === 'page' ? item.value : `ellipsis-${index}`">
+                  <UiPaginationListItem v-if="item.type === 'page'" :value="item.value">
+                    {{ item.value }}
+                  </UiPaginationListItem>
+                  <UiPaginationEllipsis v-else />
+                </template>
+              </UiPaginationList>
+              <UiPaginationNext>
+                下一页
+                <Icon name="lucide:chevron-right" class="size-4" />
+              </UiPaginationNext>
+            </UiPagination>
+          </div>
+        </div>
+      </UiCard>
+    </template>
+
+    <DialogRoot v-model:open="dialogOpen">
+      <DialogPortal>
+        <DialogOverlay class="fixed inset-0 z-[120] bg-slate-950/45 backdrop-blur-sm" />
+        <DialogContent class="fixed left-1/2 top-1/2 z-[121] flex max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] shadow-2xl outline-none data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95">
+          <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitCategory">
+            <div class="flex shrink-0 items-center justify-between border-b border-[var(--border-soft)] px-5 py-4 sm:px-6">
               <div class="flex items-center gap-3">
-                <div class="flex size-10 items-center justify-center rounded-xl bg-[var(--primary)]/5 text-[var(--primary)]">
+                <div class="flex size-9 items-center justify-center rounded-md bg-[var(--primary-soft)] text-[var(--primary)]">
                   <Icon :name="isEditing ? 'lucide:pencil' : 'lucide:folder-plus'" class="size-5" />
                 </div>
                 <div>
-                  <h2 class="text-base font-semibold text-[var(--text-primary)]">
+                  <DialogTitle class="text-base font-semibold text-[var(--text-primary)]">
                     {{ isEditing ? '编辑分类' : '新建分类' }}
-                  </h2>
-                  <p class="mt-0.5 text-xs text-[var(--text-secondary)]">
+                  </DialogTitle>
+                  <DialogDescription class="mt-0.5 text-xs text-[var(--text-secondary)]">
                     {{ currentCategory.name || '未命名分类' }}
-                  </p>
+                  </DialogDescription>
                 </div>
               </div>
-              <UiButton type="button" variant="ghost" size="icon" class="size-8 rounded-full" aria-label="关闭弹窗" @click="closeDialog">
-                <Icon name="lucide:x" class="size-4" />
-              </UiButton>
+              <DialogClose as-child>
+                <UiButton type="button" variant="ghost" size="icon" class="size-8" aria-label="关闭弹窗" title="关闭" :disabled="saving">
+                  <Icon name="lucide:x" class="size-4" />
+                </UiButton>
+              </DialogClose>
             </div>
 
-            <!-- Body -->
-            <div class="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pb-2">
-              <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <UiLabel class="block space-y-2">
-                  <span class="text-sm font-medium text-[var(--text-primary)]">名称 <span class="text-red-500">*</span></span>
-                  <UiInput v-model="currentCategory.name" placeholder="例如：技术分享" required class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
+            <div class="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UiLabel class="space-y-2">
+                  <span class="text-xs font-medium text-[var(--text-secondary)]">名称 <span class="text-red-500">*</span></span>
+                  <UiInput v-model="currentCategory.name" :disabled="saving" placeholder="例如：技术分享" required class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]" />
                 </UiLabel>
 
-                <UiLabel class="block space-y-2">
-                  <span class="text-sm font-medium text-[var(--text-primary)]">别名 (Slug)</span>
-                  <UiInput v-model="currentCategory.slug" placeholder="例如：tech" class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
+                <UiLabel class="space-y-2">
+                  <span class="text-xs font-medium text-[var(--text-secondary)]">别名</span>
+                  <UiInput v-model="currentCategory.slug" :disabled="saving" placeholder="例如：tech" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] font-mono" />
                 </UiLabel>
               </div>
 
-              <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <UiLabel class="block space-y-2">
-                  <span class="text-sm font-medium text-[var(--text-primary)]">父级分类</span>
-                  <UiSelect v-model="selectedParentId">
-                    <UiSelectTrigger class="border-transparent bg-[var(--surface-low)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UiLabel class="space-y-2">
+                  <span class="text-xs font-medium text-[var(--text-secondary)]">父级分类</span>
+                  <UiSelect v-model="selectedParentId" :disabled="saving">
+                    <UiSelectTrigger class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]">
                       <UiSelectValue placeholder="选择父级分类" />
                     </UiSelectTrigger>
                     <UiSelectContent>
-                      <UiSelectItem :value="PARENT_NONE_VALUE">
-                        无
-                      </UiSelectItem>
-                      <UiSelectItem
-                        v-for="parent in parentOptions"
-                        :key="parent.id"
-                        :value="parent.id"
-                      >
+                      <UiSelectItem :value="PARENT_NONE_VALUE">无</UiSelectItem>
+                      <UiSelectItem v-for="parent in parentOptions" :key="parent.id" :value="parent.id">
                         {{ `${'— '.repeat(parent.depth)}${parent.name}` }}
                       </UiSelectItem>
                     </UiSelectContent>
                   </UiSelect>
                 </UiLabel>
 
-                <UiLabel class="block space-y-2">
-                  <span class="text-sm font-medium text-[var(--text-primary)]">排序 (越小越靠前)</span>
-                  <UiInput v-model.number="currentCategory.order" type="number" min="1" class="border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
+                <UiLabel class="space-y-2">
+                  <span class="text-xs font-medium text-[var(--text-secondary)]">排序</span>
+                  <UiInput v-model.number="currentCategory.order" :disabled="saving" type="number" min="1" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]" />
                 </UiLabel>
               </div>
 
-              <UiLabel class="block space-y-2">
-                <span class="text-sm font-medium text-[var(--text-primary)]">描述</span>
-                <UiTextarea v-model="currentCategory.description" placeholder="分类说明（可选）" class="min-h-24 resize-none border-transparent bg-[var(--surface-low)] transition focus:border-[var(--primary)] focus:bg-[var(--surface-card)] focus:ring-[var(--primary)]" />
+              <UiLabel class="space-y-2">
+                <span class="text-xs font-medium text-[var(--text-secondary)]">描述</span>
+                <UiTextarea v-model="currentCategory.description" :disabled="saving" placeholder="分类说明（可选）" class="min-h-28 resize-none rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] leading-6" />
               </UiLabel>
             </div>
 
-            <!-- Footer -->
-            <div class="flex shrink-0 items-center justify-end gap-3 px-6 py-5">
-              <UiButton type="button" variant="ghost" class="h-10 rounded-xl px-5 hover:bg-[var(--surface-low)]" @click="closeDialog">
-                取消
-              </UiButton>
-              <UiButton type="submit" class="h-10 rounded-xl px-5">
-                <Icon :name="isEditing ? 'lucide:save' : 'lucide:plus'" class="mr-2 size-4" />
-                {{ isEditing ? '更新分类' : '添加分类' }}
+            <div class="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--border-soft)] px-5 py-4 sm:px-6">
+              <DialogClose as-child>
+                <UiButton type="button" variant="ghost" :disabled="saving">取消</UiButton>
+              </DialogClose>
+              <UiButton type="submit" :disabled="saving">
+                <Icon :name="saving ? 'lucide:loader-circle' : isEditing ? 'lucide:save' : 'lucide:plus'" :class="['size-4', saving && 'animate-spin']" />
+                {{ saving ? '保存中...' : isEditing ? '更新分类' : '添加分类' }}
               </UiButton>
             </div>
           </form>
-        </div>
-      </Transition>
-    </Teleport>
+        </DialogContent>
+      </DialogPortal>
+    </DialogRoot>
   </div>
 </template>

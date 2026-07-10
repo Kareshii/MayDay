@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import { useDatabase } from '../database/client'
 import {
   adminCategories,
@@ -11,6 +11,8 @@ import {
   adminSettings,
 } from '../database/schema'
 import { getConfiguredArticleTableName, getConfiguredDatabaseUrl } from './runtimeSetup'
+import type { PublicArticleComment } from '~~/shared/types/comments'
+import type { HomeGalleryItem } from '~~/shared/types/gallery'
 
 type NavigationType = 'internal' | 'external'
 type CommentStatus = 'pending' | 'approved' | 'spam'
@@ -96,6 +98,10 @@ export interface FeatureSettings {
   bingPushToken: string
   searchPushScript: string
   friendLinks: FriendLinkItem[]
+  galleryEnabled: boolean
+  galleryTitle: string
+  gallerySubtitle: string
+  galleryItems: HomeGalleryItem[]
 }
 
 export interface AdminFeatureState {
@@ -215,6 +221,44 @@ const defaultState: AdminFeatureState = {
     bingPushToken: '',
     searchPushScript: '',
     friendLinks: [],
+    galleryEnabled: true,
+    galleryTitle: '图册',
+    gallerySubtitle: '把瞬间收进横向卷轴，点开每张卡片查看完整记忆。',
+    galleryItems: [
+      {
+        id: 'gallery-live',
+        title: '舞台光',
+        category: 'LIVE',
+        image: '/cover.jpg',
+        description: '从第一束灯到最后一次合唱，现场总会把时间拉长。',
+        content: '可以在后台替换这张卡片的封面、标题、说明和展开内容。',
+        images: ['/cover.jpg'],
+        order: 1,
+        enabled: true,
+      },
+      {
+        id: 'gallery-archive',
+        title: '档案页',
+        category: 'ARCHIVE',
+        image: '/cover.jpg',
+        description: '把文章之外的画面整理成可以翻阅的入口。',
+        content: '图册支持多张附加图片，展开后会以 hover 伸展图组展示。',
+        images: ['/cover.jpg'],
+        order: 2,
+        enabled: true,
+      },
+      {
+        id: 'gallery-memory',
+        title: '蓝色记忆',
+        category: 'MEMORY',
+        image: '/cover.jpg',
+        description: '那些被歌曲照亮的片段，适合放在这里慢慢看。',
+        content: '排序和显示状态都可以在后台功能管理里维护。',
+        images: ['/cover.jpg'],
+        order: 3,
+        enabled: true,
+      },
+    ],
   },
   updatedAt: nowIso(),
 }
@@ -358,6 +402,30 @@ function normalizeFriendLinkItem(input: Partial<FriendLinkItem>, index: number):
   }
 }
 
+function normalizeGalleryImageList(value: unknown, fallbackImage: string) {
+  const images = Array.isArray(value)
+    ? value.map(normalizeString).filter(Boolean)
+    : []
+
+  return images.length ? images : [fallbackImage]
+}
+
+function normalizeGalleryItem(input: Partial<HomeGalleryItem>, index: number): HomeGalleryItem {
+  const image = normalizeString(input.image) || DEFAULT_SITE_SETTINGS.homeHeroImage
+
+  return {
+    id: normalizeString(input.id) || randomUUID(),
+    title: normalizeString(input.title) || '未命名图册',
+    category: normalizeString(input.category) || 'GALLERY',
+    image,
+    description: normalizeString(input.description),
+    content: typeof input.content === 'string' ? input.content.trim() : '',
+    images: normalizeGalleryImageList(input.images, image),
+    order: normalizeNumber(input.order, index + 1),
+    enabled: normalizeBoolean(input.enabled, true),
+  }
+}
+
 function normalizeFeatureSettings(input: Partial<FeatureSettings> = {}): FeatureSettings {
   return {
     robotsText: typeof input.robotsText === 'string' ? input.robotsText : defaultState.features.robotsText,
@@ -369,6 +437,12 @@ function normalizeFeatureSettings(input: Partial<FeatureSettings> = {}): Feature
     friendLinks: Array.isArray(input.friendLinks)
       ? input.friendLinks.map(normalizeFriendLinkItem)
       : [],
+    galleryEnabled: normalizeBoolean(input.galleryEnabled, defaultState.features.galleryEnabled),
+    galleryTitle: normalizeString(input.galleryTitle) || defaultState.features.galleryTitle,
+    gallerySubtitle: normalizeString(input.gallerySubtitle) || defaultState.features.gallerySubtitle,
+    galleryItems: Array.isArray(input.galleryItems)
+      ? input.galleryItems.map(normalizeGalleryItem).sort((left, right) => left.order - right.order)
+      : defaultState.features.galleryItems.map(normalizeGalleryItem),
   }
 }
 
@@ -890,6 +964,37 @@ export async function readAdminComments() {
   const rows = await db.select().from(adminComments).orderBy(sql`${adminComments.createdAt} desc`)
 
   return serializeCommentRows(rows)
+}
+
+export async function readApprovedArticleComments(articleSlug: string): Promise<PublicArticleComment[]> {
+  const normalizedSlug = normalizeString(articleSlug)
+
+  if (!normalizedSlug) {
+    return []
+  }
+
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db
+    .select({
+      id: adminComments.id,
+      author: adminComments.author,
+      content: adminComments.content,
+      createdAt: adminComments.createdAt,
+    })
+    .from(adminComments)
+    .where(and(
+      eq(adminComments.articleSlug, normalizedSlug),
+      eq(adminComments.status, 'approved'),
+    ))
+    .orderBy(sql`${adminComments.createdAt} desc`)
+
+  return rows.map(row => ({
+    id: row.id,
+    author: row.author,
+    content: row.content,
+    createdAt: row.createdAt.toISOString(),
+  }))
 }
 
 export async function readAdminFeatureSettings() {

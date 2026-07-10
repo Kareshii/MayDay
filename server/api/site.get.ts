@@ -2,6 +2,7 @@ import { isDatabaseConfigured } from '../database/client'
 import {
   DEFAULT_SEO_SETTINGS,
   DEFAULT_SITE_SETTINGS,
+  readAdminFeatureSettings,
   readAdminSeoSettings,
   readAdminSiteSettings,
 } from '../utils/adminFeatureStore'
@@ -11,12 +12,19 @@ export default defineEventHandler(async () => {
     return {
       site: DEFAULT_SITE_SETTINGS,
       seo: DEFAULT_SEO_SETTINGS,
+      gallery: {
+        enabled: false,
+        title: '图册',
+        subtitle: '',
+        items: [],
+      },
     }
   }
 
-  const [site, seo] = await Promise.all([
+  const [site, seo, features] = await Promise.all([
     readAdminSiteSettings(),
     readAdminSeoSettings(),
+    readAdminFeatureSettings(),
   ])
 
   return {
@@ -34,5 +42,13 @@ export default defineEventHandler(async () => {
       maintenanceStatusCode: site.maintenanceStatusCode,
     },
     seo,
+    gallery: {
+      enabled: features.galleryEnabled,
+      title: features.galleryTitle,
+      subtitle: features.gallerySubtitle,
+      items: features.galleryItems
+        .filter(item => item.enabled)
+        .sort((left, right) => left.order - right.order),
+    },
   }
 })

@@ -36,6 +36,7 @@ const packageVersion = '2.0.0'
 const quickActions = [
   { title: '新建文章', to: '/admin/articles/new', icon: 'lucide:file-plus-2', hint: '创建博客内容' },
   { title: '内容图片', to: '/admin/content-images', icon: 'lucide:image-plus', hint: '上传复用图片' },
+  { title: '图册管理', to: '/admin/gallery', icon: 'lucide:images', hint: '维护首页图册' },
   { title: '站点设置', to: '/admin/features/site', icon: 'lucide:sliders-horizontal', hint: '维护站点全局信息' },
   { title: '分类管理', to: '/admin/features/categories', icon: 'lucide:folder-tree', hint: '维护分类结构' },
   { title: '评论管理', to: '/admin/features/comments', icon: 'lucide:message-square', hint: '处理待审评论' },

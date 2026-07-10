@@ -18,11 +18,36 @@ const {
   saveSection,
 } = await useAdminSiteSettings('navigation')
 
+const NAVIGATION_ROOT_VALUE = '__root__'
 const navigation = ref<AdminNavigationItem[]>([])
+const settingsHydrated = ref(false)
+const settingsDirty = ref(false)
 
 watch(data, (value) => {
+  settingsHydrated.value = false
   navigation.value = value?.navigation?.map(item => ({ ...item })) || []
+  void nextTick(() => {
+    settingsDirty.value = false
+    settingsHydrated.value = true
+  })
 }, { immediate: true })
+
+watch(navigation, () => {
+  if (!settingsHydrated.value) {
+    return
+  }
+
+  settingsDirty.value = true
+}, { deep: 2 })
+
+async function saveNavigationSettings() {
+  const snapshot = JSON.stringify(navigation.value)
+  const saved = await saveSection('navigation', navigation.value)
+
+  if (saved && JSON.stringify(navigation.value) === snapshot) {
+    settingsDirty.value = false
+  }
+}
 
 function addNavigation() {
   navigation.value.push({
@@ -37,78 +62,217 @@ function addNavigation() {
 }
 
 function removeNavigation(id: string) {
-  navigation.value = navigation.value.filter(item => item.id !== id)
+  navigation.value = navigation.value
+    .filter(item => item.id !== id)
+    .map(item => item.parentId === id ? { ...item, parentId: '' } : item)
 }
+
+function collectNavigationDescendantIds(itemId: string) {
+  const result = new Set<string>()
+  const walk = (parentId: string) => {
+    navigation.value
+      .filter(item => item.parentId === parentId)
+      .forEach((item) => {
+        if (result.has(item.id)) {
+          return
+        }
+
+        result.add(item.id)
+        walk(item.id)
+      })
+  }
+
+  walk(itemId)
+  return result
+}
+
+function getParentOptions(itemId: string) {
+  const excludedIds = collectNavigationDescendantIds(itemId)
+  excludedIds.add(itemId)
+  return navigation.value.filter(item => !excludedIds.has(item.id))
+}
+
+function getParentValue(item: AdminNavigationItem) {
+  return item.parentId || NAVIGATION_ROOT_VALUE
+}
+
+function updateParent(item: AdminNavigationItem, value: string) {
+  item.parentId = value === NAVIGATION_ROOT_VALUE ? '' : value
+}
+
+const enabledNavigationCount = computed(() => navigation.value.filter(item => item.enabled).length)
+const externalNavigationCount = computed(() => navigation.value.filter(item => item.type === 'external').length)
+const saveStateLabel = computed(() => savingSection.value === 'navigation'
+  ? '保存中'
+  : settingsDirty.value ? '待保存' : '已保存')
+const headerActions = computed(() => [
+  {
+    label: '新增导航',
+    icon: 'lucide:plus',
+    variant: 'secondary' as const,
+    disabled: pending.value,
+    onClick: addNavigation,
+  },
+  {
+    label: savingSection.value === 'navigation' ? '保存中...' : '保存导航',
+    icon: 'lucide:save',
+    disabled: pending.value || savingSection.value === 'navigation' || !settingsDirty.value,
+    onClick: saveNavigationSettings,
+  },
+])
 </script>
 
 <template>
-  <div class="cms-page space-y-4">
-    <AdminPageHeader title="导航设置" subtitle="" />
+  <div class="cms-page space-y-5">
+    <AdminPageHeader title="导航设置" subtitle="前台菜单结构与链接" :actions="headerActions" />
 
-    <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-6 py-14 text-center text-sm text-[var(--text-secondary)]">
-      正在加载设置...
+    <AdminSiteSettingsNav />
+
+    <div v-if="pending" class="flex min-h-56 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
+      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
+        正在加载设置
+      </div>
     </div>
 
-    <UiCard v-else class="overflow-hidden p-0">
-      <div class="flex items-center justify-between border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-6 py-4">
-        <div>
-          <h3 class="text-base font-bold text-[var(--text-primary)]">
-            导航设置
-          </h3>
-          <p class="mt-0.5 text-xs text-[var(--text-secondary)]">
-            管理前台顶部导航菜单。
-          </p>
+    <template v-else>
+      <section class="grid overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] sm:grid-cols-3">
+        <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+            <Icon name="lucide:list-tree" class="size-4" />
+          </span>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">导航总数</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ navigation.length }}</p>
+          </div>
         </div>
-        <div class="flex gap-2">
-          <UiButton variant="secondary" size="sm" @click="addNavigation">
-            <Icon name="lucide:plus" class="mr-1 size-4" /> 新增
-          </UiButton>
-          <UiButton size="sm" :disabled="savingSection === 'navigation'" @click="saveSection('navigation', navigation)">
-            保存导航
-          </UiButton>
+        <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+            <Icon name="lucide:eye" class="size-4" />
+          </span>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">前台显示</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ enabledNavigationCount }}</p>
+          </div>
         </div>
-      </div>
+        <div class="flex min-h-24 items-center gap-3 px-5 py-4">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-violet-50 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
+            <Icon name="lucide:external-link" class="size-4" />
+          </span>
+          <div>
+            <p class="text-xs font-medium text-[var(--text-secondary)]">站外链接</p>
+            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ externalNavigationCount }}</p>
+          </div>
+        </div>
+      </section>
 
-      <div class="px-6 py-2">
-        <div v-if="!navigation.length" class="py-8 text-center text-sm text-[var(--text-secondary)]">
-          暂无导航数据。
+      <section class="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
+        <header class="flex min-h-16 items-center justify-between gap-4 border-b border-[var(--border-soft)] px-5 py-3.5">
+          <div class="flex min-w-0 items-center gap-3">
+            <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
+              <Icon name="lucide:menu" class="size-4" />
+            </span>
+            <div class="min-w-0">
+              <h2 class="text-sm font-semibold text-[var(--text-primary)]">菜单项目</h2>
+              <p class="mt-0.5 text-xs text-[var(--text-secondary)]">{{ navigation.length }} 项</p>
+            </div>
+          </div>
+          <span class="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
+            <span
+              :class="[
+                'size-1.5 rounded-full',
+                savingSection === 'navigation'
+                  ? 'animate-pulse bg-amber-500'
+                  : settingsDirty ? 'bg-amber-500' : 'bg-emerald-500',
+              ]"
+            />
+            {{ saveStateLabel }}
+          </span>
+        </header>
+
+        <div v-if="!navigation.length" class="px-5 py-16 text-center">
+          <span class="mx-auto grid size-11 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-muted)]">
+            <Icon name="lucide:menu" class="size-5" />
+          </span>
+          <p class="mt-4 text-sm font-semibold text-[var(--text-primary)]">暂无导航</p>
         </div>
 
-        <div class="divide-y divide-[var(--border-soft)]">
+        <template v-else>
+          <div class="hidden grid-cols-[minmax(9rem,1fr)_minmax(12rem,1.4fr)_8rem_10rem_5rem_2.5rem] gap-3 border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-5 py-2.5 text-xs font-medium text-[var(--text-secondary)] lg:grid">
+            <span>标题</span>
+            <span>链接</span>
+            <span>类型</span>
+            <span>上级</span>
+            <span class="text-center">显示</span>
+            <span />
+          </div>
+
+          <div class="divide-y divide-[var(--border-soft)]">
           <div
             v-for="item in navigation"
             :key="item.id"
-            class="group flex flex-col gap-3 py-4 transition-colors hover:bg-[var(--surface-hover)]/30 md:flex-row md:items-center"
+            class="group grid gap-3 px-5 py-4 transition-colors hover:bg-[var(--surface-low)] lg:grid-cols-[minmax(9rem,1fr)_minmax(12rem,1.4fr)_8rem_10rem_5rem_2.5rem] lg:items-center"
           >
-            <div class="grid flex-1 items-center gap-3 md:grid-cols-[1fr_1.4fr_8rem_5rem_auto]">
-              <UiInput v-model="item.title" variant="ghost" class="font-medium text-[var(--text-primary)]" placeholder="导航标题" />
-              <UiInput v-model="item.path" variant="ghost" class="text-[var(--text-secondary)]" placeholder="/posts 或 https://..." />
+            <UiLabel class="space-y-1.5 lg:space-y-0">
+              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">标题</span>
+              <UiInput v-model="item.title" class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] font-medium" placeholder="导航标题" />
+            </UiLabel>
 
+            <UiLabel class="space-y-1.5 lg:space-y-0">
+              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">链接</span>
+              <div class="relative">
+                <Icon :name="item.type === 'external' ? 'lucide:external-link' : 'lucide:route'" class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
+                <UiInput v-model="item.path" class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] pl-8 font-mono text-xs" placeholder="/posts" />
+              </div>
+            </UiLabel>
+
+            <UiLabel class="space-y-1.5 lg:space-y-0">
+              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">类型</span>
               <UiSelect v-model="item.type">
-                <UiSelectTrigger class="h-9 rounded-lg border-transparent bg-transparent px-2 hover:bg-[var(--surface-hover)] focus:bg-[var(--surface-card)]">
+                <UiSelectTrigger class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] px-2">
                   <UiSelectValue placeholder="链接类型" />
                 </UiSelectTrigger>
                 <UiSelectContent>
-                  <UiSelectItem value="internal">站内链接</UiSelectItem>
-                  <UiSelectItem value="external">站外链接</UiSelectItem>
+                  <UiSelectItem value="internal">站内</UiSelectItem>
+                  <UiSelectItem value="external">站外</UiSelectItem>
                 </UiSelectContent>
               </UiSelect>
+            </UiLabel>
 
-              <UiInput v-model.number="item.order" variant="ghost" type="number" placeholder="排序" class="text-center" />
+            <UiLabel class="space-y-1.5 lg:space-y-0">
+              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">上级</span>
+              <UiSelect :model-value="getParentValue(item)" @update:model-value="updateParent(item, $event)">
+                <UiSelectTrigger class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] px-2">
+                  <UiSelectValue placeholder="顶级导航" />
+                </UiSelectTrigger>
+                <UiSelectContent>
+                  <UiSelectItem :value="NAVIGATION_ROOT_VALUE">顶级导航</UiSelectItem>
+                  <UiSelectItem v-for="parent in getParentOptions(item.id)" :key="parent.id" :value="parent.id">
+                    {{ parent.title || '未命名导航' }}
+                  </UiSelectItem>
+                </UiSelectContent>
+              </UiSelect>
+            </UiLabel>
 
-              <div class="flex items-center justify-end gap-3 px-2">
-                <UiLabel class="flex cursor-pointer items-center gap-2">
-                  <UiCheckbox v-model="item.enabled" />
-                  <span class="text-xs text-[var(--text-secondary)]">显示</span>
-                </UiLabel>
-                <UiButton variant="ghost" size="icon" class="text-red-500 opacity-0 group-hover:opacity-100 focus-within:opacity-100 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" @click="removeNavigation(item.id)">
-                  <Icon name="lucide:trash-2" class="size-4" />
-                </UiButton>
-              </div>
+            <div class="flex items-center justify-between gap-3 lg:justify-center">
+              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">前台显示</span>
+              <UiCheckbox v-model="item.enabled" :aria-label="`${item.title || '导航'}前台显示`" />
             </div>
+
+            <div class="flex justify-end">
+              <UiButton variant="ghost" size="icon" class="size-9 text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" title="删除导航" aria-label="删除导航" @click="removeNavigation(item.id)">
+                <Icon name="lucide:trash-2" class="size-4" />
+              </UiButton>
+            </div>
+
+            <UiLabel class="flex items-center gap-2 lg:col-span-6">
+              <span class="shrink-0 text-xs font-medium text-[var(--text-secondary)]">排序</span>
+              <UiInput v-model.number="item.order" type="number" class="h-8 w-24 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center text-xs tabular-nums" />
+            </UiLabel>
           </div>
         </div>
-      </div>
-    </UiCard>
+        </template>
+      </section>
+    </template>
   </div>
 </template>

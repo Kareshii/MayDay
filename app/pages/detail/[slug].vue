@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ManagedArticle } from '~~/shared/types/articles'
+import type { PublicArticleComment } from '~~/shared/types/comments'
 import PostArticleDetail from '@/components/posts/PostArticleDetail.vue'
 
 definePageMeta({
@@ -24,11 +25,23 @@ if (!articleSlug.value) {
   })
 }
 
-const { data, error } = await useFetch<{ article: ManagedArticle }>(
+const articleRequest = useFetch<{
+  article: ManagedArticle
+  comments: PublicArticleComment[]
+}>(
   () => `/api/posts/${encodeURIComponent(articleSlug.value)}${preview.value ? '?preview=1' : ''}`,
+  {
+    lazy: import.meta.client,
+  },
 )
 
-if (error.value) {
+if (import.meta.server) {
+  await articleRequest
+}
+
+const { data, error, status } = articleRequest
+
+if (import.meta.server && error.value) {
   throw createError({
     statusCode: error.value.statusCode || 404,
     statusMessage: error.value.statusMessage || 'Article not found',
@@ -36,6 +49,8 @@ if (error.value) {
 }
 
 const article = computed(() => data.value?.article)
+const comments = computed(() => data.value?.comments || [])
+const isLoading = computed(() => status.value === 'pending' && !article.value)
 const heroNavbarOverlay = useState<boolean>('hero-navbar-overlay', () => false)
 const recordedViewSlug = ref('')
 
@@ -79,9 +94,22 @@ watchEffect(() => {
   heroNavbarOverlay.value = article.value?.coverLayout === 'top-hero'
 })
 
-onMounted(() => {
-  void recordArticleView()
-})
+if (import.meta.client) {
+  watch(error, (value) => {
+    if (!value) {
+      return
+    }
+
+    showError(createError({
+      statusCode: value.statusCode || 404,
+      statusMessage: value.statusMessage || 'Article not found',
+    }))
+  }, { immediate: true })
+
+  watch(article, () => {
+    void recordArticleView()
+  }, { immediate: true })
+}
 
 onUnmounted(() => {
   heroNavbarOverlay.value = false
@@ -95,5 +123,26 @@ useSeoMeta({
 </script>
 
 <template>
-  <PostArticleDetail v-if="article" :article="article" />
+  <PostArticleDetail v-if="article" :article="article" :comments="comments" />
+  <section v-else-if="isLoading" class="container space-y-8 pt-26">
+    <header class="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 md:p-10">
+      <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
+        <div class="space-y-5">
+          <div class="h-3 w-24 animate-pulse rounded bg-[var(--surface-low)]" />
+          <div class="h-12 w-4/5 animate-pulse rounded bg-[var(--surface-low)] md:h-16" />
+          <div class="h-4 w-full animate-pulse rounded bg-[var(--surface-low)]" />
+          <div class="h-4 w-2/3 animate-pulse rounded bg-[var(--surface-low)]" />
+        </div>
+        <div class="aspect-[4/3] animate-pulse rounded-[1.6rem] bg-[var(--surface-low)]" />
+      </div>
+    </header>
+    <div class="surface-card p-6 md:p-10">
+      <div class="space-y-4">
+        <div class="h-4 w-full animate-pulse rounded bg-[var(--surface-low)]" />
+        <div class="h-4 w-11/12 animate-pulse rounded bg-[var(--surface-low)]" />
+        <div class="h-4 w-10/12 animate-pulse rounded bg-[var(--surface-low)]" />
+        <div class="h-4 w-3/4 animate-pulse rounded bg-[var(--surface-low)]" />
+      </div>
+    </div>
+  </section>
 </template>

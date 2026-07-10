@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useDebounceFn } from '@vueuse/core'
+import type { HomeGalleryItem } from '~~/shared/types/gallery'
+
 interface FriendLinkItem {
   id: string
   title: string
@@ -16,6 +19,10 @@ interface FeatureSettings {
   bingPushToken: string
   searchPushScript: string
   friendLinks: FriendLinkItem[]
+  galleryEnabled: boolean
+  galleryTitle: string
+  gallerySubtitle: string
+  galleryItems: HomeGalleryItem[]
 }
 
 definePageMeta({
@@ -28,9 +35,9 @@ useSeoMeta({
 })
 
 const saving = ref(false)
-const { showSuccessToast, showErrorToast } = useAdminToast()
+const { showErrorToast } = useAdminToast()
 
-const { data, pending, error, refresh } = await useFetch<{ features: FeatureSettings }>('/api/admin/features/features')
+const { data, pending, error } = await useFetch<{ features: FeatureSettings }>('/api/admin/features/features')
 
 const features = reactive<FeatureSettings>({
   robotsText: '',
@@ -40,26 +47,54 @@ const features = reactive<FeatureSettings>({
   bingPushToken: '',
   searchPushScript: '',
   friendLinks: [],
+  galleryEnabled: true,
+  galleryTitle: '图册',
+  gallerySubtitle: '',
+  galleryItems: [],
 })
+const settingsHydrated = ref(false)
+let settingsDirty = false
+let saveQueued = false
+
+const autoSaveFeatures = useDebounceFn(async () => {
+  await persistFeatures()
+}, 500, { maxWait: 1500 })
 
 watch(data, (value) => {
   if (!value?.features) {
     return
   }
 
+  settingsHydrated.value = false
   Object.assign(features, {
     ...value.features,
     friendLinks: value.features.friendLinks.map(item => ({ ...item })),
+    galleryItems: value.features.galleryItems.map(item => ({
+      ...item,
+      images: [...item.images],
+    })),
+  })
+  void nextTick(() => {
+    settingsHydrated.value = true
   })
 }, { immediate: true })
 
-function createLocalId() {
-  return globalThis.crypto?.randomUUID?.() || `friend-link-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+watch(features, () => {
+  if (!settingsHydrated.value) {
+    return
+  }
+
+  settingsDirty = true
+  void autoSaveFeatures()
+}, { deep: 3 })
+
+function createLocalId(prefix: string) {
+  return globalThis.crypto?.randomUUID?.() || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
 function addFriendLink() {
   features.friendLinks.push({
-    id: createLocalId(),
+    id: createLocalId('friend-link'),
     title: '新友链',
     url: 'https://example.com',
     description: '',
@@ -72,32 +107,47 @@ function removeFriendLink(id: string) {
   features.friendLinks = features.friendLinks.filter(item => item.id !== id)
 }
 
-async function saveFeatures() {
-  saving.value = true
-
-  try {
-    await $fetch('/api/admin/features/features', {
-      method: 'PUT',
-      body: {
-        features,
-      },
-    })
-    await refresh()
-    showSuccessToast('功能配置已保存')
-  } catch (err) {
-    showErrorToast('保存失败', getRequestErrorMessage(err, '保存失败'))
-  } finally {
-    saving.value = false
+async function persistFeatures() {
+  if (saving.value) {
+    saveQueued = true
+    return
   }
+
+  do {
+    saveQueued = false
+    saving.value = true
+    settingsDirty = false
+
+    try {
+      const payload: FeatureSettings = {
+        ...features,
+        friendLinks: features.friendLinks.map(item => ({ ...item })),
+        galleryItems: features.galleryItems.map(item => ({
+          ...item,
+          images: [...item.images],
+        })),
+      }
+
+      await $fetch('/api/admin/features/features', {
+        method: 'PUT',
+        body: {
+          features: payload,
+        },
+      })
+    } catch (err) {
+      settingsDirty = true
+      showErrorToast('保存失败', getRequestErrorMessage(err, '保存失败'))
+    } finally {
+      saving.value = false
+    }
+  } while (saveQueued)
 }
 
-const headerActions = computed(() => [
-  {
-    label: '保存功能配置',
-    disabled: saving.value,
-    onClick: saveFeatures,
-  },
-])
+onBeforeUnmount(() => {
+  if (settingsDirty) {
+    void persistFeatures()
+  }
+})
 
 watch(error, (value) => {
   if (value) {
@@ -108,7 +158,7 @@ watch(error, (value) => {
 
 <template>
   <div class="cms-page space-y-3">
-    <AdminPageHeader title="功能管理" subtitle="" :actions="headerActions" />
+    <AdminPageHeader title="功能管理" subtitle="" />
 
     <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-6 py-14 text-center text-sm text-[var(--text-secondary)]">
       正在加载功能配置...
@@ -122,27 +172,36 @@ watch(error, (value) => {
         <p class="mt-1 text-sm text-[var(--text-secondary)]">
           保存 robots.txt 文本规则，后续可接入公开文件输出。
         </p>
-        <UiTextarea v-model="features.robotsText" class="mt-4 min-h-44 font-mono" />
+        <UiLabel class="mt-4 grid gap-3 md:grid-cols-[10rem_minmax(0,1fr)] md:items-start md:gap-6">
+          <span class="pt-3 text-sm font-medium text-[var(--text-primary)]">规则内容</span>
+          <UiTextarea v-model="features.robotsText" class="min-h-44 font-mono" />
+        </UiLabel>
       </UiCard>
 
       <UiCard class="p-6">
         <p class="text-lg font-bold text-[var(--text-primary)]">
           Sitemap 管理
         </p>
-        <div class="mt-4 grid gap-4 md:grid-cols-2">
-          <UiLabel class="flex items-start gap-3 rounded-xl border border-[var(--border-soft)] bg-[var(--surface-low)] px-4 py-4">
-            <UiCheckbox v-model="features.sitemapEnabled" />
-            <span class="text-sm font-medium text-[var(--text-primary)]">启用 Sitemap</span>
+        <div class="mt-4 divide-y divide-[var(--border-soft)]">
+          <UiLabel class="grid gap-3 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center md:gap-6">
+            <span class="text-sm font-medium text-[var(--text-primary)]">启用状态</span>
+            <span class="flex items-center gap-3">
+              <UiCheckbox v-model="features.sitemapEnabled" />
+              <span class="text-sm text-[var(--text-secondary)]">Sitemap</span>
+            </span>
           </UiLabel>
-          <UiSelect v-model="features.sitemapFormat">
-            <UiSelectTrigger class="border-[var(--border-soft)]">
-              <UiSelectValue placeholder="Sitemap 格式" />
-            </UiSelectTrigger>
-            <UiSelectContent>
-              <UiSelectItem value="txt">TXT</UiSelectItem>
-              <UiSelectItem value="xml">XML</UiSelectItem>
-            </UiSelectContent>
-          </UiSelect>
+          <UiLabel class="grid gap-3 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center md:gap-6">
+            <span class="text-sm font-medium text-[var(--text-primary)]">输出格式</span>
+            <UiSelect v-model="features.sitemapFormat">
+              <UiSelectTrigger class="border-[var(--border-soft)]">
+                <UiSelectValue placeholder="Sitemap 格式" />
+              </UiSelectTrigger>
+              <UiSelectContent>
+                <UiSelectItem value="txt">TXT</UiSelectItem>
+                <UiSelectItem value="xml">XML</UiSelectItem>
+              </UiSelectContent>
+            </UiSelect>
+          </UiLabel>
         </div>
       </UiCard>
 
@@ -150,10 +209,19 @@ watch(error, (value) => {
         <p class="text-lg font-bold text-[var(--text-primary)]">
           搜索引擎推送
         </p>
-        <div class="mt-4 grid gap-4 md:grid-cols-2">
-          <UiInput v-model="features.baiduPushToken" placeholder="百度推送 Token" />
-          <UiInput v-model="features.bingPushToken" placeholder="必应推送 Token" />
-          <UiTextarea v-model="features.searchPushScript" placeholder="JS 推送代码" class="min-h-32 md:col-span-2 font-mono" />
+        <div class="mt-4 divide-y divide-[var(--border-soft)]">
+          <UiLabel class="grid gap-3 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center md:gap-6">
+            <span class="text-sm font-medium text-[var(--text-primary)]">百度 Token</span>
+            <UiInput v-model="features.baiduPushToken" placeholder="百度推送 Token" />
+          </UiLabel>
+          <UiLabel class="grid gap-3 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-center md:gap-6">
+            <span class="text-sm font-medium text-[var(--text-primary)]">必应 Token</span>
+            <UiInput v-model="features.bingPushToken" placeholder="必应推送 Token" />
+          </UiLabel>
+          <UiLabel class="grid gap-3 py-4 md:grid-cols-[10rem_minmax(0,1fr)] md:items-start md:gap-6">
+            <span class="pt-3 text-sm font-medium text-[var(--text-primary)]">推送代码</span>
+            <UiTextarea v-model="features.searchPushScript" placeholder="JS 推送代码" class="min-h-32 font-mono" />
+          </UiLabel>
         </div>
       </UiCard>
 

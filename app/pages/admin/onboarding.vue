@@ -303,7 +303,7 @@ watch(error, (value) => {
     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(0,95,184,0.15),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(92,0,202,0.13),transparent_36%)]" />
     <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.58),rgba(255,255,255,0))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0))]" />
 
-    <UiCard class="relative w-full max-w-3xl border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-9">
+    <UiCard class="relative w-full max-w-2xl border border-[var(--border-soft)] bg-[var(--surface-card)]/95 p-7 sm:p-9">
       <p class="cms-kicker">
         First Deploy
       </p>
@@ -353,7 +353,7 @@ watch(error, (value) => {
         </div>
 
         <div v-if="currentStep.key === 'database'" class="space-y-5">
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4">
             <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库主机
@@ -394,7 +394,7 @@ watch(error, (value) => {
             />
           </UiLabel>
 
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4">
             <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 数据库用户名
@@ -448,7 +448,7 @@ watch(error, (value) => {
         </div>
 
         <div v-else class="space-y-5">
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4">
             <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 管理员用户名
@@ -468,7 +468,7 @@ watch(error, (value) => {
             </div>
           </div>
 
-          <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-4">
             <UiLabel class="block space-y-2">
               <span class="text-sm font-medium text-[var(--text-primary)]">
                 管理员密码

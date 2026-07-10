@@ -11,12 +11,6 @@ interface NavbarSiteResponse {
   site: NavbarSiteSettings
 }
 
-interface NavbarArticleResponse {
-  article: {
-    coverLayout: string
-  } | null
-}
-
 const route = useRoute()
 const { y } = useWindowScroll()
 const mobileOpen = ref(false)
@@ -33,48 +27,6 @@ const { data: siteConfig } = await useFetch<NavbarSiteResponse>('/api/site', {
   }),
 })
 
-const detailArticleSlug = computed(() => {
-  if (!route.path.startsWith('/detail/')) {
-    return ''
-  }
-
-  const rawSlug = route.params.slug
-
-  if (Array.isArray(rawSlug)) {
-    return rawSlug.join('/')
-  }
-
-  if (typeof rawSlug === 'string') {
-    return rawSlug
-  }
-
-  return route.path.replace(/^\/detail\/?/, '')
-})
-const detailArticlePreview = computed(() => route.query.preview === '1')
-const detailArticleKey = computed(() => detailArticleSlug.value
-  ? `navbar-article-${detailArticleSlug.value}-${detailArticlePreview.value ? 'preview' : 'public'}`
-  : 'navbar-article-none')
-const { data: detailArticle } = await useAsyncData<NavbarArticleResponse>(
-  detailArticleKey,
-  async () => {
-    if (!detailArticleSlug.value) {
-      return { article: null }
-    }
-
-    try {
-      return await $fetch<NavbarArticleResponse>(`/api/posts/${encodeURIComponent(detailArticleSlug.value)}`, {
-        query: detailArticlePreview.value ? { preview: '1' } : undefined,
-      })
-    } catch {
-      return { article: null }
-    }
-  },
-  {
-    default: () => ({ article: null }),
-    watch: [detailArticleSlug, detailArticlePreview],
-  },
-)
-
 const navigation = [
   { title: '主页', path: '/' },
   ...primaryNavigation,
@@ -83,13 +35,12 @@ const navigation = [
 const siteName = computed(() => siteConfig.value.site.siteName || 'mayday.life')
 const siteLogo = computed(() => siteConfig.value.site.siteLogo)
 const siteLogoFallback = computed(() => siteName.value.trim().slice(0, 1).toUpperCase() || 'M')
-const hasTopHeroArticle = computed(() => detailArticle.value?.article?.coverLayout === 'top-hero')
 const isTransparent = computed(() => {
   if (route.path === '/') {
     return y.value < 24
   }
 
-  return (heroNavbarOverlay.value || hasTopHeroArticle.value) && y.value < 24
+  return heroNavbarOverlay.value && y.value < 24
 })
 
 watch(() => route.fullPath, () => {

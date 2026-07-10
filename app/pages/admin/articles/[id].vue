@@ -35,6 +35,16 @@ const error = computed(() => settingsError.value || (!databaseConfigured.value ?
 const saving = ref(false)
 const deleting = ref(false)
 const { showSuccessToast, showErrorToast } = useAdminToast()
+const headerActions = computed(() => [
+  {
+    label: '返回列表',
+    icon: 'lucide:arrow-left',
+    variant: 'outline' as const,
+    to: '/admin/articles',
+    disabled: saving.value || deleting.value,
+  },
+])
+const headerSubtitle = computed(() => data.value?.article.title || '编辑文章内容与发布状态')
 
 const ArticleForm = defineComponent({
   inheritAttrs: false,
@@ -114,11 +124,14 @@ watch(error, (value) => {
 </script>
 
 <template>
-  <div class="cms-page cms-editor-page space-y-4">
-    <AdminPageHeader title="编辑文章"  />
+  <div class="cms-page cms-editor-page space-y-3">
+    <AdminPageHeader title="编辑文章" :subtitle="headerSubtitle" :actions="headerActions" />
 
-    <div v-if="pending" class="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-card)] px-5 py-12 text-center text-sm text-[var(--text-secondary)]">
-      正在加载文章...
+    <div v-if="pending" class="flex min-h-64 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
+      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
+        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
+        正在加载文章
+      </div>
     </div>
 
     <ArticleForm

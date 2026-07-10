@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type { DirectiveBinding } from 'vue'
 import type { ManagedArticleSummary } from '~~/shared/types/articles'
+import type { HomeGallerySettings } from '~~/shared/types/gallery'
 import { useMediaQuery, useWindowScroll } from '@vueuse/core'
+import { AppleCard, AppleCardCarousel, AppleCarouselItem } from '~/components/inspira/ui/apple-card-carousel'
 import { CardBody, CardContainer, CardItem } from '~/components/inspira/ui/card-3d'
 import { featuredShowcase, showcaseSections } from '@/utils/siteSections'
 import { mojoItems } from '@/utils/mojoData'
@@ -23,6 +25,7 @@ interface PublicSeoSettings {
 interface PublicSiteResponse {
   site: PublicSiteSettings
   seo: PublicSeoSettings
+  gallery: HomeGallerySettings
 }
 
 definePageMeta({
@@ -46,6 +49,12 @@ const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
       title: 'Hi,',
       description: '一个用 Vue 写成的五月天档案馆首页，把文章、收藏和互动页面重新编排成 blog-next 风格。',
       keywords: 'mayday, 五月天, blog',
+    },
+    gallery: {
+      enabled: false,
+      title: '图册',
+      subtitle: '',
+      items: [],
     },
   }),
 })
@@ -84,6 +93,8 @@ const featuredSection = featuredShowcase ?? showcaseSections[0] ?? {
 }
 const secondarySections = showcaseSections.filter(section => section.path !== featuredSection.path)
 const homeArticles = computed(() => (postsData.value?.articles || []).slice(0, 3))
+const gallery = computed(() => siteConfig.value.gallery)
+const galleryItems = computed(() => gallery.value.enabled ? gallery.value.items : [])
 
 function getArticleRoute(article: ManagedArticleSummary) {
   return article.path || `/detail/${article.slug}`
@@ -266,7 +277,7 @@ onBeforeUnmount(() => {
 
         <NuxtLink
           to="/posts"
-          class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-500/50 hover:text-cyan-600 dark:hover:text-cyan-300"
+          class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5 "
         >
           查看全部
           <Icon name="lucide:arrow-right" class="size-4" />
@@ -285,7 +296,7 @@ onBeforeUnmount(() => {
           class="group/article block focus:outline-none"
         >
           <CardContainer container-class="h-full">
-            <CardBody class="group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 group-hover/article:border-cyan-500/40 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
+            <CardBody class="group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
               <CardItem
                 :translate-z="50"
                 class="line-clamp-1 w-full text-xl font-bold text-neutral-600 dark:text-white"
@@ -373,6 +384,41 @@ onBeforeUnmount(() => {
           </article>
         </NuxtLink>
       </div>
+    </section>
+
+    <section
+      v-if="galleryItems.length"
+      id="gallery"
+      class="relative z-10 mx-auto w-full scroll-mt-18 py-16 md:py-24"
+    >
+      <div v-reveal="80" class="mx-auto flex w-full max-w-[96rem] flex-col gap-5 px-4 sm:px-6 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p class="section-kicker flex items-center gap-2 text-[var(--text-secondary)]">
+            <Icon name="lucide:images" class="size-4" />
+            GALLERY
+          </p>
+          <h2 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
+            {{ gallery.title }}
+          </h2>
+          <p v-if="gallery.subtitle" class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] md:text-base">
+            {{ gallery.subtitle }}
+          </p>
+        </div>
+      </div>
+
+      <AppleCardCarousel :item-count="galleryItems.length">
+        <AppleCarouselItem
+          v-for="(item, index) in galleryItems"
+          :key="item.id"
+          :index="index"
+        >
+          <AppleCard
+            :card="item"
+            :index="index"
+            layout
+          />
+        </AppleCarouselItem>
+      </AppleCardCarousel>
     </section>
 
     <section class="container pb-24 md:pb-32">

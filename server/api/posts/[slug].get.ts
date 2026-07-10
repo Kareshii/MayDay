@@ -1,4 +1,5 @@
 import { getPublicArticleBySlug } from '../../utils/articleRepository'
+import { readApprovedArticleComments } from '../../utils/adminFeatureStore'
 
 export default defineEventHandler(async (event) => {
   const slug = getRouterParam(event, 'slug', { decode: true })
@@ -11,7 +12,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  return {
-    article: await getPublicArticleBySlug(slug, query.preview === '1'),
-  }
+  const [article, comments] = await Promise.all([
+    getPublicArticleBySlug(slug, query.preview === '1'),
+    readApprovedArticleComments(slug),
+  ])
+
+  return { article, comments }
 })

@@ -3,10 +3,13 @@ import {
   DEFAULT_ARTICLE_COVER_LAYOUT,
   type ManagedArticle,
 } from '~~/shared/types/articles'
+import type { PublicArticleComment } from '~~/shared/types/comments'
 import ArticleReadingEnhancer from './ArticleReadingEnhancer.vue'
+import PostArticleComments from './PostArticleComments.vue'
 
 const props = defineProps<{
   article: ManagedArticle
+  comments?: PublicArticleComment[]
 }>()
 
 const coverLayout = computed(() => props.article.coverLayout || DEFAULT_ARTICLE_COVER_LAYOUT)
@@ -101,11 +104,6 @@ const articleMetaItems = computed(() => [
             {{ article.summary }}
           </p>
 
-          <div class="mt-8 flex flex-wrap items-center gap-3 text-xs font-medium tracking-[0.18em] text-white/84">
-            <span class="rounded-full border border-white/30 bg-white/8 px-3 py-2 backdrop-blur-sm">
-              {{ article.slug }}
-            </span>
-          </div>
         </div>
       </div>
     </header>
@@ -131,6 +129,7 @@ const articleMetaItems = computed(() => [
         <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
         <MDC v-else :value="article.content" class="blog-content" />
       </ArticleReadingEnhancer>
+      <PostArticleComments :comments="comments || []" />
     </div>
   </article>
 
@@ -160,11 +159,6 @@ const articleMetaItems = computed(() => [
             {{ article.summary }}
           </p>
 
-          <div class="mt-8 flex flex-wrap items-center gap-3 text-xs font-medium tracking-[0.18em] text-[var(--text-secondary)]">
-            <span class="rounded-full border border-[var(--border)] px-3 py-2">
-              {{ article.slug }}
-            </span>
-          </div>
         </div>
 
         <div
@@ -201,5 +195,6 @@ const articleMetaItems = computed(() => [
       <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
       <MDC v-else :value="article.content" class="blog-content" />
     </ArticleReadingEnhancer>
+    <PostArticleComments :comments="comments || []" />
   </article>
 </template>

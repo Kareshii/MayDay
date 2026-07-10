@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm'
 import { createError } from 'h3'
 import { articleViewEvents, getArticlesTable, type ArticleRecord } from '../database/schema'
 import { useDatabase } from '../database/client'
@@ -25,6 +25,13 @@ export interface PublicArticleSearchResult {
   excerpt: string
   path: string
   updatedAt: string
+}
+
+export interface AdminArticleListOptions {
+  page: number
+  pageSize: number
+  search?: string
+  status?: 'all' | 'published' | 'draft'
 }
 
 const articleCoverLayoutSet = new Set<ArticleCoverLayout>(ARTICLE_COVER_LAYOUTS)
@@ -248,10 +255,42 @@ async function findById(id: string) {
   return await findByIdRecord(id)
 }
 
-export async function listAdminArticles() {
+export async function listAdminArticles(options: AdminArticleListOptions) {
   await ensureArticlesSchema()
   const db = useDatabase()
   const articles = getArticlesTable()
+  const pageSize = Math.min(100, Math.max(1, Math.trunc(options.pageSize)))
+  const requestedPage = Math.max(1, Math.trunc(options.page))
+  const conditions: SQL[] = []
+  const search = options.search?.trim()
+
+  if (options.status === 'published') {
+    conditions.push(eq(articles.published, true))
+  } else if (options.status === 'draft') {
+    conditions.push(eq(articles.published, false))
+  }
+
+  if (search) {
+    const pattern = `%${search}%`
+    const searchCondition = or(
+      ilike(articles.title, pattern),
+      ilike(articles.slug, pattern),
+      ilike(articles.summary, pattern),
+    )
+
+    if (searchCondition) {
+      conditions.push(searchCondition)
+    }
+  }
+
+  const whereCondition = conditions.length ? and(...conditions) : undefined
+  const countRows = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(articles)
+    .where(whereCondition)
+  const total = Number(countRows[0]?.total) || 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  const page = Math.min(requestedPage, totalPages)
   const rows = await db
     .select({
       id: articles.id,
@@ -268,9 +307,17 @@ export async function listAdminArticles() {
       updatedAt: articles.updatedAt,
     })
     .from(articles)
+    .where(whereCondition)
     .orderBy(desc(articles.pinned), desc(articles.updatedAt))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize)
 
-  return rows.map(serializeArticleSummary)
+  return {
+    articles: rows.map(serializeArticleSummary),
+    total,
+    page,
+    pageSize,
+  }
 }
 
 export async function listPublicArticles() {

@@ -38,6 +38,7 @@ const navItems: NavItem[] = [
         ],
       },
       { title: '内容图片', to: '/admin/content-images', icon: 'lucide:image' },
+      { title: '图册', to: '/admin/gallery', icon: 'lucide:images' },
       { title: '分类', to: '/admin/features/categories', icon: 'lucide:folder-tree' },
       { title: '评论', to: '/admin/features/comments', icon: 'lucide:message-square' },
     ],
