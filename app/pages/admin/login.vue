@@ -168,6 +168,7 @@ async function signIn() {
             <UiInput
               id="admin-login-username"
               v-model="form.username"
+              class="max-w-none"
               autocomplete="username"
               placeholder="admin"
               required
@@ -185,6 +186,7 @@ async function signIn() {
             <UiInput
               id="admin-login-password"
               v-model="form.password"
+              class="max-w-none"
               type="password"
               autocomplete="current-password"
               placeholder="输入后台密码"
