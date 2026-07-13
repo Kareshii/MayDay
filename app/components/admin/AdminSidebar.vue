@@ -51,6 +51,7 @@ const navItems: NavItem[] = [
       { title: '全局设置', to: '/admin/features/site', icon: 'lucide:globe-2', exact: true },
       { title: 'SEO 设置', to: '/admin/features/site/seo', icon: 'lucide:search' },
       { title: '导航设置', to: '/admin/features/site/navigation', icon: 'lucide:menu' },
+      { title: '路由管理', to: '/admin/features/site/routes', icon: 'lucide:network' },
       { title: '内容设置', to: '/admin/features/site/content', icon: 'lucide:image' },
       { title: '账号设置', to: '/admin/features/site/account', icon: 'lucide:shield-user' },
     ],

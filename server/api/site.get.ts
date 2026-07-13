@@ -3,15 +3,24 @@ import {
   DEFAULT_SEO_SETTINGS,
   DEFAULT_SITE_SETTINGS,
   readAdminFeatureSettings,
+  readAdminRouteSettings,
   readAdminSeoSettings,
   readAdminSiteSettings,
 } from '../utils/adminFeatureStore'
+import {
+  DEFAULT_MANAGED_ROUTE_GROUPS,
+  isPublicRouteEnabled,
+  toPublicRouteVisibility,
+} from '~~/shared/types/routes'
 
 export default defineEventHandler(async () => {
   if (!isDatabaseConfigured()) {
+    const routes = toPublicRouteVisibility(DEFAULT_MANAGED_ROUTE_GROUPS)
+
     return {
       site: DEFAULT_SITE_SETTINGS,
       seo: DEFAULT_SEO_SETTINGS,
+      routes,
       gallery: {
         enabled: false,
         title: '图册',
@@ -21,11 +30,13 @@ export default defineEventHandler(async () => {
     }
   }
 
-  const [site, seo, features] = await Promise.all([
+  const [site, seo, features, routeGroups] = await Promise.all([
     readAdminSiteSettings(),
     readAdminSeoSettings(),
     readAdminFeatureSettings(),
+    readAdminRouteSettings(),
   ])
+  const routes = toPublicRouteVisibility(routeGroups)
 
   return {
     site: {
@@ -42,8 +53,9 @@ export default defineEventHandler(async () => {
       maintenanceStatusCode: site.maintenanceStatusCode,
     },
     seo,
+    routes,
     gallery: {
-      enabled: features.galleryEnabled,
+      enabled: isPublicRouteEnabled(routes, 'home-gallery'),
       title: features.galleryTitle,
       subtitle: features.gallerySubtitle,
       items: features.galleryItems

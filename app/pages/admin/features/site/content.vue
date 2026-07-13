@@ -13,6 +13,8 @@ useSeoMeta({
 const {
   data,
   pending,
+  error,
+  refresh,
   savingSection,
   saveSection,
 } = await useAdminSiteSettings('content')
@@ -83,17 +85,28 @@ const headerActions = computed(() => [
 
     <AdminSiteSettingsNav />
 
-    <div v-if="pending" class="flex min-h-56 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
-        正在加载设置
-      </div>
+    <UiAlert v-if="error" variant="destructive">
+      <Icon name="lucide:circle-alert" />
+      <UiAlertTitle>内容设置加载失败</UiAlertTitle>
+      <UiAlertDescription>{{ error.message }}</UiAlertDescription>
+      <UiAlertAction>
+        <UiButton variant="outline" size="sm" @click="refresh">
+          <Icon name="lucide:refresh-cw" class="size-4" />
+          重试
+        </UiButton>
+      </UiAlertAction>
+    </UiAlert>
+
+    <div v-else-if="pending" class="max-w-xl space-y-4" aria-label="正在加载内容设置">
+      <UiSkeleton class="h-24 w-full" />
+      <UiSkeleton class="h-72 w-full" />
+      <UiSkeleton class="h-72 w-full" />
     </div>
 
     <template v-else>
       <section class="grid overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] sm:grid-cols-3">
         <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:wand-sparkles" class="size-4" />
           </span>
           <div>
@@ -102,7 +115,7 @@ const headerActions = computed(() => [
           </div>
         </div>
         <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:maximize-2" class="size-4" />
           </span>
           <div>
@@ -113,7 +126,7 @@ const headerActions = computed(() => [
           </div>
         </div>
         <div class="flex min-h-24 items-center gap-3 px-5 py-4">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-violet-50 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:save" class="size-4" />
           </span>
           <div>
@@ -123,8 +136,7 @@ const headerActions = computed(() => [
         </div>
       </section>
 
-      <div class="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-        <div class="space-y-4">
+      <form class="max-w-xl space-y-4" @submit.prevent="saveContentSettings">
           <AdminSettingsPanel title="处理策略" description="入库与输出规则" icon="lucide:workflow">
             <AdminSettingsRow label="远程图片本地化" description="保存内容时抓取远程图片">
               <label class="flex cursor-pointer items-center justify-between gap-4 rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)] px-3 py-3">
@@ -158,25 +170,25 @@ const headerActions = computed(() => [
           </AdminSettingsPanel>
 
           <AdminSettingsPanel title="尺寸规则" description="原图与缩略图输出尺寸" icon="lucide:ruler">
-            <AdminSettingsRow label="大图上限" description="宽度 × 高度，单位 px">
-              <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                <UiInput v-model.number="content.imageMaxWidth" type="number" min="1" placeholder="宽度" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center tabular-nums" />
-                <span class="text-[var(--text-muted)]">×</span>
-                <UiInput v-model.number="content.imageMaxHeight" type="number" min="1" placeholder="高度" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center tabular-nums" />
-              </div>
+            <AdminSettingsRow label="大图最大宽度" description="单位 px">
+              <UiInput v-model.number="content.imageMaxWidth" aria-label="大图最大宽度" type="number" min="1" placeholder="宽度" />
             </AdminSettingsRow>
 
-            <AdminSettingsRow label="缩略图尺寸" description="宽度 × 高度，单位 px">
-              <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-                <UiInput v-model.number="content.thumbnailWidth" type="number" min="1" placeholder="宽度" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center tabular-nums" />
-                <span class="text-[var(--text-muted)]">×</span>
-                <UiInput v-model.number="content.thumbnailHeight" type="number" min="1" placeholder="高度" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center tabular-nums" />
-              </div>
+            <AdminSettingsRow label="大图最大高度" description="单位 px">
+              <UiInput v-model.number="content.imageMaxHeight" aria-label="大图最大高度" type="number" min="1" placeholder="高度" />
+            </AdminSettingsRow>
+
+            <AdminSettingsRow label="缩略图宽度" description="单位 px">
+              <UiInput v-model.number="content.thumbnailWidth" aria-label="缩略图宽度" type="number" min="1" placeholder="宽度" />
+            </AdminSettingsRow>
+
+            <AdminSettingsRow label="缩略图高度" description="单位 px">
+              <UiInput v-model.number="content.thumbnailHeight" aria-label="缩略图高度" type="number" min="1" placeholder="高度" />
             </AdminSettingsRow>
 
             <AdminSettingsRow label="生成模式">
               <UiSelect v-model="content.thumbnailMode">
-                <UiSelectTrigger class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]">
+                <UiSelectTrigger aria-label="缩略图生成模式">
                   <UiSelectValue placeholder="缩略图模式" />
                 </UiSelectTrigger>
                 <UiSelectContent>
@@ -187,9 +199,11 @@ const headerActions = computed(() => [
               </UiSelect>
             </AdminSettingsRow>
           </AdminSettingsPanel>
-        </div>
 
         <AdminSettingsPanel title="默认缩略图" description="文章未设置封面时使用" icon="lucide:image">
+          <AdminSettingsRow label="图片路径" description="支持站内路径或完整 URL">
+            <UiInput v-model="content.defaultThumbnail" aria-label="默认缩略图路径" placeholder="/cover.jpg" />
+          </AdminSettingsRow>
           <div class="px-5 py-5">
             <div class="aspect-[4/3] overflow-hidden rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)]">
               <img v-if="content.defaultThumbnail" :src="content.defaultThumbnail" alt="默认缩略图预览" class="size-full object-cover">
@@ -197,7 +211,6 @@ const headerActions = computed(() => [
                 <Icon name="lucide:image-off" class="size-7" />
               </div>
             </div>
-            <UiInput v-model="content.defaultThumbnail" placeholder="/cover.jpg" class="mt-4 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]" />
             <div class="mt-4 flex items-center justify-between border-t border-[var(--border-soft)] pt-4 text-xs text-[var(--text-secondary)]">
               <span>输出尺寸</span>
               <span class="font-mono tabular-nums text-[var(--text-primary)]">
@@ -206,7 +219,7 @@ const headerActions = computed(() => [
             </div>
           </div>
         </AdminSettingsPanel>
-      </div>
+      </form>
     </template>
   </div>
 </template>

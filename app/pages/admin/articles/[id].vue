@@ -95,14 +95,6 @@ async function removeCurrentArticle() {
     return
   }
 
-  if (!import.meta.client) {
-    return
-  }
-
-  if (!window.confirm('确认要从 PostgreSQL 中删除这篇文章吗？')) {
-    return
-  }
-
   deleting.value = true
 
   try {
@@ -116,6 +108,10 @@ async function removeCurrentArticle() {
   }
 }
 
+async function refreshArticle() {
+  await articleRequest?.refresh()
+}
+
 watch(error, (value) => {
   if (value && databaseConfigured.value) {
     showErrorToast('文章加载失败', value.message)
@@ -127,12 +123,22 @@ watch(error, (value) => {
   <div class="cms-page cms-editor-page space-y-3">
     <AdminPageHeader title="编辑文章" :subtitle="headerSubtitle" :actions="headerActions" />
 
-    <div v-if="pending" class="flex min-h-64 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
-        正在加载文章
-      </div>
-    </div>
+    <UiCard v-if="pending" class="space-y-4 p-5" aria-label="正在加载文章">
+      <UiSkeleton class="h-10 w-full" />
+      <UiSkeleton class="h-[34rem] w-full" />
+    </UiCard>
+
+    <UiAlert v-else-if="error && databaseConfigured" variant="destructive">
+      <Icon name="lucide:circle-alert" class="size-4" />
+      <UiAlertTitle>文章加载失败</UiAlertTitle>
+      <UiAlertDescription>{{ error.message }}</UiAlertDescription>
+      <UiAlertAction>
+        <UiButton variant="outline" size="sm" @click="refreshArticle">
+          <Icon name="lucide:refresh-cw" class="size-4" />
+          重试
+        </UiButton>
+      </UiAlertAction>
+    </UiAlert>
 
     <ArticleForm
       v-else

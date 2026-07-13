@@ -5,16 +5,13 @@ withDefaults(defineProps<{
   align?: 'center' | 'start'
 }>(), {
   description: '',
-  align: 'center',
+  align: 'start',
 })
 </script>
 
 <template>
-  <div
-    class="grid gap-4 px-5 py-5 lg:grid-cols-[minmax(11rem,0.42fr)_minmax(0,1fr)] lg:gap-8"
-    :class="align === 'start' ? 'lg:items-start' : 'lg:items-center'"
-  >
-    <div class="min-w-0">
+  <div class="space-y-3 px-5 py-5">
+    <div class="min-w-0 max-w-xl">
       <p class="text-sm font-medium text-[var(--text-primary)]">
         {{ label }}
       </p>

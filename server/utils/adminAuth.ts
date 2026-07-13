@@ -8,7 +8,7 @@ import {
   verifyConfiguredAdminPassword,
 } from './runtimeSetup'
 
-const ADMIN_SESSION_COOKIE = 'mayday_admin_session'
+const ADMIN_SESSION_COOKIE = 'MasterGo_admin_session'
 const ADMIN_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 interface AdminSessionPayload {

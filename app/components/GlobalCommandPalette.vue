@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { primaryNavigation } from '@/utils/siteSections'
+import { isPublicRouteEnabled } from '~~/shared/types/routes'
+import { siteSections } from '@/utils/siteSections'
 
 interface SearchResult {
   id: string
@@ -25,31 +26,33 @@ const remoteResults = ref<SearchResult[]>([])
 const activeIndex = ref(0)
 const inputRef = useTemplateRef<HTMLInputElement>('inputRef')
 const openPaletteEvent = 'mayday:open-command-palette'
+const { data: siteConfig } = await usePublicSiteConfig()
 let searchTimer: number | null = null
 let searchRequestId = 0
 
-const staticItems: PaletteItem[] = [
-  { id: 'page-home', title: '主页', description: '回到 Mayday Archive 首页', path: '/', type: 'page', icon: 'lucide:home' },
-  ...primaryNavigation.map(item => ({
-    id: `page-${item.path}`,
-    title: item.title,
-    description: `打开 ${item.title}`,
-    path: item.path,
+const staticItems = computed<PaletteItem[]>(() => [
+  ...siteSections
+    .filter(section => isPublicRouteEnabled(siteConfig.value.routes, section.routeId))
+    .map(section => ({
+    id: `page-${section.path}`,
+    title: section.navTitle,
+    description: section.path === '/' ? '回到 Mayday Archive 首页' : `打开 ${section.navTitle}`,
+    path: section.path,
     type: 'page' as const,
-    icon: 'lucide:compass',
+    icon: section.path === '/' ? 'lucide:home' : 'lucide:compass',
   })),
   { id: 'admin-dashboard', title: '后台仪表盘', description: '进入内容管理后台', path: '/admin', type: 'admin', icon: 'lucide:layout-dashboard' },
   { id: 'admin-new-post', title: '新建文章', description: '快速创建一篇博客文章', path: '/admin/articles/new', type: 'admin', icon: 'lucide:file-plus-2' },
   { id: 'admin-site', title: '站点设置', description: '维护站点名称、首页文案和全局配置', path: '/admin/features/site', type: 'admin', icon: 'lucide:sliders-horizontal' },
-]
+])
 
 const normalizedQuery = computed(() => query.value.trim().toLowerCase())
 const localResults = computed(() => {
   if (!normalizedQuery.value) {
-    return staticItems
+    return staticItems.value
   }
 
-  return staticItems.filter((item) => {
+  return staticItems.value.filter((item) => {
     return `${item.title} ${item.description}`.toLowerCase().includes(normalizedQuery.value)
   })
 })

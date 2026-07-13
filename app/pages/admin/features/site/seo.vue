@@ -13,6 +13,8 @@ useSeoMeta({
 const {
   data,
   pending,
+  error,
+  refresh,
   savingSection,
   saveSection,
 } = await useAdminSiteSettings('seo')
@@ -83,17 +85,28 @@ onMounted(() => {
 
     <AdminSiteSettingsNav />
 
-    <div v-if="pending" class="flex min-h-56 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
-        正在加载设置
-      </div>
+    <UiAlert v-if="error" variant="destructive">
+      <Icon name="lucide:circle-alert" />
+      <UiAlertTitle>SEO 设置加载失败</UiAlertTitle>
+      <UiAlertDescription>{{ error.message }}</UiAlertDescription>
+      <UiAlertAction>
+        <UiButton variant="outline" size="sm" @click="refresh">
+          <Icon name="lucide:refresh-cw" class="size-4" />
+          重试
+        </UiButton>
+      </UiAlertAction>
+    </UiAlert>
+
+    <div v-else-if="pending" class="max-w-xl space-y-4" aria-label="正在加载 SEO 设置">
+      <UiSkeleton class="h-24 w-full" />
+      <UiSkeleton class="h-72 w-full" />
+      <UiSkeleton class="h-48 w-full" />
     </div>
 
     <template v-else>
       <section class="grid overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] sm:grid-cols-3">
         <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:type" class="size-4" />
           </span>
           <div class="min-w-0">
@@ -102,7 +115,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:align-left" class="size-4" />
           </span>
           <div class="min-w-0">
@@ -111,7 +124,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="flex min-h-24 items-center gap-3 px-5 py-4">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-violet-50 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
+          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:save" class="size-4" />
           </span>
           <div class="min-w-0">
@@ -121,38 +134,38 @@ onMounted(() => {
         </div>
       </section>
 
-      <AdminSettingsPanel title="搜索摘要" description="首页 meta 信息" icon="lucide:file-search">
-        <AdminSettingsRow label="页面标题" description="搜索结果的主标题">
-          <div class="space-y-2">
-            <UiInput v-model="seo.title" placeholder="留空则使用网站名称" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]" />
-            <p class="text-right text-xs tabular-nums text-[var(--text-muted)]">
-              {{ seo.title.length }} 字符
-            </p>
-          </div>
-        </AdminSettingsRow>
+      <form class="max-w-xl space-y-4" @submit.prevent="saveSeoSettings">
+        <AdminSettingsPanel title="搜索摘要" description="首页 meta 信息" icon="lucide:file-search">
+          <AdminSettingsRow label="页面标题" description="搜索结果的主标题">
+            <div class="space-y-2">
+              <UiInput v-model="seo.title" aria-label="页面标题" placeholder="留空则使用网站名称" />
+              <p class="text-right text-xs tabular-nums text-[var(--text-muted)]">
+                {{ seo.title.length }} 字符
+              </p>
+            </div>
+          </AdminSettingsRow>
 
-        <AdminSettingsRow label="页面描述" description="搜索结果的摘要内容" align="start">
-          <div class="space-y-2">
-            <UiTextarea v-model="seo.description" placeholder="站点描述" class="min-h-32 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] leading-6" />
-            <p class="text-right text-xs tabular-nums text-[var(--text-muted)]">
-              {{ seo.description.length }} 字符
-            </p>
-          </div>
-        </AdminSettingsRow>
+          <AdminSettingsRow label="页面描述" description="搜索结果的摘要内容" align="start">
+            <div class="space-y-2">
+              <UiTextarea v-model="seo.description" aria-label="页面描述" rows="5" placeholder="站点描述" />
+              <p class="text-right text-xs tabular-nums text-[var(--text-muted)]">
+                {{ seo.description.length }} 字符
+              </p>
+            </div>
+          </AdminSettingsRow>
 
-        <AdminSettingsRow label="关键词" description="使用逗号分隔">
-          <UiInput v-model="seo.keywords" placeholder="博客, 前端, 设计" class="rounded-md border-[var(--border-soft)] bg-[var(--surface-low)]" />
-        </AdminSettingsRow>
-      </AdminSettingsPanel>
+          <AdminSettingsRow label="关键词" description="使用逗号分隔">
+            <UiInput v-model="seo.keywords" aria-label="关键词" placeholder="博客, 前端, 设计" />
+          </AdminSettingsRow>
+        </AdminSettingsPanel>
 
-      <div class="space-y-4">
         <AdminSettingsPanel title="搜索结果预览" icon="lucide:scan-search">
           <div class="px-5 py-5">
             <div class="min-w-0 font-sans">
-              <p class="truncate text-sm text-emerald-700 dark:text-emerald-400">
+              <p class="truncate text-sm text-[var(--success)]">
                 https://{{ siteHost }}/
               </p>
-              <p class="mt-1 line-clamp-2 text-lg font-medium leading-6 text-blue-700 dark:text-blue-400">
+              <p class="mt-1 line-clamp-2 text-lg font-medium leading-6 text-[var(--primary)]">
                 {{ previewTitle }}
               </p>
               <p class="mt-1 line-clamp-3 text-sm leading-6 text-[var(--text-secondary)]">
@@ -162,7 +175,7 @@ onMounted(() => {
           </div>
         </AdminSettingsPanel>
 
-        <AdminSettingsPanel title="关键词" icon="lucide:tags">
+        <AdminSettingsPanel title="关键词预览" icon="lucide:tags">
           <div class="px-5 py-5">
             <div v-if="keywordItems.length" class="flex flex-wrap gap-2">
               <UiBadge
@@ -181,7 +194,7 @@ onMounted(() => {
           </div>
         </AdminSettingsPanel>
 
-      </div>
+      </form>
     </template>
   </div>
 </template>

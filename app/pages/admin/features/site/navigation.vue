@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { TableColumn } from '@/components/ui/table'
 import type { AdminNavigationItem } from '@/composables/useAdminSiteSettings'
 import { createAdminLocalId } from '@/composables/useAdminSiteSettings'
 
@@ -14,14 +15,38 @@ useSeoMeta({
 const {
   data,
   pending,
+  error,
+  refresh,
   savingSection,
   saveSection,
 } = await useAdminSiteSettings('navigation')
 
+const PAGE_SIZE = 20
 const NAVIGATION_ROOT_VALUE = '__root__'
+const navigationColumns = [
+  { prop: 'title', label: '标题', minWidth: 180 },
+  { prop: 'path', label: '链接', minWidth: 240 },
+  { prop: 'type', label: '类型', width: 104 },
+  { prop: 'parent', label: '上级', minWidth: 160 },
+  { prop: 'order', label: '排序', width: 88 },
+  { prop: 'enabled', label: '状态', width: 120 },
+  { prop: 'actions', label: '操作', width: 104, align: 'right' },
+] satisfies readonly TableColumn[]
 const navigation = ref<AdminNavigationItem[]>([])
+const currentPage = ref(1)
+const dialogOpen = ref(false)
+const editingNavigationId = ref('')
+const navigationDraft = ref<AdminNavigationItem | null>(null)
+const navigationToDelete = ref<AdminNavigationItem | null>(null)
 const settingsHydrated = ref(false)
 const settingsDirty = ref(false)
+const {
+  discardDialogOpen,
+  captureDraft,
+  requestClose: requestDialogClose,
+  handleOpenChange: handleDialogOpenChange,
+  discardDraft,
+} = useDialogDraftGuard(navigationDraft, closeDialogNow)
 
 watch(data, (value) => {
   settingsHydrated.value = false
@@ -49,22 +74,84 @@ async function saveNavigationSettings() {
   }
 }
 
-function addNavigation() {
-  navigation.value.push({
+function createNavigationDraft(): AdminNavigationItem {
+  return {
     id: createAdminLocalId('navigation'),
-    title: '新导航',
-    path: '/',
+    title: '',
+    path: '',
     type: 'internal',
     parentId: '',
     order: navigation.value.length + 1,
     enabled: true,
-  })
+  }
 }
 
-function removeNavigation(id: string) {
+function openCreateDialog() {
+  editingNavigationId.value = ''
+  navigationDraft.value = createNavigationDraft()
+  captureDraft()
+  dialogOpen.value = true
+}
+
+function openEditDialog(item: AdminNavigationItem) {
+  editingNavigationId.value = item.id
+  navigationDraft.value = { ...item }
+  captureDraft()
+  dialogOpen.value = true
+}
+
+function closeDialogNow() {
+  dialogOpen.value = false
+  editingNavigationId.value = ''
+  navigationDraft.value = null
+}
+
+function submitNavigation() {
+  const draft = navigationDraft.value
+
+  if (!draft) {
+    return
+  }
+
+  const nextItem = {
+    ...draft,
+    title: draft.title.trim(),
+    path: draft.path.trim(),
+    order: Number.isFinite(Number(draft.order)) ? Number(draft.order) : navigation.value.length + 1,
+  }
+
+  if (editingNavigationId.value) {
+    navigation.value = navigation.value.map(item => item.id === editingNavigationId.value ? nextItem : item)
+  } else {
+    navigation.value = [...navigation.value, nextItem]
+    currentPage.value = totalPages.value
+  }
+
+  closeDialogNow()
+}
+
+function requestNavigationRemoval(item: AdminNavigationItem) {
+  navigationToDelete.value = item
+}
+
+function handleDeleteDialogOpenChange(value: boolean) {
+  if (!value) {
+    navigationToDelete.value = null
+  }
+}
+
+function removeNavigation() {
+  const item = navigationToDelete.value
+
+  if (!item) {
+    return
+  }
+
   navigation.value = navigation.value
-    .filter(item => item.id !== id)
-    .map(item => item.parentId === id ? { ...item, parentId: '' } : item)
+    .filter(navigationItem => navigationItem.id !== item.id)
+    .map(navigationItem => navigationItem.parentId === item.id ? { ...navigationItem, parentId: '' } : navigationItem)
+  currentPage.value = Math.min(currentPage.value, totalPages.value)
+  navigationToDelete.value = null
 }
 
 function collectNavigationDescendantIds(itemId: string) {
@@ -100,18 +187,31 @@ function updateParent(item: AdminNavigationItem, value: string) {
   item.parentId = value === NAVIGATION_ROOT_VALUE ? '' : value
 }
 
-const enabledNavigationCount = computed(() => navigation.value.filter(item => item.enabled).length)
-const externalNavigationCount = computed(() => navigation.value.filter(item => item.type === 'external').length)
+const navigationLookup = computed(() => new Map(navigation.value.map(item => [item.id, item.title || '未命名导航'])))
+const totalPages = computed(() => Math.max(1, Math.ceil(navigation.value.length / PAGE_SIZE)))
+const paginatedNavigation = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return navigation.value.slice(start, start + PAGE_SIZE)
+})
 const saveStateLabel = computed(() => savingSection.value === 'navigation'
   ? '保存中'
   : settingsDirty.value ? '待保存' : '已保存')
+
+watch(totalPages, (value) => {
+  currentPage.value = Math.min(currentPage.value, value)
+})
+
+function goToPage(page: number) {
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+}
+
 const headerActions = computed(() => [
   {
     label: '新增导航',
     icon: 'lucide:plus',
     variant: 'secondary' as const,
     disabled: pending.value,
-    onClick: addNavigation,
+    onClick: openCreateDialog,
   },
   {
     label: savingSection.value === 'navigation' ? '保存中...' : '保存导航',
@@ -128,108 +228,99 @@ const headerActions = computed(() => [
 
     <AdminSiteSettingsNav />
 
-    <div v-if="pending" class="flex min-h-56 items-center justify-center rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-      <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-        <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
-        正在加载设置
+    <UiCard class="overflow-hidden p-0">
+      <div class="flex min-h-14 items-center justify-between gap-4 border-b border-[var(--border-soft)] px-5 py-3">
+        <div>
+          <h2 class="text-sm font-semibold text-[var(--text-primary)]">菜单项目</h2>
+          <p class="mt-1 text-xs text-[var(--text-secondary)]">维护导航层级、链接类型和展示状态。</p>
+        </div>
+        <span class="inline-flex shrink-0 items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
+          <Icon :name="savingSection === 'navigation' ? 'lucide:loader-circle' : settingsDirty ? 'lucide:circle-dot' : 'lucide:circle-check'" :class="['size-4', savingSection === 'navigation' && 'animate-spin']" />
+          {{ saveStateLabel }}
+        </span>
       </div>
-    </div>
 
-    <template v-else>
-      <section class="grid overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)] sm:grid-cols-3">
-        <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
-            <Icon name="lucide:list-tree" class="size-4" />
-          </span>
-          <div>
-            <p class="text-xs font-medium text-[var(--text-secondary)]">导航总数</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ navigation.length }}</p>
+      <UiTable
+        class="min-w-[1000px]"
+        :columns="navigationColumns"
+        :items="paginatedNavigation"
+        row-key="id"
+        :loading="pending"
+        loading-text="正在加载导航"
+        :error="error?.message"
+        empty-text="暂无导航"
+        pagination
+        :page="currentPage"
+        :items-per-page="PAGE_SIZE"
+        :total="navigation.length"
+        @retry="refresh"
+        @update:page="goToPage"
+      >
+        <template #cell-title="{ item }">
+          <span class="font-medium text-[var(--text-primary)]">{{ item.title || '未命名导航' }}</span>
+        </template>
+        <template #cell-path="{ item }">
+          <code class="text-xs text-[var(--text-secondary)]">{{ item.path }}</code>
+        </template>
+        <template #cell-type="{ item }">
+          <UiBadge variant="secondary">{{ item.type === 'external' ? '站外' : '站内' }}</UiBadge>
+        </template>
+        <template #cell-parent="{ item }">
+          <span class="text-[var(--text-secondary)]">{{ navigationLookup.get(item.parentId) || '顶级导航' }}</span>
+        </template>
+        <template #cell-order="{ item }">
+          <span class="tabular-nums text-[var(--text-secondary)]">{{ item.order }}</span>
+        </template>
+        <template #cell-enabled="{ item }">
+          <UiLabel class="inline-flex items-center gap-2">
+            <UiCheckbox v-model="item.enabled" :disabled="savingSection === 'navigation'" />
+            <span class="text-xs text-[var(--text-secondary)]">{{ item.enabled ? '显示' : '隐藏' }}</span>
+          </UiLabel>
+        </template>
+        <template #cell-actions="{ item }">
+          <div class="flex justify-end gap-1">
+            <UiTooltip>
+              <UiTooltipTrigger as-child>
+                <UiButton variant="ghost" size="icon-sm" :disabled="savingSection === 'navigation'" aria-label="编辑导航" @click="openEditDialog(item)">
+                  <Icon name="lucide:pencil" class="size-4" />
+                </UiButton>
+              </UiTooltipTrigger>
+              <UiTooltipContent>编辑导航</UiTooltipContent>
+            </UiTooltip>
+            <UiTooltip>
+              <UiTooltipTrigger as-child>
+                <UiButton variant="ghost" size="icon-sm" :disabled="savingSection === 'navigation'" aria-label="删除导航" @click="requestNavigationRemoval(item)">
+                  <Icon name="lucide:trash-2" class="size-4 text-[var(--danger)]" />
+                </UiButton>
+              </UiTooltipTrigger>
+              <UiTooltipContent>删除导航</UiTooltipContent>
+            </UiTooltip>
           </div>
-        </div>
-        <div class="flex min-h-24 items-center gap-3 border-b border-[var(--border-soft)] px-5 py-4 sm:border-b-0 sm:border-r">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
-            <Icon name="lucide:eye" class="size-4" />
-          </span>
-          <div>
-            <p class="text-xs font-medium text-[var(--text-secondary)]">前台显示</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ enabledNavigationCount }}</p>
-          </div>
-        </div>
-        <div class="flex min-h-24 items-center gap-3 px-5 py-4">
-          <span class="grid size-9 shrink-0 place-items-center rounded-md bg-violet-50 text-violet-700 dark:bg-violet-400/10 dark:text-violet-300">
-            <Icon name="lucide:external-link" class="size-4" />
-          </span>
-          <div>
-            <p class="text-xs font-medium text-[var(--text-secondary)]">站外链接</p>
-            <p class="mt-1 text-xl font-bold tabular-nums text-[var(--text-primary)]">{{ externalNavigationCount }}</p>
-          </div>
-        </div>
-      </section>
+        </template>
+      </UiTable>
+    </UiCard>
 
-      <section class="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-        <header class="flex min-h-16 items-center justify-between gap-4 border-b border-[var(--border-soft)] px-5 py-3.5">
-          <div class="flex min-w-0 items-center gap-3">
-            <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
-              <Icon name="lucide:menu" class="size-4" />
-            </span>
-            <div class="min-w-0">
-              <h2 class="text-sm font-semibold text-[var(--text-primary)]">菜单项目</h2>
-              <p class="mt-0.5 text-xs text-[var(--text-secondary)]">{{ navigation.length }} 项</p>
-            </div>
-          </div>
-          <span class="inline-flex items-center gap-2 text-xs font-medium text-[var(--text-secondary)]">
-            <span
-              :class="[
-                'size-1.5 rounded-full',
-                savingSection === 'navigation'
-                  ? 'animate-pulse bg-amber-500'
-                  : settingsDirty ? 'bg-amber-500' : 'bg-emerald-500',
-              ]"
-            />
-            {{ saveStateLabel }}
-          </span>
-        </header>
+    <UiDialog :open="dialogOpen" @update:open="handleDialogOpenChange">
+      <UiDialogContent size="lg">
+        <form v-if="navigationDraft" class="space-y-6" @submit.prevent="submitNavigation">
+          <UiDialogHeader>
+            <UiDialogTitle>{{ editingNavigationId ? '编辑导航' : '新增导航' }}</UiDialogTitle>
+            <UiDialogDescription>维护导航标题、地址、层级和展示状态。</UiDialogDescription>
+          </UiDialogHeader>
 
-        <div v-if="!navigation.length" class="px-5 py-16 text-center">
-          <span class="mx-auto grid size-11 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-muted)]">
-            <Icon name="lucide:menu" class="size-5" />
-          </span>
-          <p class="mt-4 text-sm font-semibold text-[var(--text-primary)]">暂无导航</p>
-        </div>
-
-        <template v-else>
-          <div class="hidden grid-cols-[minmax(9rem,1fr)_minmax(12rem,1.4fr)_8rem_10rem_5rem_2.5rem] gap-3 border-b border-[var(--border-soft)] bg-[var(--surface-low)] px-5 py-2.5 text-xs font-medium text-[var(--text-secondary)] lg:grid">
-            <span>标题</span>
-            <span>链接</span>
-            <span>类型</span>
-            <span>上级</span>
-            <span class="text-center">显示</span>
-            <span />
-          </div>
-
-          <div class="divide-y divide-[var(--border-soft)]">
-          <div
-            v-for="item in navigation"
-            :key="item.id"
-            class="group grid gap-3 px-5 py-4 transition-colors hover:bg-[var(--surface-low)] lg:grid-cols-[minmax(9rem,1fr)_minmax(12rem,1.4fr)_8rem_10rem_5rem_2.5rem] lg:items-center"
-          >
-            <UiLabel class="space-y-1.5 lg:space-y-0">
-              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">标题</span>
-              <UiInput v-model="item.title" class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] font-medium" placeholder="导航标题" />
+          <div class="space-y-4 overflow-y-auto">
+            <UiLabel class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">标题</span>
+              <UiInput v-model="navigationDraft.title" class="w-full max-w-xl" placeholder="导航标题" required />
             </UiLabel>
-
-            <UiLabel class="space-y-1.5 lg:space-y-0">
-              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">链接</span>
-              <div class="relative">
-                <Icon :name="item.type === 'external' ? 'lucide:external-link' : 'lucide:route'" class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
-                <UiInput v-model="item.path" class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] pl-8 font-mono text-xs" placeholder="/posts" />
-              </div>
+            <UiLabel class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">链接</span>
+              <UiInput v-model="navigationDraft.path" class="w-full max-w-xl" placeholder="/posts 或 https://example.com" required />
             </UiLabel>
-
-            <UiLabel class="space-y-1.5 lg:space-y-0">
-              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">类型</span>
-              <UiSelect v-model="item.type">
-                <UiSelectTrigger class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] px-2">
+            <UiLabel class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">类型</span>
+              <UiSelect v-model="navigationDraft.type">
+                <UiSelectTrigger class="w-full max-w-xl">
                   <UiSelectValue placeholder="链接类型" />
                 </UiSelectTrigger>
                 <UiSelectContent>
@@ -238,41 +329,54 @@ const headerActions = computed(() => [
                 </UiSelectContent>
               </UiSelect>
             </UiLabel>
-
-            <UiLabel class="space-y-1.5 lg:space-y-0">
-              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">上级</span>
-              <UiSelect :model-value="getParentValue(item)" @update:model-value="updateParent(item, $event)">
-                <UiSelectTrigger class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] px-2">
+            <UiLabel class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">上级导航</span>
+              <UiSelect :model-value="getParentValue(navigationDraft)" @update:model-value="updateParent(navigationDraft, $event)">
+                <UiSelectTrigger class="w-full max-w-xl">
                   <UiSelectValue placeholder="顶级导航" />
                 </UiSelectTrigger>
                 <UiSelectContent>
                   <UiSelectItem :value="NAVIGATION_ROOT_VALUE">顶级导航</UiSelectItem>
-                  <UiSelectItem v-for="parent in getParentOptions(item.id)" :key="parent.id" :value="parent.id">
+                  <UiSelectItem v-for="parent in getParentOptions(navigationDraft.id)" :key="parent.id" :value="parent.id">
                     {{ parent.title || '未命名导航' }}
                   </UiSelectItem>
                 </UiSelectContent>
               </UiSelect>
             </UiLabel>
-
-            <div class="flex items-center justify-between gap-3 lg:justify-center">
-              <span class="text-xs font-medium text-[var(--text-secondary)] lg:hidden">前台显示</span>
-              <UiCheckbox v-model="item.enabled" :aria-label="`${item.title || '导航'}前台显示`" />
-            </div>
-
-            <div class="flex justify-end">
-              <UiButton variant="ghost" size="icon" class="size-9 text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30" title="删除导航" aria-label="删除导航" @click="removeNavigation(item.id)">
-                <Icon name="lucide:trash-2" class="size-4" />
-              </UiButton>
-            </div>
-
-            <UiLabel class="flex items-center gap-2 lg:col-span-6">
-              <span class="shrink-0 text-xs font-medium text-[var(--text-secondary)]">排序</span>
-              <UiInput v-model.number="item.order" type="number" class="h-8 w-24 rounded-md border-[var(--border-soft)] bg-[var(--surface-low)] text-center text-xs tabular-nums" />
+            <UiLabel class="block space-y-2">
+              <span class="text-sm font-medium text-[var(--text-primary)]">排序</span>
+              <UiInput v-model.number="navigationDraft.order" class="w-full max-w-xl" type="number" min="1" />
+            </UiLabel>
+            <UiLabel class="flex items-center gap-2">
+              <UiCheckbox v-model="navigationDraft.enabled" />
+              <span class="text-sm font-medium text-[var(--text-primary)]">在前台显示</span>
             </UiLabel>
           </div>
-        </div>
-        </template>
-      </section>
-    </template>
+
+          <UiDialogFooter>
+            <UiButton type="button" variant="outline" @click="requestDialogClose">取消</UiButton>
+            <UiButton type="submit">
+              <Icon name="lucide:save" class="size-4" />
+              保存到列表
+            </UiButton>
+          </UiDialogFooter>
+        </form>
+      </UiDialogContent>
+    </UiDialog>
+
+    <AdminDiscardChangesDialog v-model:open="discardDialogOpen" @confirm="discardDraft" />
+
+    <UiAlertDialog :open="Boolean(navigationToDelete)" @update:open="handleDeleteDialogOpenChange">
+      <UiAlertDialogContent>
+        <UiAlertDialogHeader>
+          <UiAlertDialogTitle>删除导航“{{ navigationToDelete?.title || '未命名导航' }}”？</UiAlertDialogTitle>
+          <UiAlertDialogDescription>删除后，现有子导航会自动移动到顶级；更改仍需点击“保存导航”才会提交。</UiAlertDialogDescription>
+        </UiAlertDialogHeader>
+        <UiAlertDialogFooter>
+          <UiAlertDialogCancel>取消</UiAlertDialogCancel>
+          <UiAlertDialogAction variant="destructive" @click="removeNavigation">确认删除</UiAlertDialogAction>
+        </UiAlertDialogFooter>
+      </UiAlertDialogContent>
+    </UiAlertDialog>
   </div>
 </template>

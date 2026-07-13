@@ -19,6 +19,7 @@ interface ContentImageUploadResponse {
 
 interface TinyMceShortcutEditor {
   addShortcut: (pattern: string, description: string, callback: () => void) => void
+  focus: () => void
 }
 
 const model = defineModel<string>({ default: '' })
@@ -28,13 +29,16 @@ const emit = defineEmits<{
 const props = withDefaults(defineProps<{
   disabled?: boolean
   height?: number | string
+  placeholder?: string
 }>(), {
   disabled: false,
   height: 'calc(100dvh - 10rem)',
+  placeholder: '',
 })
 
 const editorComponent = shallowRef<unknown>(null)
 const tinymceInstance = shallowRef<unknown>(null)
+const activeEditor = shallowRef<TinyMceShortcutEditor | null>(null)
 const { showErrorToast } = useAdminToast()
 
 async function uploadEditorImage(blobInfo: TinyMceBlobInfo, progress?: (value: number) => void) {
@@ -66,6 +70,7 @@ async function uploadEditorImage(blobInfo: TinyMceBlobInfo, progress?: (value: n
 
 const editorConfig = computed(() => ({
   height: props.height,
+  placeholder: props.placeholder,
   language: 'zh-CN',
   menubar: 'file edit view insert format table tools help',
   plugins: 'advlist anchor autolink charmap code fullscreen help image link lists media preview searchreplace table visualblocks wordcount',
@@ -83,6 +88,7 @@ const editorConfig = computed(() => ({
   images_upload_handler: uploadEditorImage,
   convert_urls: false,
   setup: (editor: TinyMceShortcutEditor) => {
+    activeEditor.value = editor
     editor.addShortcut('Meta+S', '保存文章', () => {
       emit('save-shortcut')
     })
@@ -92,7 +98,7 @@ const editorConfig = computed(() => ({
   content_style: [
     contentUiSkinCss,
     contentCss,
-    'body { font-family: "Inter", "Avenir Next", "PingFang SC", "Noto Sans SC", sans-serif; font-size: 16px; line-height: 1.8; padding: 1.2rem; color: #141b2c; }',
+    'body { font-family: "Inter", "Avenir Next", "PingFang SC", "Noto Sans SC", sans-serif; font-size: 16px; line-height: 1.8;  color: #141b2c; }',
     'img { max-width: 100%; height: auto; border-radius: 16px; }',
     'blockquote { border-left: 4px solid #005fb8; margin: 1.5rem 0; padding: 0.5rem 0 0.5rem 1rem; color: #4a5568; background: #f6f8ff; border-radius: 0 10px 10px 0; }',
   ].join('\n'),
@@ -134,6 +140,12 @@ onMounted(async () => {
   editorComponent.value = Editor
   tinymceInstance.value = tinymce
 })
+
+function focus() {
+  activeEditor.value?.focus()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>

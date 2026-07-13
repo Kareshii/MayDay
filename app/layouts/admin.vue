@@ -6,8 +6,9 @@ const mobileOpen = ref(false)
 const sidebarCollapsed = ref(false)
 const routeLoading = ref(false)
 const routeProgress = ref(0)
-let progressTimer: ReturnType<typeof setInterval> | null = null
-let finishTimer: ReturnType<typeof setTimeout> | null = null
+const mainContentRef = useTemplateRef<HTMLElement>('mainContentRef')
+let progressTimer: number | null = null
+let finishTimer: number | null = null
 
 watch(() => route.path, () => {
   mobileOpen.value = false
@@ -60,8 +61,10 @@ onMounted(() => {
     }
   })
 
-  router.afterEach(() => {
+  router.afterEach(async () => {
     finishRouteLoading()
+    await nextTick()
+    mainContentRef.value?.focus({ preventScroll: true })
   })
 
   nuxtApp.hook('page:start', startRouteLoading)
@@ -74,33 +77,47 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    class="cms-admin-shell min-h-dvh flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] lg:flex-row"
-    :class="{ 'is-sidebar-collapsed': sidebarCollapsed }"
-  >
+  <UiTooltipProvider>
     <div
-      class="cms-route-progress"
-      :class="{ 'is-active': routeLoading }"
-      :aria-hidden="!routeLoading"
+      class="cms-admin-shell min-h-dvh flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] lg:flex-row"
+      :class="{ 'is-sidebar-collapsed': sidebarCollapsed }"
     >
       <div
-        class="cms-route-progress__bar"
-        :style="{ transform: `scaleX(${routeProgress / 100})` }"
+        class="cms-route-progress"
+        :class="{ 'is-active': routeLoading }"
+        :aria-hidden="!routeLoading"
+      >
+        <div
+          class="cms-route-progress__bar"
+          :style="{ transform: `scaleX(${routeProgress / 100})` }"
+        />
+      </div>
+
+      <a
+        href="#admin-main-content"
+        class="fixed left-3 top-3 z-[200] -translate-y-20 rounded-md bg-[var(--surface-card)] px-3 py-2 text-sm font-semibold text-[var(--text-primary)] shadow-lg transition-transform focus:translate-y-0"
+      >
+        跳到主内容
+      </a>
+
+      <AdminSidebar
+        :mobile-open="mobileOpen"
+        :collapsed="sidebarCollapsed"
+        @close="mobileOpen = false"
+        @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       />
-    </div>
 
-    <AdminSidebar
-      :mobile-open="mobileOpen"
-      :collapsed="sidebarCollapsed"
-      @close="mobileOpen = false"
-      @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
-    />
-
-    <div class="min-h-dvh min-w-0 flex flex-1 flex-col">
-      <AdminHeader @toggle="mobileOpen = true" />
-      <main class="min-h-0 flex-1">
-        <slot />
-      </main>
+      <div class="min-h-dvh min-w-0 flex flex-1 flex-col">
+        <AdminHeader @toggle="mobileOpen = true" />
+        <main
+          id="admin-main-content"
+          ref="mainContentRef"
+          class="min-h-0 flex-1 outline-none"
+          tabindex="-1"
+        >
+          <slot />
+        </main>
+      </div>
     </div>
-  </div>
+  </UiTooltipProvider>
 </template>

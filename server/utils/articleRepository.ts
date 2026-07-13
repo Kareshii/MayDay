@@ -546,6 +546,42 @@ export async function updateArticlePinned(id: string, pinned: boolean) {
   return serializeArticleSummary(rows[0])
 }
 
+export async function updateArticlePublished(id: string, published: boolean) {
+  await ensureArticlesSchema()
+  const db = useDatabase()
+  const articles = getArticlesTable()
+  const rows = await db
+    .update(articles)
+    .set({
+      published,
+      updatedAt: new Date(),
+    })
+    .where(eq(articles.id, id))
+    .returning({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      summary: articles.summary,
+      categoryId: articles.categoryId,
+      coverImage: articles.coverImage,
+      coverLayout: articles.coverLayout,
+      viewCount: articles.viewCount,
+      published: articles.published,
+      pinned: articles.pinned,
+      createdAt: articles.createdAt,
+      updatedAt: articles.updatedAt,
+    })
+
+  if (!rows[0]) {
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Article not found',
+    })
+  }
+
+  return serializeArticleSummary(rows[0])
+}
+
 export async function recordPublicArticleView(slug: string, visitorHash: string, viewedOn: string) {
   await ensureArticlesSchema()
   const db = useDatabase()

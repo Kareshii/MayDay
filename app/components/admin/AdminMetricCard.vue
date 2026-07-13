@@ -14,7 +14,7 @@ defineProps<{
         <p class="cms-kicker">
           {{ label }}
         </p>
-        <p class="mt-4 text-4xl font-bold tracking-tight text-[var(--text-primary)]">
+        <p class="mt-4 text-4xl font-bold text-[var(--text-primary)]">
           {{ value }}
         </p>
         <p v-if="hint" class="mt-2 text-xs font-medium text-[var(--text-secondary)]">

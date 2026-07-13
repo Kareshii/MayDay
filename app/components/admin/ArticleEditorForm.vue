@@ -39,28 +39,25 @@ const defaultContent = [
   '<ul><li>列表项 A</li><li>列表项 B</li></ul>',
   '<blockquote>这是一段引用</blockquote>',
 ].join('')
+const contentPlaceholder = '从这里开始写正文。你可以使用段落、列表、引用、图片和链接组织内容。'
 const coverLayoutOptions: Array<{
   value: ArticleCoverLayout
   label: string
-  description: string
   icon: string
 }> = [
   {
     value: 'split-right',
     label: '右图左文',
-    description: '左侧显示标题摘要，右侧显示封面图（默认）。',
     icon: 'lucide:panel-right',
   },
   {
     value: 'split-left',
     label: '左图右文',
-    description: '左侧显示封面图，右侧显示标题摘要。',
     icon: 'lucide:panel-left',
   },
   {
     value: 'top-hero',
     label: '上半屏背景',
-    description: '封面图铺满上半区域，标题摘要叠加在图上。',
     icon: 'lucide:panel-top',
   },
 ]
@@ -81,6 +78,12 @@ const form = reactive<ManagedArticlePayload>({
 const formDisabled = computed(() => Boolean(props.loading || props.disabled))
 const settingsOpen = ref(true)
 const layoutPreviewOpen = ref(false)
+const deleteDialogOpen = ref(false)
+const editorRef = ref<{ focus: () => void } | null>(null)
+const formErrors = reactive({
+  title: '',
+  content: '',
+})
 const { data: categoryData, pending: categoriesPending } = useFetch<{ categories: CategoryItem[] }>('/api/admin/features/categories', {
   default: () => ({ categories: [] }),
 })
@@ -213,8 +216,18 @@ watch(
 )
 
 watch(() => form.title, (value) => {
+  if (value.trim()) {
+    formErrors.title = ''
+  }
+
   if (!props.article?.slug) {
     form.slug = normalizeArticleSlug(value)
+  }
+})
+
+watch(() => form.content, (value) => {
+  if (value.trim()) {
+    formErrors.content = ''
   }
 })
 
@@ -232,12 +245,43 @@ function buildPayload(): ManagedArticlePayload {
   }
 }
 
-function handleSubmit(options?: ArticleEditorSubmitOptions) {
+async function validateForm() {
+  formErrors.title = form.title.trim() ? '' : '请输入文章标题。'
+  formErrors.content = form.content.trim() ? '' : '请输入文章正文。'
+
+  if (formErrors.title) {
+    await nextTick()
+    document.getElementById('article-editor-title')?.focus()
+    return false
+  }
+
+  if (formErrors.content) {
+    await nextTick()
+    editorRef.value?.focus()
+    return false
+  }
+
+  return true
+}
+
+async function handleSubmit(options?: ArticleEditorSubmitOptions) {
   if (formDisabled.value) {
     return
   }
 
+  if (!await validateForm()) {
+    return
+  }
+
   emit('submit', buildPayload(), options)
+}
+
+function handleDeleteDialogOpenChange(open: boolean) {
+  if (!open && formDisabled.value) {
+    return
+  }
+
+  deleteDialogOpen.value = open
 }
 
 function isSaveShortcut(event: KeyboardEvent) {
@@ -250,7 +294,7 @@ function isSaveShortcut(event: KeyboardEvent) {
 function handleSaveShortcut(event?: KeyboardEvent) {
   event?.preventDefault()
   event?.stopPropagation()
-  handleSubmit({ shortcut: true })
+  void handleSubmit({ shortcut: true })
 }
 
 function handleDocumentKeydown(event: KeyboardEvent) {
@@ -278,120 +322,128 @@ defineExpose({
 
 <template>
   <div class="admin-article-workbench">
-    <div
-      v-if="props.disabledMessage"
-      class="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200"
-    >
-      <Icon name="lucide:database-zap" class="mt-0.5 size-4 shrink-0" />
-      <span>{{ props.disabledMessage }}</span>
-    </div>
+    <UiAlert v-if="props.disabledMessage" variant="warning" class="mb-4">
+      <Icon name="lucide:database-zap" class="size-4" />
+      <UiAlertTitle>数据库未配置</UiAlertTitle>
+      <UiAlertDescription>{{ props.disabledMessage }}</UiAlertDescription>
+    </UiAlert>
 
     <section class="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
       <div class="flex min-h-16 flex-col gap-3 border-b border-[var(--border-strong)] bg-[var(--surface-card)] px-3 py-2.5 md:flex-row md:items-center">
-        <div class="flex min-w-0 flex-1 items-center gap-3">
-          <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
+        <div class="flex min-w-0 flex-1 items-start gap-3">
+          <span class="mt-6 grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
             <Icon name="lucide:file-pen-line" class="size-4" />
           </span>
-          <UiInput
-            v-model="form.title"
-            :disabled="formDisabled"
-            type="text"
-            placeholder="输入文章标题"
-            class="h-10 min-w-0 flex-1 rounded-md border-transparent bg-transparent px-2 text-base font-bold text-[var(--text-primary)] shadow-none placeholder:text-[var(--text-muted)] hover:bg-[var(--surface-low)] focus:bg-[var(--surface-low)] focus:ring-0"
-          />
-          <UiBadge
-            variant="outline"
-            :class="[
-              'hidden shrink-0 gap-1.5 whitespace-nowrap px-2 py-1 text-xs font-medium normal-case tracking-[0] sm:inline-flex',
-              form.published
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300'
-                : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
-            ]"
-          >
+          <div class="min-w-0 flex-1 space-y-2">
+            <UiLabel for="article-editor-title" class="text-xs font-medium text-[var(--text-secondary)]">
+              文章标题 <span class="text-[var(--danger)]">*</span>
+            </UiLabel>
+            <UiInput
+              id="article-editor-title"
+              v-model="form.title"
+              :disabled="formDisabled"
+              type="text"
+              placeholder="输入文章标题"
+              class="min-w-0 max-w-none"
+              required
+              :aria-invalid="Boolean(formErrors.title)"
+              :aria-describedby="formErrors.title ? 'article-editor-title-error' : undefined"
+            />
+            <p v-if="formErrors.title" id="article-editor-title-error" class="text-xs text-[var(--danger)]" role="alert">
+              {{ formErrors.title }}
+            </p>
+          </div>
+          <UiBadge :variant="form.published ? 'success' : 'warning'" class="mt-6 hidden shrink-0 gap-1.5 whitespace-nowrap normal-case tracking-[0] sm:inline-flex">
             <span class="size-1.5 rounded-full bg-current" />
             {{ form.published ? '已发布' : '草稿' }}
           </UiBadge>
         </div>
 
-        <div class="flex min-w-0 items-center justify-end gap-1 overflow-x-auto">
-          <NuxtLink v-if="previewTarget" :to="previewTarget" custom v-slot="{ href }">
-            <UiButton
-              variant="ghost"
-              size="icon"
-              as="a"
-              :href="href"
-              target="_blank"
-              rel="noreferrer"
-              class="size-9 shrink-0 text-[var(--text-secondary)]"
-              title="预览"
-              aria-label="预览"
-            >
-              <Icon name="lucide:external-link" class="size-4" />
-            </UiButton>
-          </NuxtLink>
-          <UiButton
-            variant="ghost"
-            size="icon"
-            class="size-9 shrink-0 text-[var(--text-secondary)]"
-            title="布局预览"
-            aria-label="布局预览"
-            @click="layoutPreviewOpen = true"
-          >
-            <Icon name="lucide:monitor-play" class="size-4" />
-          </UiButton>
-          <UiButton
-            variant="ghost"
-            size="icon"
-            class="size-9 shrink-0"
-            title="置顶"
-            aria-label="置顶"
-            :disabled="formDisabled"
-            :class="form.pinned ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : ''"
-            @click="form.pinned = !form.pinned"
-          >
-            <Icon name="lucide:pin" class="size-4" />
-          </UiButton>
-          <UiButton
-            variant="ghost"
-            size="icon"
-            class="size-9 shrink-0 text-[var(--text-secondary)]"
-            title="文章设置"
-            aria-label="文章设置"
-            :aria-pressed="settingsOpen"
-            @click="settingsOpen = !settingsOpen"
-          >
-            <Icon name="lucide:settings" class="size-4" />
-          </UiButton>
-          <UiButton :disabled="formDisabled" size="sm" class="h-9 shrink-0 px-3" @click="handleSubmit()">
+        <div class="flex min-w-0 items-center justify-end gap-1">
+          <UiButton :disabled="formDisabled" size="sm" class="shrink-0" @click="handleSubmit()">
             <Icon :name="props.loading ? 'lucide:loader-circle' : 'lucide:save'" :class="['size-4', props.loading ? 'animate-spin' : '']" />
             {{ props.submitLabel || '保存文章' }}
           </UiButton>
-          <UiButton
-            v-if="props.article"
-            variant="ghost"
-            size="icon"
-            class="size-9 shrink-0 text-[var(--text-muted)] hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
-            :disabled="formDisabled"
-            title="删除"
-            aria-label="删除"
-            @click="emit('delete')"
-          >
-            <Icon name="lucide:trash-2" class="size-4" />
-          </UiButton>
+
+          <UiTooltip>
+            <UiTooltipTrigger as-child>
+              <UiButton
+                variant="ghost"
+                size="icon-sm"
+                class="hidden md:inline-flex"
+                aria-label="文章设置"
+                :aria-pressed="settingsOpen"
+                @click="settingsOpen = !settingsOpen"
+              >
+                <Icon name="lucide:settings" class="size-4" />
+              </UiButton>
+            </UiTooltipTrigger>
+            <UiTooltipContent>{{ settingsOpen ? '收起文章设置' : '展开文章设置' }}</UiTooltipContent>
+          </UiTooltip>
+
+          <UiDropdownMenu>
+            <UiTooltip>
+              <UiTooltipTrigger as-child>
+                <UiDropdownMenuTrigger as-child>
+                  <UiButton variant="ghost" size="icon-sm" aria-label="更多文章操作">
+                    <Icon name="lucide:ellipsis" class="size-4" />
+                  </UiButton>
+                </UiDropdownMenuTrigger>
+              </UiTooltipTrigger>
+              <UiTooltipContent>更多操作</UiTooltipContent>
+            </UiTooltip>
+            <UiDropdownMenuContent align="end">
+              <UiDropdownMenuItem v-if="previewTarget" as-child>
+                <NuxtLink :to="previewTarget" target="_blank" rel="noreferrer">
+                  <Icon name="lucide:external-link" />
+                  查看前台
+                </NuxtLink>
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem @select="layoutPreviewOpen = true">
+                <Icon name="lucide:monitor-play" />
+                布局预览
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem class="md:hidden" @select="settingsOpen = !settingsOpen">
+                <Icon name="lucide:settings" />
+                {{ settingsOpen ? '收起文章设置' : '展开文章设置' }}
+              </UiDropdownMenuItem>
+              <UiDropdownMenuItem :disabled="formDisabled" @select="form.pinned = !form.pinned">
+                <Icon name="lucide:pin" />
+                {{ form.pinned ? '取消置顶' : '置顶文章' }}
+              </UiDropdownMenuItem>
+              <template v-if="props.article">
+                <UiDropdownMenuSeparator />
+                <UiDropdownMenuItem variant="destructive" :disabled="formDisabled" @select="deleteDialogOpen = true">
+                  <Icon name="lucide:trash-2" />
+                  删除文章
+                </UiDropdownMenuItem>
+              </template>
+            </UiDropdownMenuContent>
+          </UiDropdownMenu>
         </div>
       </div>
 
       <div
-        class="grid bg-white transition-[grid-template-columns] duration-200 dark:bg-[var(--card)]"
+        class="grid bg-[var(--card)] transition-[grid-template-columns] duration-200"
         :class="settingsOpen ? 'xl:grid-cols-[minmax(0,1fr)_23rem]' : 'xl:grid-cols-[minmax(0,1fr)_0rem]'"
       >
         <div class="min-w-0">
-          <div class="h-[calc(100dvh-10rem)] min-h-[34rem] max-h-[52rem] bg-white dark:bg-[var(--card)]">
+          <div class="flex h-[calc(100dvh-10rem)] min-h-[34rem] max-h-[52rem] flex-col bg-[var(--card)]">
+            <div class="shrink-0 space-y-1 border-b border-[var(--border-soft)] px-4 py-2">
+              <UiLabel class="text-xs font-medium text-[var(--text-secondary)]">
+                文章正文 <span class="text-[var(--danger)]">*</span>
+              </UiLabel>
+              <p v-if="formErrors.content" class="text-xs text-[var(--danger)]" role="alert">
+                {{ formErrors.content }}
+              </p>
+            </div>
             <TinyMceEditor
+              ref="editorRef"
               v-model="form.content"
               :disabled="formDisabled"
               height="100%"
-              class="h-full"
+              :placeholder="contentPlaceholder"
+              class="min-h-0 flex-1"
               @save-shortcut="handleSaveShortcut"
             />
           </div>
@@ -407,15 +459,20 @@ defineExpose({
                 <Icon name="lucide:settings-2" class="size-4 text-[var(--text-secondary)]" />
                 <p class="text-sm font-semibold text-[var(--text-primary)]">文章设置</p>
               </div>
-              <UiButton variant="ghost" size="icon" class="size-8 xl:hidden" title="关闭设置" aria-label="关闭设置" @click="settingsOpen = false">
-                <Icon name="lucide:x" class="size-4" />
-              </UiButton>
+              <UiTooltip>
+                <UiTooltipTrigger as-child>
+                  <UiButton variant="ghost" size="icon-sm" class="xl:hidden" aria-label="关闭设置" @click="settingsOpen = false">
+                    <Icon name="lucide:x" class="size-4" />
+                  </UiButton>
+                </UiTooltipTrigger>
+                <UiTooltipContent>关闭设置</UiTooltipContent>
+              </UiTooltip>
             </div>
 
             <section class="divide-y divide-[var(--border-soft)] border-b border-[var(--border-soft)] bg-[var(--surface-card)] px-4">
               <label class="flex cursor-pointer items-center justify-between gap-4 py-3.5">
                 <span class="flex items-center gap-3">
-                  <span class="grid size-8 place-items-center rounded-md bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300">
+                  <span class="grid size-8 place-items-center rounded-md bg-[var(--success-soft)] text-[var(--success)]">
                     <Icon name="lucide:send" class="size-4" />
                   </span>
                   <span>
@@ -428,7 +485,7 @@ defineExpose({
 
               <label class="flex cursor-pointer items-center justify-between gap-4 py-3.5">
                 <span class="flex items-center gap-3">
-                  <span class="grid size-8 place-items-center rounded-md bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                  <span class="grid size-8 place-items-center rounded-md bg-[var(--info-soft)] text-[var(--info)]">
                     <Icon name="lucide:pin" class="size-4" />
                   </span>
                   <span>
@@ -446,23 +503,20 @@ defineExpose({
                 <h3 class="text-xs font-semibold text-[var(--text-primary)]">基础信息</h3>
               </div>
 
-              <UiLabel class="block space-y-1.5">
+              <UiLabel class="block space-y-2">
                 <span class="text-xs font-medium text-[var(--text-secondary)]">URL Slug</span>
-                <div class="relative">
-                  <Icon name="lucide:link-2" class="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-[var(--text-muted)]" />
-                  <UiInput
-                    v-model="form.slug"
-                    :disabled="formDisabled"
-                    placeholder="article-slug"
-                    class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-card)] pl-8 font-mono text-xs"
-                  />
-                </div>
+                <UiInput
+                  v-model="form.slug"
+                  :disabled="formDisabled"
+                  placeholder="article-slug"
+                  class="max-w-none"
+                />
               </UiLabel>
 
-              <UiLabel class="block space-y-1.5">
+              <UiLabel class="block space-y-2">
                 <span class="text-xs font-medium text-[var(--text-secondary)]">分类</span>
                 <UiSelect v-model="selectedCategoryId" :disabled="formDisabled || categoriesPending">
-                  <UiSelectTrigger class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-card)]">
+                  <UiSelectTrigger class="max-w-none">
                     <UiSelectValue :placeholder="categoriesPending ? '正在加载分类...' : '选择分类'" />
                   </UiSelectTrigger>
                   <UiSelectContent>
@@ -480,13 +534,12 @@ defineExpose({
                 </UiSelect>
               </UiLabel>
 
-              <UiLabel class="block space-y-1.5">
+              <UiLabel class="block space-y-2">
                 <span class="text-xs font-medium text-[var(--text-secondary)]">摘要</span>
                 <UiTextarea
                   v-model="form.summary"
                   :disabled="formDisabled"
                   placeholder="用于文章列表和 SEO 的简短摘要"
-                  class="min-h-28 resize-y rounded-md border-[var(--border-soft)] bg-[var(--surface-card)] leading-6"
                 />
               </UiLabel>
             </section>
@@ -497,13 +550,13 @@ defineExpose({
                 <h3 class="text-xs font-semibold text-[var(--text-primary)]">封面</h3>
               </div>
 
-              <UiLabel class="block space-y-1.5">
+              <UiLabel class="block space-y-2">
                 <span class="text-xs font-medium text-[var(--text-secondary)]">封面图 URL</span>
                 <UiInput
                   v-model="form.coverImage"
                   :disabled="formDisabled"
                   placeholder="https://example.com/cover.jpg"
-                  class="h-9 rounded-md border-[var(--border-soft)] bg-[var(--surface-card)] text-xs"
+                  class="max-w-none"
                 />
               </UiLabel>
 
@@ -516,28 +569,23 @@ defineExpose({
 
               <div class="space-y-2">
                 <p class="text-xs font-medium text-[var(--text-secondary)]">图文布局</p>
-                <div class="grid gap-2">
-                  <button
+                <UiButtonGroup orientation="vertical" class="w-full">
+                  <UiButton
                     v-for="option in coverLayoutOptions"
                     :key="option.value"
                     type="button"
+                    size="lg"
+                    :variant="form.coverLayout === option.value ? 'secondary' : 'outline'"
                     :disabled="formDisabled"
-                    class="flex min-h-14 w-full items-center gap-3 rounded-md border px-3 py-2 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-50"
-                    :class="form.coverLayout === option.value
-                      ? 'border-[var(--primary)] bg-[var(--primary-soft)]'
-                      : 'border-[var(--border-soft)] bg-[var(--surface-card)] hover:border-[var(--border-strong)]'"
+                    class="w-full justify-start"
+                    :aria-pressed="form.coverLayout === option.value"
                     @click="form.coverLayout = option.value"
                   >
-                    <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
-                      <Icon :name="option.icon" class="size-4" />
-                    </span>
-                    <span class="min-w-0">
-                      <span class="block text-sm font-medium text-[var(--text-primary)]">{{ option.label }}</span>
-                      <span class="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{{ option.description }}</span>
-                    </span>
+                    <Icon :name="option.icon" class="size-4" />
+                    {{ option.label }}
                     <Icon v-if="form.coverLayout === option.value" name="lucide:check" class="ml-auto size-4 shrink-0 text-[var(--primary)]" />
-                  </button>
-                </div>
+                  </UiButton>
+                </UiButtonGroup>
               </div>
             </section>
 
@@ -571,41 +619,58 @@ defineExpose({
 
       <div class="flex min-h-9 flex-wrap items-center justify-between gap-2 border-t border-[var(--border-soft)] bg-[var(--surface-card)] px-3 text-xs text-[var(--text-secondary)]">
         <span class="flex items-center gap-2">
-          <span :class="['size-1.5 rounded-full', form.published ? 'bg-emerald-500' : 'bg-amber-500']" />
+          <span :class="['size-1.5 rounded-full', form.published ? 'bg-[var(--success)]' : 'bg-[var(--warning)]']" />
           {{ form.published ? '已发布' : '草稿' }}
         </span>
         <span class="font-mono">TinyMCE · {{ articleStats.paragraphs }} 段 · {{ articleStats.chars }} 字符 · 约 {{ estimatedReadMinutes }} 分钟</span>
       </div>
     </section>
 
-    <Teleport to="body">
-      <div
-        v-if="layoutPreviewOpen"
-        class="fixed inset-0 z-[120] bg-slate-950/60 p-3 backdrop-blur-sm md:p-6"
-        role="dialog"
-        aria-modal="true"
-        aria-label="文章布局预览"
-      >
-        <div class="flex h-full flex-col overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--bg-primary)]">
-          <div class="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--border-soft)] bg-[var(--surface-card)] px-4">
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-[var(--text-primary)]">
-                布局预览
-              </p>
-              <p class="truncate text-xs text-[var(--text-secondary)]">
+    <UiDialog v-model:open="layoutPreviewOpen">
+      <UiDialogContent size="xl" :show-close-button="false" class="h-[calc(100dvh-2rem)] gap-0 p-0">
+        <div class="grid min-h-0 grid-rows-[auto_minmax(0,1fr)]">
+          <div class="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--border-soft)] px-4">
+            <UiDialogHeader class="min-w-0">
+              <UiDialogTitle>布局预览</UiDialogTitle>
+              <UiDialogDescription class="truncate">
                 {{ previewArticle.title }} / {{ previewArticle.coverLayout }}
-              </p>
-            </div>
-            <UiButton variant="ghost" size="icon" aria-label="关闭预览" @click="layoutPreviewOpen = false">
-              <Icon name="lucide:x" class="size-4" />
-            </UiButton>
+              </UiDialogDescription>
+            </UiDialogHeader>
+            <UiTooltip>
+              <UiTooltipTrigger as-child>
+                <UiDialogClose as-child>
+                  <UiButton variant="ghost" size="icon-sm" aria-label="关闭预览">
+                    <Icon name="lucide:x" class="size-4" />
+                  </UiButton>
+                </UiDialogClose>
+              </UiTooltipTrigger>
+              <UiTooltipContent>关闭预览</UiTooltipContent>
+            </UiTooltip>
           </div>
 
-          <div class="min-h-0 flex-1 overflow-auto py-6">
+          <div class="min-h-0 overflow-auto py-6">
             <PostArticleDetail :key="previewRenderKey" :article="previewArticle" />
           </div>
         </div>
-      </div>
-    </Teleport>
+      </UiDialogContent>
+    </UiDialog>
+
+    <UiAlertDialog :open="deleteDialogOpen" @update:open="handleDeleteDialogOpenChange">
+      <UiAlertDialogContent>
+        <UiAlertDialogHeader>
+          <UiAlertDialogTitle>删除文章？</UiAlertDialogTitle>
+          <UiAlertDialogDescription>
+            将永久删除“{{ form.title || '未命名文章' }}”，此操作无法撤销。
+          </UiAlertDialogDescription>
+        </UiAlertDialogHeader>
+        <UiAlertDialogFooter>
+          <UiAlertDialogCancel :disabled="formDisabled">取消</UiAlertDialogCancel>
+          <UiAlertDialogAction class="min-w-24" variant="destructive" :disabled="formDisabled" @click.prevent="emit('delete')">
+            <Icon v-if="props.loading" name="lucide:loader-circle" class="size-4 animate-spin" />
+            {{ props.loading ? '删除中...' : '删除文章' }}
+          </UiAlertDialogAction>
+        </UiAlertDialogFooter>
+      </UiAlertDialogContent>
+    </UiAlertDialog>
   </div>
 </template>

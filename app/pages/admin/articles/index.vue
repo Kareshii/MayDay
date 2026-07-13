@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core'
+import type { TableColumn } from '@/components/ui/table'
 import type { AdminArticleListResponse, ManagedArticleSummary } from '~~/shared/types/articles'
 
 definePageMeta({
@@ -15,18 +16,32 @@ const route = useRoute()
 const router = useRouter()
 const PAGE_SIZE = 20
 const togglingPinnedId = ref('')
+const togglingPublishedId = ref('')
 const { showSuccessToast, showErrorToast } = useAdminToast()
 const statusFilters = [
-  { value: 'all', label: '全部', icon: 'lucide:files' },
-  { value: 'published', label: '已发布', icon: 'lucide:circle-check' },
-  { value: 'draft', label: '草稿', icon: 'lucide:file-pen-line' },
+  { value: 'all', label: '全部' },
+  { value: 'published', label: '已发布' },
+  { value: 'draft', label: '草稿' },
 ] as const
+const articleColumns = [
+  { prop: 'id', label: 'ID', width: 304, cellClass: 'py-4' },
+  { prop: 'article', label: '文章', minWidth: 360, headerClass: 'px-5', cellClass: 'px-5 py-4' },
+  { prop: 'status', label: '状态', width: 160, cellClass: 'py-4' },
+  { prop: 'viewCount', label: '浏览', width: 96, align: 'right', cellClass: 'py-4 font-medium tabular-nums text-[var(--text-secondary)]', formatter: (_item, _column, value) => Number(value).toLocaleString() },
+  { prop: 'updatedAt', label: '更新于', width: 144, cellClass: 'py-4 text-xs text-[var(--text-secondary)]', formatter: (_item, _column, value) => formatArticleDate(String(value)) },
+  { prop: 'actions', label: '操作', width: 152, align: 'right', headerClass: 'px-5', cellClass: 'px-5 py-4' },
+] satisfies readonly TableColumn[]
 
 const searchText = computed(() => typeof route.query.search === 'string' ? route.query.search : '')
 const searchInput = ref('')
-const status = computed<'all' | 'published' | 'draft'>(() => {
-  const value = typeof route.query.status === 'string' ? route.query.status : 'all'
-  return value === 'published' || value === 'draft' ? value : 'all'
+const status = computed<'all' | 'published' | 'draft'>({
+  get() {
+    const value = typeof route.query.status === 'string' ? route.query.status : 'all'
+    return value === 'published' || value === 'draft' ? value : 'all'
+  },
+  set(value) {
+    void setStatus(value)
+  },
 })
 const requestedPage = computed(() => {
   const value = typeof route.query.page === 'string'
@@ -52,15 +67,6 @@ const headerActions = computed(() => [
     to: '/admin/articles/new',
   },
 ])
-
-const headerSearch = computed(() => ({
-  value: searchInput.value,
-  placeholder: '搜索文章...',
-  label: '搜索文章',
-  onUpdate: (value: string) => {
-    searchInput.value = value
-  },
-}))
 
 watch(
   () => route.query.search,
@@ -114,25 +120,6 @@ const currentPage = computed(() => {
 })
 
 const paginatedArticles = computed(() => filteredArticles.value)
-const pagePublishedCount = computed(() => filteredArticles.value.filter(article => article.published).length)
-const pageDraftCount = computed(() => filteredArticles.value.length - pagePublishedCount.value)
-const pagePinnedCount = computed(() => filteredArticles.value.filter(article => article.pinned).length)
-
-const pageStart = computed(() => {
-  if (!totalArticles.value || !filteredArticles.value.length) {
-    return 0
-  }
-
-  return (currentPage.value - 1) * responsePageSize.value + 1
-})
-
-const pageEnd = computed(() => {
-  if (!pageStart.value) {
-    return 0
-  }
-
-  return Math.min(pageStart.value + filteredArticles.value.length - 1, totalArticles.value)
-})
 
 function buildPageQuery(nextPage: number) {
   const query: Record<string, string> = {}
@@ -227,6 +214,26 @@ async function togglePinned(article: ManagedArticleSummary) {
   }
 }
 
+async function togglePublished(article: ManagedArticleSummary) {
+  const nextPublished = !article.published
+  togglingPublishedId.value = article.id
+
+  try {
+    await $fetch(`/api/admin/articles/${article.id}/published`, {
+      method: 'PUT',
+      body: {
+        published: nextPublished,
+      },
+    })
+    await refresh()
+    showSuccessToast(nextPublished ? '文章已上架' : '文章已下架', article.title)
+  } catch (err) {
+    showErrorToast('发布状态更新失败', getRequestErrorMessage(err, '发布状态更新失败'))
+  } finally {
+    togglingPublishedId.value = ''
+  }
+}
+
 watch(error, (value) => {
   if (value) {
     showErrorToast('文章列表加载失败', value.message)
@@ -236,219 +243,180 @@ watch(error, (value) => {
 
 <template>
   <div class="cms-page space-y-4">
-    <AdminPageHeader title="文章管理" subtitle="搜索、筛选与发布状态" :actions="headerActions" :search="headerSearch" />
+    <AdminPageHeader title="文章管理" subtitle="搜索、筛选与发布状态" :actions="headerActions" />
 
-    <div v-if="data?.configMissing" class="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-200">
-      <Icon name="lucide:database-zap" class="mt-0.5 size-4 shrink-0" />
-      <span>`DATABASE_URL` 未配置，当前无法读取数据库文章。</span>
-    </div>
+    <UiCard class="overflow-hidden">
+      <UiAlert v-if="data?.configMissing" variant="warning" class="rounded-none border-x-0 border-t-0">
+        <Icon name="lucide:database-zap" class="size-4" />
+        <UiAlertTitle>数据库未配置</UiAlertTitle>
+        <UiAlertDescription>`DATABASE_URL` 未配置，当前无法读取数据库文章。</UiAlertDescription>
+      </UiAlert>
 
-    <section class="flex flex-col gap-3 border-b border-[var(--border-soft)] pb-3 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex min-w-0 gap-1 overflow-x-auto">
-        <button
-          v-for="filter in statusFilters"
-          :key="filter.value"
-          type="button"
-          class="inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-          :class="status === filter.value
-            ? 'bg-[var(--surface-high)] text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-low)] hover:text-[var(--text-primary)]'"
-          :aria-pressed="status === filter.value"
-          @click="setStatus(filter.value)"
-        >
-          <Icon :name="filter.icon" class="size-4" />
-          {{ filter.label }}
-        </button>
-      </div>
-
-      <div class="flex shrink-0 items-center gap-3 text-xs text-[var(--text-secondary)]">
-        <span>共 <strong class="font-semibold tabular-nums text-[var(--text-primary)]">{{ totalArticles }}</strong> 篇</span>
-        <span class="h-3 w-px bg-[var(--border-strong)]" />
-        <span>每页 {{ responsePageSize }}</span>
-      </div>
-    </section>
-
-    <section class="overflow-hidden rounded-lg border border-[var(--border-soft)] bg-[var(--surface-card)]">
-      <header class="flex min-h-16 items-center justify-between gap-4 border-b border-[var(--border-soft)] px-5 py-3.5">
-        <div class="flex min-w-0 items-center gap-3">
-          <span class="grid size-8 shrink-0 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-secondary)]">
-            <Icon name="lucide:table-2" class="size-4" />
-          </span>
-          <div class="min-w-0">
-            <h2 class="text-sm font-semibold text-[var(--text-primary)]">文章列表</h2>
-            <p class="mt-0.5 truncate text-xs text-[var(--text-secondary)]">
-              第 {{ currentPage }} / {{ totalPages }} 页
-            </p>
+      <div class="flex flex-col items-stretch gap-3 border-b border-[var(--border-soft)] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5 lg:p-5">
+        <div class="flex shrink-0 items-center gap-2">
+          <UiLabel for="article-search" class="shrink-0 text-sm font-medium text-[var(--text-secondary)]">
+            搜索
+          </UiLabel>
+          <div class="w-[min(20rem,70vw)]">
+            <UiInput
+              id="article-search"
+              v-model="searchInput"
+              type="search"
+              placeholder="搜索标题、摘要或路径"
+              class="max-w-none"
+            />
           </div>
         </div>
-        <div class="hidden items-center gap-3 text-xs text-[var(--text-secondary)] sm:flex">
-          <span>本页发布 {{ pagePublishedCount }}</span>
-          <span>草稿 {{ pageDraftCount }}</span>
-          <span>置顶 {{ pagePinnedCount }}</span>
-        </div>
-      </header>
 
-      <div v-if="pending" class="flex min-h-64 items-center justify-center">
-        <div class="flex items-center gap-3 text-sm text-[var(--text-secondary)]">
-          <Icon name="lucide:loader-circle" class="size-4 animate-spin text-[var(--primary)]" />
-          正在加载文章
+        <div class="flex shrink-0 items-center gap-2">
+          <UiLabel for="article-status-filter" class="shrink-0 text-sm font-medium text-[var(--text-secondary)]">
+            状态
+          </UiLabel>
+          <UiSelect v-model="status">
+            <UiSelectTrigger id="article-status-filter" class="w-[min(120px,60vw)]">
+              <UiSelectValue placeholder="全部状态" />
+            </UiSelectTrigger>
+            <UiSelectContent>
+              <UiSelectItem v-for="filter in statusFilters" :key="filter.value" :value="filter.value">
+                {{ filter.label }}
+              </UiSelectItem>
+            </UiSelectContent>
+          </UiSelect>
+        </div>
+
+        <div class="flex h-9 shrink-0 items-center text-xs text-[var(--text-secondary)]">
+          共 <strong class="mx-1 font-semibold tabular-nums text-[var(--text-primary)]">{{ totalArticles }}</strong> 篇
         </div>
       </div>
 
-      <div v-else-if="!filteredArticles.length" class="px-5 py-16 text-center">
-        <span class="mx-auto grid size-12 place-items-center rounded-md bg-[var(--surface-high)] text-[var(--text-muted)]">
-          <Icon name="lucide:file-search" class="size-5" />
-        </span>
-        <p class="mt-4 text-sm font-semibold text-[var(--text-primary)]">没有符合条件的文章</p>
-        <p class="mt-1 text-xs text-[var(--text-secondary)]">调整搜索词或发布状态</p>
-      </div>
+      <UiTable
+        class="min-w-[1160px]"
+        :columns="articleColumns"
+        :items="paginatedArticles"
+        row-key="id"
+        :loading="pending"
+        loading-text="正在加载文章"
+        :error="error?.message || ''"
+        empty-text="没有符合条件的文章，请调整搜索词或发布状态"
+        pagination
+        :page="currentPage"
+        :items-per-page="responsePageSize"
+        :total="totalArticles"
+        @retry="refresh"
+        @update:page="goToPage"
+      >
+          <template #cell-id="{ item: article }">
+            <code class="whitespace-nowrap font-mono text-[11px] text-[var(--text-secondary)]">{{ article.id }}</code>
+          </template>
 
-      <template v-else>
-        <UiTable class="min-w-[880px]">
-          <UiTableHeader>
-            <UiTableRow class="hover:bg-transparent">
-              <UiTableHead class="px-5">文章</UiTableHead>
-              <UiTableHead class="w-[10rem]">状态</UiTableHead>
-              <UiTableHead class="w-[6rem] text-right">浏览</UiTableHead>
-              <UiTableHead class="w-[9rem]">更新于</UiTableHead>
-              <UiTableHead class="w-[9rem] px-5 text-right">操作</UiTableHead>
-            </UiTableRow>
-          </UiTableHeader>
-          <UiTableBody>
-            <UiTableRow v-for="article in paginatedArticles" :key="article.id">
-              <UiTableCell class="px-5 py-4">
-                <div class="grid grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-4">
-                  <div class="aspect-[4/3] overflow-hidden rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)]">
-                    <img v-if="article.coverImage" :src="article.coverImage" :alt="article.title" class="size-full object-cover" loading="lazy">
-                    <div v-else class="grid size-full place-items-center text-[var(--text-muted)]">
-                      <Icon name="lucide:image" class="size-4" />
-                    </div>
-                  </div>
-                  <div class="min-w-0">
-                    <div class="flex min-w-0 items-center gap-2">
-                      <Icon v-if="article.pinned" name="lucide:pin" class="size-3.5 shrink-0 text-[var(--primary)]" />
-                      <p class="truncate font-semibold text-[var(--text-primary)]">{{ article.title }}</p>
-                    </div>
-                    <p class="mt-1 line-clamp-1 text-xs text-[var(--text-secondary)]">
-                      {{ article.summary || article.slug }}
-                    </p>
-                    <p class="mt-1 truncate font-mono text-[10px] text-[var(--text-muted)]">/{{ article.slug }}</p>
-                  </div>
+          <template #cell-article="{ item: article }">
+            <div class="grid grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-4">
+              <div class="aspect-[4/3] overflow-hidden rounded-md border border-[var(--border-soft)] bg-[var(--surface-low)]">
+                <img v-if="article.coverImage" :src="article.coverImage" :alt="article.title" class="size-full object-cover" loading="lazy">
+                <div v-else class="grid size-full place-items-center text-[var(--text-muted)]">
+                  <Icon name="lucide:image" class="size-4" />
                 </div>
-              </UiTableCell>
-
-              <UiTableCell class="py-4">
-                <div class="flex flex-wrap items-center gap-1.5">
-                  <UiBadge
-                    variant="outline"
-                    :class="[
-                      'gap-1.5 whitespace-nowrap px-2 py-1 text-xs font-medium normal-case tracking-[0]',
-                      article.published
-                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300'
-                        : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300',
-                    ]"
-                  >
-                    <span class="size-1.5 shrink-0 rounded-full bg-current" />
-                    {{ article.published ? '已发布' : '草稿' }}
-                  </UiBadge>
-                  <UiBadge v-if="article.pinned" variant="outline" class="gap-1 whitespace-nowrap px-2 py-1 text-xs font-medium normal-case tracking-[0]">
-                    置顶
-                  </UiBadge>
+              </div>
+              <div class="min-w-0">
+                <div class="flex min-w-0 items-center gap-2">
+                  <Icon v-if="article.pinned" name="lucide:pin" class="size-3.5 shrink-0 text-[var(--primary)]" />
+                  <p class="truncate font-semibold text-[var(--text-primary)]" :title="article.title">{{ article.title }}</p>
                 </div>
-              </UiTableCell>
+                <p class="mt-1 line-clamp-1 text-xs text-[var(--text-secondary)]" :title="article.summary || article.slug">
+                  {{ article.summary || article.slug }}
+                </p>
+                <p class="mt-1 truncate font-mono text-[10px] text-[var(--text-muted)]" :title="`/${article.slug}`">/{{ article.slug }}</p>
+              </div>
+            </div>
+          </template>
 
-              <UiTableCell class="py-4 text-right font-medium tabular-nums text-[var(--text-secondary)]">
-                {{ article.viewCount.toLocaleString() }}
-              </UiTableCell>
+          <template #cell-status="{ item: article }">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <UiBadge :variant="article.published ? 'success' : 'warning'" class="gap-1.5 whitespace-nowrap normal-case tracking-[0]">
+                <span class="size-1.5 shrink-0 rounded-full bg-current" />
+                {{ article.published ? '已发布' : '草稿' }}
+              </UiBadge>
+              <UiBadge v-if="article.pinned" variant="outline" class="gap-1 whitespace-nowrap px-2 py-1 text-xs font-medium normal-case tracking-[0]">
+                置顶
+              </UiBadge>
+            </div>
+          </template>
 
-              <UiTableCell class="py-4 text-xs text-[var(--text-secondary)]">
-                {{ formatArticleDate(article.updatedAt) }}
-              </UiTableCell>
-
-              <UiTableCell class="px-5 py-4">
-                <div class="flex justify-end gap-1">
-                  <UiButton
-                    variant="ghost"
-                    size="icon"
-                    class="size-8"
-                    :disabled="togglingPinnedId === article.id"
-                    :title="article.pinned ? '取消置顶' : '置顶'"
-                    :aria-label="article.pinned ? '取消置顶' : '置顶'"
-                    :class="article.pinned ? 'bg-[var(--primary-soft)] text-[var(--primary)]' : 'text-[var(--text-secondary)]'"
-                    @click="togglePinned(article)"
-                  >
-                    <Icon :name="togglingPinnedId === article.id ? 'lucide:loader-circle' : 'lucide:pin'" :class="['size-4', togglingPinnedId === article.id ? 'animate-spin' : '']" />
-                  </UiButton>
-                  <NuxtLink :to="`/admin/articles/${article.id}`" custom v-slot="{ navigate, href }">
+          <template #cell-actions="{ item: article }">
+            <div class="flex justify-end gap-1">
+              <NuxtLink v-slot="{ navigate, href }" :to="`/admin/articles/${article.id}`" custom>
+                <UiTooltip>
+                  <UiTooltipTrigger as-child>
                     <UiButton
                       as="a"
                       :href="href"
                       variant="ghost"
-                      size="icon"
-                      class="size-8 text-[var(--text-secondary)]"
-                      title="编辑文章"
+                      size="icon-sm"
                       aria-label="编辑文章"
                       @click="navigate"
                     >
                       <Icon name="lucide:pencil" class="size-4" />
                     </UiButton>
-                  </NuxtLink>
+                  </UiTooltipTrigger>
+                  <UiTooltipContent>编辑文章</UiTooltipContent>
+                </UiTooltip>
+              </NuxtLink>
+
+              <UiTooltip>
+                <UiTooltipTrigger as-child>
                   <UiButton
                     as="a"
                     :href="getArticlePreviewHref(article)"
                     target="_blank"
                     rel="noopener noreferrer"
                     variant="ghost"
-                    size="icon"
-                    class="size-8 text-[var(--text-secondary)]"
-                    title="查看前台"
+                    size="icon-sm"
                     aria-label="查看前台"
                   >
                     <Icon name="lucide:external-link" class="size-4" />
                   </UiButton>
-                </div>
-              </UiTableCell>
-            </UiTableRow>
-          </UiTableBody>
-        </UiTable>
+                </UiTooltipTrigger>
+                <UiTooltipContent>查看前台</UiTooltipContent>
+              </UiTooltip>
 
-        <div class="flex flex-col gap-3 border-t border-[var(--border-soft)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <p class="text-xs text-[var(--text-secondary)]">
-            显示 <span class="font-medium tabular-nums text-[var(--text-primary)]">{{ pageStart }} - {{ pageEnd }}</span> / {{ totalArticles }}
-          </p>
-          <UiPagination
-            :page="currentPage"
-            :items-per-page="responsePageSize"
-            :total="totalArticles"
-            :sibling-count="1"
-            show-edges
-            @update:page="goToPage"
-          >
-            <UiPaginationPrev>
-              <Icon name="lucide:chevron-left" class="size-4" />
-              上一页
-            </UiPaginationPrev>
-            <UiPaginationList v-slot="{ items }">
-              <template
-                v-for="(item, index) in items"
-                :key="item.type === 'page' ? item.value : `ellipsis-${index}`"
-              >
-                <UiPaginationListItem
-                  v-if="item.type === 'page'"
-                  :value="item.value"
-                >
-                  {{ item.value }}
-                </UiPaginationListItem>
-                <UiPaginationEllipsis v-else />
-              </template>
-            </UiPaginationList>
-            <UiPaginationNext>
-              下一页
-              <Icon name="lucide:chevron-right" class="size-4" />
-            </UiPaginationNext>
-          </UiPagination>
-        </div>
-      </template>
-    </section>
+              <UiDropdownMenu>
+                <UiTooltip>
+                  <UiTooltipTrigger as-child>
+                    <UiDropdownMenuTrigger as-child>
+                      <UiButton variant="ghost" size="icon-sm" aria-label="更多文章操作">
+                        <Icon name="lucide:ellipsis" class="size-4" />
+                      </UiButton>
+                    </UiDropdownMenuTrigger>
+                  </UiTooltipTrigger>
+                  <UiTooltipContent>更多操作</UiTooltipContent>
+                </UiTooltip>
+                <UiDropdownMenuContent align="end">
+                  <UiDropdownMenuItem
+                    :disabled="togglingPublishedId === article.id"
+                    @select="togglePublished(article)"
+                  >
+                    <Icon
+                      :name="togglingPublishedId === article.id
+                        ? 'lucide:loader-circle'
+                        : article.published
+                          ? 'lucide:arrow-down-to-line'
+                          : 'lucide:arrow-up-to-line'"
+                      :class="togglingPublishedId === article.id ? 'animate-spin' : ''"
+                    />
+                    {{ article.published ? '下架文章' : '上架文章' }}
+                  </UiDropdownMenuItem>
+                  <UiDropdownMenuItem
+                    :disabled="togglingPinnedId === article.id"
+                    @select="togglePinned(article)"
+                  >
+                    <Icon :name="togglingPinnedId === article.id ? 'lucide:loader-circle' : 'lucide:pin'" :class="togglingPinnedId === article.id ? 'animate-spin' : ''" />
+                    {{ article.pinned ? '取消置顶' : '置顶文章' }}
+                  </UiDropdownMenuItem>
+                </UiDropdownMenuContent>
+              </UiDropdownMenu>
+            </div>
+          </template>
+      </UiTable>
+    </UiCard>
   </div>
 </template>

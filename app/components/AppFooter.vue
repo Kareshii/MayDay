@@ -1,29 +1,16 @@
 <script setup lang="ts">
-import { primaryNavigation } from '@/utils/siteSections'
-
-interface FooterSiteSettings {
-  copyright: string
-  icpNumber: string
-}
-
-interface FooterSiteResponse {
-  site: FooterSiteSettings
-}
+import { isPublicRouteEnabled } from '~~/shared/types/routes'
+import { primaryNavigation, siteSections } from '@/utils/siteSections'
 
 const currentYear = new Date().getFullYear()
-const footerLinks = [
-  ...primaryNavigation,
-  { title: '内容管理', path: '/admin' },
-]
-const { data: siteConfig } = await useFetch<FooterSiteResponse>('/api/site', {
-  key: 'footer-site-config',
-  default: () => ({
-    site: {
-      copyright: `Copyright © ${currentYear} mayday.life`,
-      icpNumber: '',
-    },
+const { data: siteConfig } = await usePublicSiteConfig()
+const footerLinks = computed(() => [
+  ...primaryNavigation.filter((item) => {
+    const section = siteSections.find(section => section.path === item.path)
+    return !section || isPublicRouteEnabled(siteConfig.value.routes, section.routeId)
   }),
-})
+  { title: '内容管理', path: '/admin' },
+])
 
 const footerCopyright = computed(() => siteConfig.value.site.copyright || `Copyright © ${currentYear} mayday.life`)
 const icpNumber = computed(() => siteConfig.value.site.icpNumber)

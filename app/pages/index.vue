@@ -1,63 +1,21 @@
 <script setup lang="ts">
 import type { DirectiveBinding } from 'vue'
 import type { ManagedArticleSummary } from '~~/shared/types/articles'
-import type { HomeGallerySettings } from '~~/shared/types/gallery'
+import { isPublicRouteEnabled } from '~~/shared/types/routes'
 import { useMediaQuery, useWindowScroll } from '@vueuse/core'
 import { AppleCard, AppleCardCarousel, AppleCarouselItem } from '~/components/inspira/ui/apple-card-carousel'
 import { CardBody, CardContainer, CardItem } from '~/components/inspira/ui/card-3d'
-import { featuredShowcase, showcaseSections } from '@/utils/siteSections'
+import { showcaseSections } from '@/utils/siteSections'
 import { mojoItems } from '@/utils/mojoData'
-
-interface PublicSiteSettings {
-  siteName: string
-  homeHeroImage: string
-  homeHeroTitleLine1: string
-  homeHeroTitleLine2: string
-  homeHeroSubtitle: string
-}
-
-interface PublicSeoSettings {
-  title: string
-  description: string
-  keywords: string
-}
-
-interface PublicSiteResponse {
-  site: PublicSiteSettings
-  seo: PublicSeoSettings
-  gallery: HomeGallerySettings
-}
 
 definePageMeta({
   layout: 'full-width',
 })
 
-const { countdowns } = useMaydayData()
+// const { countdowns } = useMasterGoData()
 const { y } = useWindowScroll()
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-const { data: siteConfig } = await useFetch<PublicSiteResponse>('/api/site', {
-  key: 'public-site-config',
-  default: () => ({
-    site: {
-      siteName: 'mayday.life',
-      homeHeroImage: '/cover.jpg',
-      homeHeroTitleLine1: 'Hi，Kareshi',
-      homeHeroTitleLine2: '继续唱。',
-      homeHeroSubtitle: '星星在闪烁，你会怎么说。',
-    },
-    seo: {
-      title: 'Hi,',
-      description: '一个用 Vue 写成的五月天档案馆首页，把文章、收藏和互动页面重新编排成 blog-next 风格。',
-      keywords: 'mayday, 五月天, blog',
-    },
-    gallery: {
-      enabled: false,
-      title: '图册',
-      subtitle: '',
-      items: [],
-    },
-  }),
-})
+const { data: siteConfig } = await usePublicSiteConfig()
 
 const { data: postsData } = await useFetch<{ articles: ManagedArticleSummary[] }>('/api/posts', {
   key: 'home-featured-posts',
@@ -75,23 +33,17 @@ useSeoMeta({
   keywords: () => siteConfig.value.seo.keywords,
 })
 
+const visibleShowcaseSections = computed(() => showcaseSections.filter((section) => {
+  return isPublicRouteEnabled(siteConfig.value.routes, section.routeId)
+}))
+const postsVisible = computed(() => isPublicRouteEnabled(siteConfig.value.routes, 'posts'))
 const statTargets = computed(() => [
-  { label: 'SECTIONS', value: showcaseSections.length },
-  { label: 'COUNTDOWNS', value: countdowns.value.length },
+  { label: 'SECTIONS', value: visibleShowcaseSections.value.length },
+  // { label: 'COUNTDOWNS', value: countdowns.value.length },
   { label: 'MOJOS', value: mojoItems.length },
 ])
 
-const featuredSection = featuredShowcase ?? showcaseSections[0] ?? {
-  path: '/',
-  title: 'Mayday Archive',
-  eyebrow: 'ARCHIVE',
-  description: 'Archive overview',
-  image: '/cover.jpg',
-  badgeClass: 'border-white/20 bg-white/10 text-white/80',
-  overlayClass: 'from-slate-950/88 via-slate-950/58 to-slate-950/30',
-  cardClass: '',
-}
-const secondarySections = showcaseSections.filter(section => section.path !== featuredSection.path)
+const secondarySections = computed(() => visibleShowcaseSections.value.filter(section => section.routeId !== 'posts'))
 const homeArticles = computed(() => (postsData.value?.articles || []).slice(0, 3))
 const gallery = computed(() => siteConfig.value.gallery)
 const galleryItems = computed(() => gallery.value.enabled ? gallery.value.items : [])
@@ -225,7 +177,7 @@ onBeforeUnmount(() => {
     <section class="relative h-[100svh] overflow-hidden">
       <img
         :src="heroImage"
-        alt="Mayday cover"
+        alt="MasterGo cover"
         class="hero-parallax-layer absolute inset-x-0 -top-[12%] h-[116%] w-full object-cover"
         :style="heroImageStyle"
       >
@@ -264,7 +216,7 @@ onBeforeUnmount(() => {
     </section>
 
     <section id="chapters" class="relative z-10 mx-auto min-h-[100svh] w-full max-w-[96rem] scroll-mt-18 px-4 pt-12 pb-20 sm:px-6 md:pt-16 md:pb-28">
-      <div v-reveal="120" class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+      <div v-if="postsVisible" v-reveal="120" class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p class="section-kicker flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
             <Icon name="lucide:book-open-text" class="size-4" />
@@ -285,7 +237,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-if="homeArticles.length"
+        v-if="postsVisible && homeArticles.length"
         class="mt-8 grid gap-6 lg:grid-cols-2 2xl:grid-cols-3"
       >
         <NuxtLink
@@ -340,7 +292,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div
-        v-else
+        v-else-if="postsVisible"
         v-reveal="180"
         class="mt-8 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-card)] p-8 text-sm text-[var(--text-secondary)]"
       >

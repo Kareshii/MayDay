@@ -1,4 +1,4 @@
-# MayDay Blog
+# MasterGo Blog
 
 一个以五月天为主题的全栈博客项目，基于 **Nuxt 3 + Nitro** 实现前后端一体化，包含：
 

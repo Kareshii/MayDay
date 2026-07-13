@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { useWindowScroll } from '@vueuse/core'
-import { primaryNavigation } from '@/utils/siteSections'
-
-interface NavbarSiteSettings {
-  siteName: string
-  siteLogo: string
-}
-
-interface NavbarSiteResponse {
-  site: NavbarSiteSettings
-}
+import { isPublicRouteEnabled } from '~~/shared/types/routes'
+import { siteSections } from '@/utils/siteSections'
 
 const route = useRoute()
 const { y } = useWindowScroll()
@@ -17,20 +9,10 @@ const mobileOpen = ref(false)
 const shortcutLabel = ref('Ctrl K')
 const openPaletteEvent = 'mayday:open-command-palette'
 const heroNavbarOverlay = useState<boolean>('hero-navbar-overlay', () => false)
-const { data: siteConfig } = await useFetch<NavbarSiteResponse>('/api/site', {
-  key: 'navbar-site-config',
-  default: () => ({
-    site: {
-      siteName: 'mayday.life',
-      siteLogo: '',
-    },
-  }),
-})
-
-const navigation = [
-  { title: '主页', path: '/' },
-  ...primaryNavigation,
-]
+const { data: siteConfig } = await usePublicSiteConfig()
+const navigation = computed(() => siteSections
+  .filter(section => isPublicRouteEnabled(siteConfig.value.routes, section.routeId))
+  .map(section => ({ title: section.navTitle, path: section.path })))
 
 const siteName = computed(() => siteConfig.value.site.siteName || 'mayday.life')
 const siteLogo = computed(() => siteConfig.value.site.siteLogo)

@@ -13,6 +13,11 @@ import {
 import { getConfiguredArticleTableName, getConfiguredDatabaseUrl } from './runtimeSetup'
 import type { PublicArticleComment } from '~~/shared/types/comments'
 import type { HomeGalleryItem } from '~~/shared/types/gallery'
+import {
+  cloneManagedRouteGroups,
+  DEFAULT_MANAGED_ROUTE_GROUPS,
+  type ManagedRouteGroup,
+} from '~~/shared/types/routes'
 
 type NavigationType = 'internal' | 'external'
 type CommentStatus = 'pending' | 'approved' | 'spam'
@@ -108,6 +113,7 @@ export interface AdminFeatureState {
   site: SiteSettings
   seo: SeoSettings
   navigation: NavigationItem[]
+  routes: ManagedRouteGroup[]
   content: ContentSettings
   categories: CategoryItem[]
   comments: CommentItem[]
@@ -119,6 +125,7 @@ interface AdminFeatureStateInput {
   site?: Partial<SiteSettings>
   seo?: Partial<SeoSettings>
   navigation?: Partial<NavigationItem>[]
+  routes?: Partial<ManagedRouteGroup>[]
   content?: Partial<ContentSettings>
   categories?: Partial<CategoryItem>[]
   comments?: Partial<CommentItem>[]
@@ -128,22 +135,23 @@ interface AdminFeatureStateInput {
 
 export type AdminFeatureSection = keyof Pick<
   AdminFeatureState,
-  'site' | 'seo' | 'navigation' | 'content' | 'categories' | 'comments' | 'features'
+  'site' | 'seo' | 'navigation' | 'routes' | 'content' | 'categories' | 'comments' | 'features'
 >
 
-type SettingSection = Extract<AdminFeatureSection, 'site' | 'seo' | 'content' | 'features'>
+type SettingSection = Extract<AdminFeatureSection, 'site' | 'seo' | 'routes' | 'content' | 'features'>
 
 export const ADMIN_FEATURE_SECTIONS: AdminFeatureSection[] = [
   'site',
   'seo',
   'navigation',
+  'routes',
   'content',
   'categories',
   'comments',
   'features',
 ]
 
-const SETTING_SECTIONS: SettingSection[] = ['site', 'seo', 'content', 'features']
+const SETTING_SECTIONS: SettingSection[] = ['site', 'seo', 'routes', 'content', 'features']
 const LEGACY_STORE_FILE = resolve(process.cwd(), '.data', 'admin-features.json')
 const MIGRATION_SETTING_KEY = 'admin_features_migrated_from_file'
 
@@ -195,6 +203,7 @@ const defaultState: AdminFeatureState = {
       enabled: true,
     },
   ],
+  routes: cloneManagedRouteGroups(),
   content: {
     autoFetchRemoteImages: false,
     filterExternalLinks: false,
@@ -351,6 +360,27 @@ function normalizeNavigationItem(input: Partial<NavigationItem>, index: number):
   }
 }
 
+function normalizeRouteGroups(input: Partial<ManagedRouteGroup>[] = []): ManagedRouteGroup[] {
+  const savedRoutes = new Map(
+    input
+      .flatMap(group => Array.isArray(group.children) ? group.children : [])
+      .filter(route => typeof route?.id === 'string')
+      .map(route => [route.id, route]),
+  )
+
+  return DEFAULT_MANAGED_ROUTE_GROUPS.map(group => ({
+    ...group,
+    children: group.children.map((route) => {
+      const savedRoute = savedRoutes.get(route.id)
+
+      return {
+        ...route,
+        enabled: normalizeBoolean(savedRoute?.enabled, route.enabled),
+      }
+    }),
+  }))
+}
+
 function normalizeContentSettings(input: Partial<ContentSettings> = {}): ContentSettings {
   return {
     autoFetchRemoteImages: normalizeBoolean(input.autoFetchRemoteImages),
@@ -453,6 +483,9 @@ function normalizeState(input: AdminFeatureStateInput = {}): AdminFeatureState {
     navigation: Array.isArray(input.navigation)
       ? input.navigation.map(normalizeNavigationItem).sort((left, right) => left.order - right.order)
       : cloneDefaultState().navigation,
+    routes: Array.isArray(input.routes)
+      ? normalizeRouteGroups(input.routes)
+      : cloneManagedRouteGroups(),
     content: normalizeContentSettings(input.content),
     categories: Array.isArray(input.categories)
       ? input.categories.map(normalizeCategoryItem).sort((left, right) => left.order - right.order)
@@ -490,12 +523,53 @@ function parseFeatureSettingRows(rows: { key: string, value: string }[]) {
   return {
     site: normalizeSiteSettings(parseSettingValue<Partial<SiteSettings>>(settings.get('site'), defaultState.site)),
     seo: normalizeSeoSettings(parseSettingValue<Partial<SeoSettings>>(settings.get('seo'), defaultState.seo)),
+    routes: normalizeRouteGroups(parseSettingValue<Partial<ManagedRouteGroup>[]>(settings.get('routes'), defaultState.routes)),
     content: normalizeContentSettings(parseSettingValue<Partial<ContentSettings>>(settings.get('content'), defaultState.content)),
     features: normalizeFeatureSettings(parseSettingValue<Partial<FeatureSettings>>(
       settings.get('features'),
       defaultState.features,
     )),
   }
+}
+
+function applyLegacyRouteVisibility(
+  groups: ManagedRouteGroup[],
+  galleryEnabled: unknown,
+  navigation: Array<{ path?: string, type?: string, enabled?: boolean }>,
+) {
+  const navigationByPath = new Map(
+    navigation
+      .filter(item => item.type === 'internal' && typeof item.path === 'string')
+      .map(item => [item.path as string, item.enabled]),
+  )
+
+  for (const route of groups.flatMap(group => group.children)) {
+    if (route.id === 'home-gallery' && typeof galleryEnabled === 'boolean') {
+      route.enabled = galleryEnabled
+      continue
+    }
+
+    const navigationEnabled = navigationByPath.get(route.path)
+    if (typeof navigationEnabled === 'boolean') {
+      route.enabled = navigationEnabled
+    }
+  }
+
+  return groups
+}
+
+function createInitialRouteGroups(
+  settingRows: { key: string, value: string }[],
+  navigationRows: Array<typeof adminNavigation.$inferSelect>,
+) {
+  const settings = new Map(settingRows.map(row => [row.key, row.value]))
+  const legacyFeatures = parseSettingValue<Partial<FeatureSettings>>(settings.get('features'), {})
+
+  return applyLegacyRouteVisibility(
+    cloneManagedRouteGroups(),
+    legacyFeatures.galleryEnabled,
+    navigationRows,
+  )
 }
 
 function serializeNavigationRows(rows: Array<typeof adminNavigation.$inferSelect>) {
@@ -759,7 +833,18 @@ async function saveStateToDatabase(state: AdminFeatureState) {
 async function readLegacyState() {
   try {
     const raw = await readFile(LEGACY_STORE_FILE, 'utf8')
-    return normalizeState(JSON.parse(raw) as Partial<AdminFeatureState>)
+    const input = JSON.parse(raw) as AdminFeatureStateInput
+    const normalized = normalizeState(input)
+
+    if (!Array.isArray(input.routes)) {
+      normalized.routes = applyLegacyRouteVisibility(
+        normalized.routes,
+        input.features?.galleryEnabled,
+        input.navigation || [],
+      )
+    }
+
+    return normalized
   } catch {
     return null
   }
@@ -826,6 +911,7 @@ async function readStateFromDatabase() {
   return normalizeState({
     site: settings.site,
     seo: settings.seo,
+    routes: settings.routes,
     content: settings.content,
     features: {
       ...settings.features,
@@ -840,18 +926,24 @@ async function readStateFromDatabase() {
 
 async function ensureDefaultSettings() {
   const db = useDatabase()
-  const rows = await db
-    .select({ key: adminSettings.key })
-    .from(adminSettings)
-    .where(inArray(adminSettings.key, SETTING_SECTIONS))
+  const [rows, navigationRows] = await Promise.all([
+    db
+      .select({ key: adminSettings.key, value: adminSettings.value })
+      .from(adminSettings)
+      .where(inArray(adminSettings.key, SETTING_SECTIONS)),
+    db.select().from(adminNavigation).orderBy(asc(adminNavigation.order)),
+  ])
 
   const existingKeys = new Set(rows.map(row => row.key))
+  const initialRoutes = createInitialRouteGroups(rows, navigationRows)
   const missingValues = SETTING_SECTIONS
     .filter(key => !existingKeys.has(key))
     .map(key => ({
       key,
       value: JSON.stringify(key === 'features'
         ? mergeFeaturesForStorage(defaultState.features)
+        : key === 'routes'
+          ? initialRoutes
         : defaultState[key]),
       updatedAt: new Date(),
     }))
@@ -902,7 +994,7 @@ export async function readAdminSettingSections() {
     db
       .select()
       .from(adminSettings)
-      .where(inArray(adminSettings.key, ['site', 'seo', 'content'])),
+      .where(inArray(adminSettings.key, ['site', 'seo', 'routes', 'content'])),
     db.select().from(adminNavigation).orderBy(asc(adminNavigation.order)),
   ])
   const settings = parseFeatureSettingRows(settingsRows)
@@ -911,6 +1003,7 @@ export async function readAdminSettingSections() {
     site: settings.site,
     seo: settings.seo,
     navigation: serializeNavigationRows(navigationRows),
+    routes: settings.routes,
     content: settings.content,
   }
 }
@@ -948,6 +1041,15 @@ export async function readAdminNavigation() {
   const rows = await db.select().from(adminNavigation).orderBy(asc(adminNavigation.order))
 
   return serializeNavigationRows(rows)
+}
+
+export async function readAdminRouteSettings() {
+  await ensureAdminFeatureStoreReady()
+  const db = useDatabase()
+  const rows = await db.select().from(adminSettings).where(eq(adminSettings.key, 'routes')).limit(1)
+  const settings = parseFeatureSettingRows(rows)
+
+  return settings.routes
 }
 
 export async function readAdminCategories() {
@@ -1049,11 +1151,20 @@ export async function updateAdminFeatureSection<K extends AdminFeatureSection>(k
       : current.features,
     updatedAt: nowIso(),
   })
+  const galleryRouteEnabled = next.routes
+    .flatMap(group => group.children)
+    .find(route => route.id === 'home-gallery')
+    ?.enabled
 
-  if (key === 'site' || key === 'seo' || key === 'content') {
+  if (typeof galleryRouteEnabled === 'boolean') {
+    next.features.galleryEnabled = galleryRouteEnabled
+  }
+
+  if (key === 'site' || key === 'seo' || key === 'routes' || key === 'content') {
     await replaceSettings({
       site: next.site,
       seo: next.seo,
+      routes: next.routes,
       content: next.content,
       features: mergeFeaturesForStorage(next.features),
     })
@@ -1061,6 +1172,7 @@ export async function updateAdminFeatureSection<K extends AdminFeatureSection>(k
     await replaceSettings({
       site: next.site,
       seo: next.seo,
+      routes: next.routes,
       content: next.content,
       features: mergeFeaturesForStorage(next.features),
     })

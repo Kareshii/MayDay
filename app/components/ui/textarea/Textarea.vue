@@ -46,10 +46,11 @@ defineExpose({
   <textarea
     ref="textareaRef"
     v-bind="attrs"
+    data-slot="textarea"
     :value="modelValue"
     :disabled="disabled"
     :class="cn(
-      'flex min-h-[128px] w-full rounded-xl px-3 py-3 text-sm leading-7 shadow-none outline-none transition-all duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-70',
+      'flex min-h-[128px] w-full rounded-md px-3 py-3 text-sm leading-7 shadow-none outline-none transition-all duration-200 placeholder:text-[var(--text-muted)] focus:ring-2 focus:ring-[var(--focus-ring)] disabled:cursor-not-allowed disabled:opacity-70',
       props.variant === 'default' && 'border border-[var(--border-strong)] bg-[var(--surface-card)] text-[var(--text-primary)] focus:border-[var(--primary)]',
       props.variant === 'ghost' && 'border border-transparent bg-transparent text-[var(--text-primary)] hover:bg-[var(--surface-hover)] focus:border-[var(--primary)] focus:bg-[var(--surface-card)]',
       attrs.class as string,

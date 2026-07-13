@@ -1,6 +1,7 @@
 import { mojoItems } from '@/utils/mojoData'
 
 export interface SiteSection {
+  routeId: string
   path: string
   navTitle: string
   title: string
@@ -16,6 +17,7 @@ const coverImage = '/cover.jpg'
 
 export const siteSections: SiteSection[] = [
   {
+    routeId: 'home',
     path: '/',
     navTitle: '主页',
     title: '纯真之后，继续唱',
@@ -28,6 +30,7 @@ export const siteSections: SiteSection[] = [
       'hover:border-cyan-400/45 hover:shadow-[0_28px_90px_-55px_rgba(34,211,238,0.8)]',
   },
   {
+    routeId: 'posts',
     path: '/posts',
     navTitle: '文章',
     title: '文章',
@@ -40,6 +43,7 @@ export const siteSections: SiteSection[] = [
       'hover:border-slate-300/40 hover:shadow-[0_28px_90px_-55px_rgba(100,116,139,0.72)]',
   },
   {
+    routeId: 'balls',
     path: '/balls',
     navTitle: '五球',
     title: '五球盲盒',
@@ -52,6 +56,7 @@ export const siteSections: SiteSection[] = [
       'hover:border-rose-300/40 hover:shadow-[0_28px_90px_-55px_rgba(244,63,94,0.72)]',
   },
   {
+    routeId: 'mojo',
     path: '/mojo',
     navTitle: 'Mojo Family',
     title: 'Mojo Family',

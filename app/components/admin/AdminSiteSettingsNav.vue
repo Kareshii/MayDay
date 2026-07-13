@@ -12,6 +12,7 @@ const settingsItems: SiteSettingsNavItem[] = [
   { label: '全局', to: '/admin/features/site', icon: 'lucide:globe-2', exact: true },
   { label: 'SEO', to: '/admin/features/site/seo', icon: 'lucide:search' },
   { label: '导航', to: '/admin/features/site/navigation', icon: 'lucide:menu' },
+  { label: '路由', to: '/admin/features/site/routes', icon: 'lucide:network' },
   { label: '内容', to: '/admin/features/site/content', icon: 'lucide:image' },
   { label: '账号', to: '/admin/features/site/account', icon: 'lucide:shield-user' },
 ]
@@ -24,8 +25,8 @@ function isActive(item: SiteSettingsNavItem) {
 </script>
 
 <template>
-  <nav class="overflow-x-auto border-b border-[var(--border-soft)]" aria-label="站点设置">
-    <div class="flex min-w-max items-center gap-1 px-1">
+  <nav class="border-b border-[var(--border-soft)]" aria-label="站点设置">
+    <div class="flex flex-wrap items-center gap-1 px-1">
       <NuxtLink
         v-for="item in settingsItems"
         :key="item.to"
