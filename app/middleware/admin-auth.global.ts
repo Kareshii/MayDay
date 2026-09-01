@@ -20,29 +20,25 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   const headers = import.meta.server ? useRequestHeaders(['cookie']) : undefined
-  const setup = await $fetch<{
+  const session = await $fetch<{
+    authenticated: boolean
+    configured: boolean
     databaseConfigured: boolean
     authConfigured: boolean
-  }>('/api/admin/setup', { headers }).catch(() => ({
+  }>('/api/admin/session', { headers }).catch(() => ({
+    authenticated: false,
+    configured: false,
     databaseConfigured: false,
     authConfigured: false,
   }))
 
-  if (!setup.databaseConfigured || !setup.authConfigured) {
+  if (!session.databaseConfigured || !session.authConfigured) {
     if (to.path === '/admin/onboarding') {
       return
     }
 
     return navigateTo('/admin/onboarding')
   }
-
-  const session = await $fetch<{
-    authenticated: boolean
-    configured: boolean
-  }>('/api/admin/session', { headers }).catch(() => ({
-    authenticated: false,
-    configured: false,
-  }))
 
   if (to.path === '/admin/login' || to.path === '/admin/onboarding') {
     if (session.authenticated) {
