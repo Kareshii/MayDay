@@ -59,15 +59,16 @@ function openCommandPalette() {
 
 <template>
   <header
-    class="fixed inset-x-0 top-0 z-50 transition-all duration-300"
+    class="site-navbar fixed inset-x-0 top-0 z-50 transition-all duration-300"
     :class="isTransparent ? 'border-b-0 bg-transparent' : 'border-b border-[var(--border)] bg-[var(--card)] shadow-[0_24px_64px_-44px_rgba(15,23,42,0.38)]'"
+    :data-transparent="isTransparent"
   >
-    <div class="mx-auto w-full max-w-[92rem] px-4 sm:px-6 2xl:max-w-[96rem]" :class="{ 'pb-4': mobileOpen }">
+    <div class="site-navbar__frame mx-auto w-full max-w-[92rem] px-4 sm:px-6 2xl:max-w-[96rem]" :class="{ 'pb-4': mobileOpen }">
       <div class="flex h-18 items-center justify-between gap-4 py-4">
         <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-          <NuxtLink to="/" class="group flex min-w-0 items-center gap-3 transition-opacity hover:opacity-85">
+          <NuxtLink to="/" class="site-navbar__brand group flex min-w-0 items-center gap-3 transition-opacity hover:opacity-85">
             <span
-              class="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-semibold transition-colors"
+              class="site-navbar__mark flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-semibold transition-colors"
               :class="isTransparent ? 'border-white/20 bg-white/10 text-white' : 'border-[var(--border)] bg-black text-white dark:bg-white dark:text-black'"
             >
               <img
@@ -82,7 +83,7 @@ function openCommandPalette() {
             </span>
             <span class="min-w-0">
               <span
-                class="block truncate text-[1.05rem] font-semibold tracking-[0.22em] uppercase"
+                class="site-navbar__name block truncate text-[1.05rem] font-semibold tracking-[0.22em] uppercase"
                 :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'"
               >
                 {{ siteName }}
@@ -92,7 +93,7 @@ function openCommandPalette() {
 
           <button
             type="button"
-            class="hidden h-10 w-56 shrink-0 items-center justify-between gap-3 rounded-full border px-3 text-sm font-semibold transition-all duration-200 sm:inline-flex lg:w-64 xl:w-72"
+            class="site-navbar__search hidden h-10 w-56 shrink-0 items-center justify-between gap-3 rounded-full border px-3 text-sm font-semibold transition-all duration-200 sm:inline-flex lg:w-64 xl:w-72"
             :class="isTransparent ? 'border-white/18 bg-white/10 text-white hover:bg-white/16' : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10'"
             aria-label="打开快捷搜索"
             @click="openCommandPalette"
@@ -110,7 +111,7 @@ function openCommandPalette() {
           </button>
           <button
             type="button"
-            class="inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors sm:hidden"
+            class="site-navbar__search-button inline-flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors sm:hidden"
             :class="isTransparent ? 'border-white/18 bg-white/10 text-white hover:bg-white/16' : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10'"
             aria-label="打开快捷搜索"
             @click="openCommandPalette"
@@ -119,31 +120,45 @@ function openCommandPalette() {
           </button>
         </div>
 
-        <nav class="hidden items-center gap-2 lg:flex">
+        <nav class="site-navbar__links hidden items-center gap-2 lg:flex">
           <NuxtLink
             v-for="link in navigation"
             :key="link.path"
             :to="link.path"
-            class="rounded-[4px 4px 0 0] px-3 py-2 text-sm font-medium transition-all duration-200"
+            class="site-navbar__nav-link rounded-[4px 4px 0 0] px-3 py-2 text-sm font-medium transition-all duration-200"
             :class="navLinkClass(link.path)"
+            :data-active="isActive(link.path)"
           >
             {{ link.title }}
           </NuxtLink>
         </nav>
 
-        <div class="flex items-center gap-2">
+        <div class="site-navbar__actions flex items-center gap-2">
+          <SiteThemeSwitch :transparent="isTransparent" />
           <ColorModeSwitch :transparent="isTransparent" :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'" />
           <button
             type="button"
-            class="inline-flex size-10 items-center justify-center rounded-full border lg:hidden"
+            class="site-navbar__menu-button inline-flex size-10 items-center justify-center rounded-full border lg:hidden"
             :class="isTransparent ? 'border-white/18 bg-white/10 text-white' : 'border-[var(--border)] bg-[var(--card)] text-[var(--text-primary)]'"
-            aria-label="打开导航菜单"
+            :aria-label="mobileOpen ? '关闭导航菜单' : '打开导航菜单'"
+            :aria-expanded="mobileOpen"
+            aria-controls="site-navigation-menu"
+            :data-open="mobileOpen"
             @click="mobileOpen = !mobileOpen"
           >
             <Icon :name="mobileOpen ? 'lucide:x' : 'lucide:menu'" class="size-5" />
+            <span class="site-navbar__menu-label hidden">{{ mobileOpen ? 'EXIT' : 'MENU' }}</span>
           </button>
         </div>
       </div>
+
+      <button
+        v-if="mobileOpen"
+        type="button"
+        class="site-navbar__menu-scrim hidden"
+        aria-label="关闭导航菜单"
+        @click="mobileOpen = false"
+      />
 
       <Transition
         enter-active-class="transition duration-200 ease-out"
@@ -155,7 +170,8 @@ function openCommandPalette() {
       >
         <nav
           v-if="mobileOpen"
-          class="rounded-[1.5rem] border p-3 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.48)] lg:hidden"
+          id="site-navigation-menu"
+          class="site-navbar__mobile-panel rounded-[1.5rem] border p-3 shadow-[0_24px_64px_-44px_rgba(15,23,42,0.48)] lg:hidden"
           :class="isTransparent ? 'border-white/12 bg-slate-950/75 backdrop-blur-xl' : 'border-[var(--border)] bg-[var(--card)]'"
         >
           <div class="grid grid-cols-2 gap-2">
@@ -163,8 +179,9 @@ function openCommandPalette() {
               v-for="link in navigation"
               :key="link.path"
               :to="link.path"
-              class="rounded-2xl px-3 py-3 text-sm font-medium transition-all"
+              class="site-navbar__nav-link rounded-2xl px-3 py-3 text-sm font-medium transition-all"
               :class="navLinkClass(link.path)"
+              :data-active="isActive(link.path)"
             >
               {{ link.title }}
             </NuxtLink>

@@ -17,7 +17,7 @@ const icpNumber = computed(() => siteConfig.value.site.icpNumber)
 </script>
 
 <template>
-  <footer class="border-t border-[var(--border)] bg-[var(--card)]/88 backdrop-blur-xl">
+  <footer class="site-footer border-t border-[var(--border)] bg-[var(--card)]/88 backdrop-blur-xl">
     <div class="container py-2 lg:py-3">
       <div class="flex min-h-18 flex-col justify-center gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div class="max-w-xl">

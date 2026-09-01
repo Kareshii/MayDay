@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="open"
-        class="fixed inset-0 z-[90] bg-slate-950/[0.28] px-4 pt-[12vh] backdrop-blur-sm"
+        class="site-command-palette-backdrop fixed inset-0 z-[90] bg-slate-950/[0.28] px-4 pt-[12vh] backdrop-blur-sm"
         @click.self="closePalette"
         @keydown="handlePaletteKeydown"
       >
@@ -206,7 +206,7 @@ onBeforeUnmount(() => {
           role="dialog"
           aria-modal="true"
           aria-label="全局快捷搜索"
-          class="mx-auto max-w-2xl overflow-hidden rounded-[1.4rem] border border-white/[0.18] bg-white/[0.82] shadow-[0_30px_100px_-40px_rgba(15,23,42,0.65)] backdrop-blur-2xl dark:bg-zinc-950/[0.82]"
+          class="site-command-palette mx-auto max-w-2xl overflow-hidden rounded-[1.4rem] border border-white/[0.18] bg-white/[0.82] shadow-[0_30px_100px_-40px_rgba(15,23,42,0.65)] backdrop-blur-2xl dark:bg-zinc-950/[0.82]"
         >
           <div class="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
             <Icon name="lucide:search" class="size-5 text-[var(--text-secondary)]" />
@@ -227,8 +227,9 @@ onBeforeUnmount(() => {
               v-for="(item, index) in paletteItems"
               :key="item.id"
               type="button"
-              class="flex w-full items-center gap-3 rounded-[1rem] px-3 py-3 text-left transition-colors"
+              class="site-command-palette__item flex w-full items-center gap-3 rounded-[1rem] px-3 py-3 text-left transition-colors"
               :class="index === activeIndex ? 'bg-black/[0.07] dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/[0.07]'"
+              :data-active="index === activeIndex"
               @mouseenter="activeIndex = index"
               @click="selectItem(item)"
             >

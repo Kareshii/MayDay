@@ -87,12 +87,12 @@ onUnmounted(() => {
     >
       <div
         v-if="open"
-        class="fixed inset-0 z-[90] h-screen overflow-y-auto px-4 py-6"
+        class="apple-card-dialog fixed inset-0 z-[90] h-screen overflow-y-auto px-4 py-6"
       >
         <div class="fixed inset-0 bg-black/80 backdrop-blur-lg" />
         <article
           ref="containerRef"
-          class="relative z-[91] mx-auto my-4 max-w-5xl rounded-3xl border border-white/10 bg-white p-4 shadow-[0_40px_120px_-48px_rgba(0,0,0,0.82)] md:p-10 dark:bg-neutral-950"
+          class="apple-card-dialog__content relative z-[91] mx-auto my-4 max-w-5xl rounded-3xl border border-white/10 bg-white p-4 shadow-[0_40px_120px_-48px_rgba(0,0,0,0.82)] md:p-10 dark:bg-neutral-950"
         >
           <button
             type="button"
@@ -145,7 +145,7 @@ onUnmounted(() => {
 
   <button
     type="button"
-    class="group relative z-10 flex h-80 w-full cursor-pointer flex-col items-start justify-start overflow-hidden rounded-3xl bg-gray-100 text-left shadow-[0_28px_90px_-58px_rgba(15,23,42,0.75)] outline-none transition-transform duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:h-[40rem] dark:bg-neutral-900"
+    class="apple-card group relative z-10 flex h-80 w-full cursor-pointer flex-col items-start justify-start overflow-hidden rounded-3xl bg-gray-100 text-left shadow-[0_28px_90px_-58px_rgba(15,23,42,0.75)] outline-none transition-transform duration-300 hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:h-[40rem] dark:bg-neutral-900"
     @click="handleOpen"
   >
     <div class="pointer-events-none absolute inset-x-0 top-0 z-30 h-full bg-linear-to-b from-black/58 via-black/12 to-black/34" />

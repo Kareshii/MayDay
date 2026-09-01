@@ -35,7 +35,7 @@ function setPreference(value: ThemePreference) {
 <template>
   <ColorScheme>
     <div
-      class="group relative inline-flex h-10 items-center gap-1 rounded-full border p-1 transition-all duration-300"
+      class="site-color-mode-switch group relative inline-flex h-10 items-center gap-1 rounded-full border p-1 transition-all duration-300"
       :class="props.transparent
         ? 'border-white/12 bg-white/8 backdrop-blur-md hover:bg-white/12 hover:border-white/20'
         : 'border-[var(--border)] bg-[var(--card)]/82 backdrop-blur-xl hover:border-[var(--border-strong)]'"

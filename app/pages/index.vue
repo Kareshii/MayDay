@@ -24,6 +24,8 @@ const { data: postsData } = await useFetch<{ articles: ManagedArticleSummary[] }
 
 const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
 const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 ?? '继续唱。')
+const heroTitleCharactersLine1 = computed(() => Array.from(heroTitleLine1.value))
+const heroTitleCharactersLine2 = computed(() => Array.from(heroTitleLine2.value))
 const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
 const heroImage = computed(() => siteConfig.value.site.homeHeroImage || '/cover.jpg')
 
@@ -173,8 +175,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative overflow-hidden">
-    <section class="relative h-[100svh] overflow-hidden">
+  <div class="home-page relative overflow-hidden">
+    <section class="home-hero relative h-[100svh] overflow-hidden">
       <img
         :src="heroImage"
         alt="MasterGo cover"
@@ -182,20 +184,40 @@ onBeforeUnmount(() => {
         :style="heroImageStyle"
       >
       <div class="hero-halo absolute inset-0" />
-      <div class="absolute inset-0 bg-gradient-to-b from-slate-950/34 via-slate-950/72 to-[var(--bg-primary)]" />
-      <div class="absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
+      <div class="home-hero__shade absolute inset-0 bg-gradient-to-b from-slate-950/34 via-slate-950/72 to-[var(--bg-primary)]" />
+      <div class="home-hero__accent absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
       <div class="hero-grid absolute inset-0 opacity-35" />
+      <div class="phantom-hero-figure" aria-hidden="true">
+        <span class="phantom-hero-figure__mask">
+          <Icon name="lucide:venetian-mask" />
+        </span>
+        <span class="phantom-hero-figure__callout">STEAL BACK YOUR FUTURE</span>
+      </div>
 
       <div class="container relative z-10 flex h-full flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
         <div class="max-w-4xl space-y-6">
 
 
-          <h1 class="mt-4 hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
-            <span class="glitch-text block" :data-text="heroTitleLine1">{{ heroTitleLine1 }}</span>
-            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
+          <h1 class="home-hero__title mt-4 hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
+            <span class="glitch-text block" :data-text="heroTitleLine1">
+              <span
+                v-for="(character, index) in heroTitleCharactersLine1"
+                :key="`hero-line-1-${index}`"
+                class="phantom-title-letter"
+                :class="{ 'is-space': character === ' ' }"
+              >{{ character }}</span>
+            </span>
+            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">
+              <span
+                v-for="(character, index) in heroTitleCharactersLine2"
+                :key="`hero-line-2-${index}`"
+                class="phantom-title-letter"
+                :class="{ 'is-space': character === ' ' }"
+              >{{ character }}</span>
+            </span>
           </h1>
 
-          <div class="hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">
+          <div class="home-hero__subtitle hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">
             <p class="text-xl font-medium md:text-2xl">
               {{ heroSubtitle }}
             </p>
@@ -215,21 +237,21 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <section id="chapters" class="relative z-10 mx-auto min-h-[100svh] w-full max-w-[96rem] scroll-mt-18 px-4 pt-12 pb-20 sm:px-6 md:pt-16 md:pb-28">
+    <section id="chapters" class="home-chapters relative z-10 mx-auto min-h-[100svh] w-full max-w-[96rem] scroll-mt-18 px-4 pt-12 pb-20 sm:px-6 md:pt-16 md:pb-28">
       <div v-if="postsVisible" v-reveal="120" class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p class="section-kicker flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
             <Icon name="lucide:book-open-text" class="size-4" />
             POSTS
           </p>
-          <h2 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
+          <h2 class="home-section-title mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
             文章
           </h2>
         </div>
 
         <NuxtLink
           to="/posts"
-          class="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5 "
+          class="home-section-action inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5"
         >
           查看全部
           <Icon name="lucide:arrow-right" class="size-4" />
@@ -248,7 +270,7 @@ onBeforeUnmount(() => {
           class="group/article block focus:outline-none"
         >
           <CardContainer container-class="h-full">
-            <CardBody class="group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
+            <CardBody class="home-article-card group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
               <CardItem
                 :translate-z="50"
                 class="line-clamp-1 w-full text-xl font-bold text-neutral-600 dark:text-white"
@@ -349,7 +371,7 @@ onBeforeUnmount(() => {
             <Icon name="lucide:images" class="size-4" />
             GALLERY
           </p>
-          <h2 class="mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
+          <h2 class="home-section-title mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
             {{ gallery.title }}
           </h2>
           <p v-if="gallery.subtitle" class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] md:text-base">

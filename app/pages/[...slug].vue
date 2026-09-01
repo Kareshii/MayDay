@@ -40,8 +40,8 @@ useSeoMeta({
 </script>
 
 <template>
-  <article class="container">
-    <header class="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
+  <article class="public-content-page container">
+    <header class="public-content-header overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
       <div class="grid gap-6 p-6 md:p-10 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
         <div>
           <p class="section-kicker">

@@ -34,12 +34,12 @@ function getArticleDetailRoute(slug: string): RouteLocationRaw {
 </script>
 
 <template>
-  <section class="container max-w-xl">
+  <section class="public-posts-page container max-w-xl">
     <div v-if="isLoading" class="mt-8 flex flex-col gap-6 md:gap-8">
       <div
         v-for="skeleton in 3"
         :key="`post-skeleton-${skeleton}`"
-        class="flex min-h-[24rem] flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] md:min-h-[28rem] md:flex-row"
+        class="public-post-card flex min-h-[24rem] flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] md:min-h-[28rem] md:flex-row"
         :class="skeleton % 2 === 0 ? 'md:flex-row-reverse' : ''"
       >
         <div class="aspect-[16/9] w-full shrink-0 animate-pulse bg-[var(--surface-low)] md:aspect-auto md:w-5/12 lg:w-[45%]" />
@@ -57,7 +57,7 @@ function getArticleDetailRoute(slug: string): RouteLocationRaw {
         v-for="(page, index) in allPages"
         :key="page.id"
         :to="getArticleDetailRoute(page.slug)"
-        class="group flex min-h-[24rem] flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_-24px_rgba(15,23,42,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:min-h-[28rem] md:flex-row"
+        class="public-post-card group flex min-h-[24rem] flex-col overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_12px_40px_-24px_rgba(15,23,42,0.3)] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl md:min-h-[28rem] md:flex-row"
         :class="index % 2 === 1 ? 'md:flex-row-reverse' : ''"
       >
         <!-- Image Half -->
