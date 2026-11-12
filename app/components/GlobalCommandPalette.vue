@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="open"
-        class="site-command-palette-backdrop fixed inset-0 z-[90] bg-slate-950/[0.28] px-4 pt-[12vh] backdrop-blur-sm"
+        class="site-command-palette-backdrop"
         @click.self="closePalette"
         @keydown="handlePaletteKeydown"
       >
@@ -206,9 +206,9 @@ onBeforeUnmount(() => {
           role="dialog"
           aria-modal="true"
           aria-label="全局快捷搜索"
-          class="site-command-palette mx-auto max-w-2xl overflow-hidden rounded-[1.4rem] border border-white/[0.18] bg-white/[0.82] shadow-[0_30px_100px_-40px_rgba(15,23,42,0.65)] backdrop-blur-2xl dark:bg-zinc-950/[0.82]"
+          class="site-command-palette"
         >
-          <div class="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
+          <div class="site-command-palette__search">
             <Icon name="lucide:search" class="size-5 text-[var(--text-secondary)]" />
             <input
               ref="inputRef"
@@ -217,30 +217,29 @@ onBeforeUnmount(() => {
               placeholder="搜索文章、页面或后台设置"
               class="h-10 min-w-0 flex-1 bg-transparent text-base text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)]"
             >
-            <kbd class="hidden rounded-md border border-[var(--border)] px-2 py-1 text-[11px] font-semibold text-[var(--text-secondary)] sm:inline">
+            <kbd class="site-command-palette__key hidden sm:inline">
               Esc
             </kbd>
           </div>
 
-          <div class="max-h-[24rem] overflow-y-auto p-2">
+          <div class="site-command-palette__results">
             <button
               v-for="(item, index) in paletteItems"
               :key="item.id"
               type="button"
-              class="site-command-palette__item flex w-full items-center gap-3 rounded-[1rem] px-3 py-3 text-left transition-colors"
-              :class="index === activeIndex ? 'bg-black/[0.07] dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/[0.07]'"
+              class="site-command-palette__item"
               :data-active="index === activeIndex"
               @mouseenter="activeIndex = index"
               @click="selectItem(item)"
             >
-              <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-low)] text-[var(--text-primary)]">
+              <span class="site-command-palette__icon">
                 <Icon :name="item.icon" class="size-4" />
               </span>
               <span class="min-w-0 flex-1">
-                <span class="block truncate text-sm font-semibold text-[var(--text-primary)]">{{ item.title }}</span>
-                <span class="mt-0.5 block truncate text-xs text-[var(--text-secondary)]">{{ item.description }}</span>
+                <span class="site-command-palette__title block truncate text-sm font-medium">{{ item.title }}</span>
+                <span class="site-command-palette__description mt-1 block truncate text-xs">{{ item.description }}</span>
               </span>
-              <span class="rounded-full border border-[var(--border)] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
+              <span class="site-command-palette__type">
                 {{ item.type }}
               </span>
             </button>
@@ -250,7 +249,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="flex items-center justify-between border-t border-[var(--border)] px-4 py-2 text-[11px] text-[var(--text-secondary)]">
+          <div class="site-command-palette__footer">
             <span>↑↓ 选择</span>
             <span>Enter 打开</span>
           </div>

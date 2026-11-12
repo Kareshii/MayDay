@@ -22,7 +22,6 @@ if (!page.value) {
 const section = computed(() => getSiteSection(route.path))
 const pageDescription = computed(() => page.value?.seo?.description || page.value?.description || '')
 const heroImage = computed(() => section.value?.image || page.value?.coverImage || '/cover.jpg')
-const heroBadge = computed(() => section.value?.badgeClass || 'border-white/20 bg-white/10 text-white/72')
 const heroLabel = computed(() => section.value?.navTitle || 'MAYDAY')
 const heroSummary = computed(() => section.value?.description || pageDescription.value)
 const pageNavigationTitle = computed(() => {
@@ -40,70 +39,46 @@ useSeoMeta({
 </script>
 
 <template>
-  <article class="public-content-page container">
-    <header class="public-content-header overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
-      <div class="grid gap-6 p-6 md:p-10 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
-        <div>
-          <p class="section-kicker">
-            {{ section?.eyebrow || 'ARCHIVE ENTRY' }}
-          </p>
-          <h1 class="mt-4 text-4xl font-semibold tracking-tight text-[var(--text-primary)] md:text-6xl">
-            {{ page?.title }}
-          </h1>
-          <p
-            v-if="pageDescription"
-            class="mt-5 max-w-2xl text-base leading-8 text-[var(--text-secondary)]"
-          >
-            {{ pageDescription }}
-          </p>
-
-          <div class="mt-8 flex flex-wrap items-center gap-3 text-xs font-medium tracking-[0.18em] text-[var(--text-secondary)]">
-            <span class="rounded-full border border-[var(--border)] px-3 py-2">
-              {{ route.path }}
-            </span>
-            <span class="rounded-full border border-[var(--border)] px-3 py-2">
-              {{ pageNavigationTitle }}
-            </span>
-          </div>
+  <article class="public-content-page container archive-page">
+    <header class="archive-header">
+      <div class="archive-header__label"><span>{{ section?.eyebrow || 'ARCHIVE ENTRY' }}</span><span>{{ route.path }}</span></div>
+      <div class="archive-header__grid">
+        <div class="archive-header__copy">
+          <h1>{{ page?.title }}</h1>
+          <p v-if="pageDescription" class="archive-description">{{ pageDescription }}</p>
+          <div class="archive-caption"><span>{{ pageNavigationTitle }}</span><Icon name="lucide:arrow-down-right" class="size-5" /></div>
         </div>
-
-        <div class="relative aspect-[4/3] overflow-hidden rounded-[1.6rem] bg-slate-950">
-          <img
-            :src="heroImage"
-            :alt="page?.title || ''"
-            class="absolute inset-0 h-full w-full object-cover"
-          >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/88 via-black/28 to-transparent" />
-          <div class="absolute inset-x-0 bottom-0 p-6 text-white">
-            <span
-              class="inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.22em]"
-              :class="heroBadge"
-            >
-              {{ heroLabel }}
-            </span>
-            <p class="mt-4 text-sm leading-7 text-white/68">
-              {{ heroSummary }}
-            </p>
-          </div>
-        </div>
+        <figure class="archive-cover">
+          <img :src="heroImage" :alt="page?.title || ''">
+          <figcaption><span>{{ heroLabel }}</span><p>{{ heroSummary }}</p></figcaption>
+        </figure>
       </div>
     </header>
 
-    <div class="mt-8">
-      <ArticleReadingEnhancer :content-key="route.path">
-        <div
-          v-if="pageDescription"
-          class="rounded-[1.4rem] border-l-4 border-black/70 bg-black/[0.035] p-5 text-lg leading-8 text-[var(--text-secondary)] dark:border-white/70 dark:bg-white/[0.035]"
-        >
-          {{ pageDescription }}
-        </div>
-
-        <ContentRenderer
-          v-if="page"
-          :value="page"
-          class="blog-content"
-        />
-      </ArticleReadingEnhancer>
-    </div>
+    <ArticleReadingEnhancer :content-key="route.path">
+      <p v-if="pageDescription" class="archive-intro">{{ pageDescription }}</p>
+      <ContentRenderer v-if="page" :value="page" class="blog-content" />
+    </ArticleReadingEnhancer>
   </article>
 </template>
+
+<style scoped>
+.archive-page { padding-top: clamp(3rem, 7vw, 7rem); padding-bottom: 5rem; }
+.archive-header { margin-bottom: clamp(4rem, 8vw, 8rem); }
+.archive-header__label { display: flex; justify-content: space-between; gap: 1rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); color: var(--text-muted); font-size: .65rem; font-weight: 500; letter-spacing: .15em; }
+.archive-header__label > span:last-child { letter-spacing: .03em; }
+.archive-header__grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .85fr); gap: clamp(2rem, 6vw, 6rem); align-items: center; padding-top: clamp(2.5rem, 5vw, 5rem); }
+.archive-header__copy h1 { color: var(--text-primary); font-size: clamp(3rem, 7vw, 6.5rem); line-height: 1.15; font-weight: 400; letter-spacing: -.055em; overflow-wrap: anywhere; }
+.archive-description { max-width: 32rem; margin-top: 2rem; color: var(--text-secondary); font-size: .95rem; line-height: 2; }
+.archive-caption { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 3rem; padding-block: 1.25rem; border-block: 1px solid var(--border); color: var(--text-muted); font-size: .68rem; letter-spacing: .06em; }
+.archive-cover { min-width: 0; }
+.archive-cover > img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; filter: grayscale(1); }
+.archive-cover figcaption { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; padding-top: 1rem; color: var(--text-muted); font-size: .62rem; line-height: 1.8; }
+.archive-cover figcaption > span { font-weight: 500; letter-spacing: .12em; }
+.archive-intro { margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border); color: var(--text-primary); font-size: clamp(1.15rem, 2.2vw, 1.65rem); font-weight: 300; line-height: 1.85; }
+@media (max-width: 767px) {
+  .archive-header__grid { grid-template-columns: minmax(0, 1fr); }
+  .archive-cover > img { aspect-ratio: 16 / 10; }
+  .archive-header__label { font-size: .56rem; letter-spacing: .1em; }
+}
+</style>

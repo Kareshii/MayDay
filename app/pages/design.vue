@@ -582,13 +582,13 @@ function onDrop(e: DragEvent) {
 </script>
 
 <template>
-  <div class="h-screen w-full flex flex-col bg-gray-50 text-gray-900 font-sans overflow-hidden">
+  <div class="design-studio h-screen w-full flex flex-col bg-gray-50 text-gray-900 font-sans overflow-hidden">
     
     <!-- Top Toolbar -->
-    <header class="h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between shrink-0 z-20 shadow-sm">
+    <header class="design-studio__toolbar h-14 bg-white border-b border-gray-200 flex items-center px-4 justify-between shrink-0 z-20 shadow-sm">
         <div class="flex items-center gap-4">
             <h1 class="text-lg font-bold text-indigo-600 flex items-center gap-2">
-                <span>🎨</span> 创意工坊
+                <NuxtLink to="/" aria-label="返回首页" class="inline-flex"><Icon name="lucide:arrow-up-left" class="size-5" /></NuxtLink> 创意工坊
             </h1>
             <div class="h-6 w-px bg-gray-300 mx-2"></div>
             
@@ -667,9 +667,9 @@ function onDrop(e: DragEvent) {
         </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden">
+    <div class="design-studio__workbench flex-1 flex overflow-hidden">
         <!-- Left Sidebar Tools -->
-        <aside class="w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-4 z-10">
+        <aside class="design-studio__tools w-16 bg-white border-r border-gray-200 flex flex-col items-center py-4 gap-4 z-10">
             <button 
                 @click="setTool('select')"
                 :class="{'bg-indigo-100 text-indigo-600': currentTool === 'select', 'text-gray-500 hover:bg-gray-100': currentTool !== 'select'}"
@@ -704,7 +704,7 @@ function onDrop(e: DragEvent) {
         </aside>
 
         <!-- Secondary Left Panel (Contextual or Assets) -->
-        <aside class="w-64 bg-white border-r border-gray-200 flex flex-col z-10">
+        <aside class="design-studio__assets w-64 bg-white border-r border-gray-200 flex flex-col z-10">
             <div class="p-4 border-b border-gray-200 flex justify-between items-center">
                 <h2 class="font-semibold text-gray-700">素材库</h2>
                 <button @click="triggerUpload" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded flex items-center gap-1">
@@ -713,13 +713,13 @@ function onDrop(e: DragEvent) {
                 <input id="uploadInput" type="file" accept="image/*" class="hidden" @change="handleUpload" />
             </div>
             <div class="p-4 overflow-y-auto flex-1">
-                <div class="grid grid-cols-2 gap-3">
+                <div class="design-studio__asset-grid grid grid-cols-2 gap-3">
                      <div 
                         v-for="asset in assets" 
                         :key="asset.id"
                         draggable="true"
                         @dragstart="onDragStart($event, asset.src)"
-                        class="aspect-square bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-move hover:ring-2 hover:ring-indigo-400"
+                        class="aspect-square bg-gray-50 rounded-lg border border-gray-200 overflow-hidden cursor-move hover:ring-2 hover:ring-white"
                     >
                          <img :src="asset.src" class="w-full h-full object-contain pointer-events-none p-2" />
                     </div>
@@ -729,7 +729,8 @@ function onDrop(e: DragEvent) {
 
         <!-- Main Canvas Area -->
         <main 
-            class="flex-1 bg-gray-100 relative overflow-hidden flex items-center justify-center"
+            id="workspace"
+            class="design-studio__canvas flex-1 bg-gray-100 relative overflow-hidden flex items-center justify-center"
             ref="workspaceEl"
              @dragover.prevent
              @drop.prevent="onDrop"
@@ -741,7 +742,7 @@ function onDrop(e: DragEvent) {
         </main>
 
         <!-- Right Property Panel -->
-        <aside class="w-[320px] bg-white border-l border-gray-200 flex flex-col z-10 shrink-0">
+        <aside class="design-studio__properties w-[320px] bg-white border-l border-gray-200 flex flex-col z-10 shrink-0">
             <!-- Property / 3D Tabs could go here, for now stacked -->
             
             <!-- Properties -->
@@ -819,8 +820,26 @@ function onDrop(e: DragEvent) {
 </template>
 
 <style scoped>
+.design-studio__toolbar { gap: 32px; }
+.design-studio__toolbar > div { flex-shrink: 0; }
+.design-studio__toolbar h1 { white-space: nowrap; }
+.design-studio__tools, .design-studio__assets { flex-shrink: 0; }
+.design-studio__canvas { min-width: 0; }
 .pattern-grid {
   background-image: radial-gradient(#9ca3af 1px, transparent 1px);
   background-size: 20px 20px;
+}
+@media (max-width: 1100px) {
+  .design-studio { height: auto; min-height: 100svh; overflow: visible; }
+  .design-studio__toolbar { overflow-x: auto; min-height: 56px; }
+  .design-studio__workbench { display: grid; flex: none; overflow: visible; grid-template-columns: 56px minmax(0, 1fr); grid-template-rows: auto minmax(420px, 60svh) auto; grid-template-areas: "tools assets" "tools canvas" "properties properties"; }
+  .design-studio__tools { grid-area: tools; width: 56px; }
+  .design-studio__assets { grid-area: assets; width: auto; min-width: 0; border-bottom: 1px solid var(--border); }
+  .design-studio__assets > div:last-child { overflow-x: auto; }
+  .design-studio__asset-grid { display: flex; }
+  .design-studio__asset-grid > div { width: 80px; flex-shrink: 0; }
+  .design-studio__canvas { grid-area: canvas; overflow: auto; }
+  .design-studio__properties { grid-area: properties; width: 100%; border-left: 0; border-top: 1px solid var(--border); }
+  .design-studio__properties > div:first-child { min-height: 180px; }
 }
 </style>

@@ -7,8 +7,13 @@ const showSiteChrome = computed(() => !route.path.startsWith('/design') && !isAd
 
 useHead({
   bodyAttrs: {
-    class: computed(() => isAdminRoute.value ? 'cms-body' : ''),
+    class: computed(() => isAdminRoute.value ? 'cms-body' : 'site-design'),
   },
+  link: computed(() => isAdminRoute.value ? [] : [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap' },
+  ]),
 })
 
 useSeoMeta({
@@ -21,7 +26,8 @@ useSeoMeta({
   <div
     :class="[
       'min-h-dvh text-[var(--text-primary)]',
-      isAdminRoute ? 'cms-theme' : 'bg-[var(--bg-primary)]',
+      isAdminRoute ? 'cms-theme' : 'site-design-root',
+      { 'site-design-studio': route.path.startsWith('/design') },
     ]"
   >
     <Html lang="zh-CN" />

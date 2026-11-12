@@ -55,8 +55,8 @@ const drawBlindBox = () => {
 </script>
 
 <template>
-  <div class="min-h-[80vh] flex flex-col items-center justify-center relative px-4 pt-28 pb-12 md:px-6">
-    <h1 class="text-4xl font-bold mb-16 text-center text-gradient-blue drop-shadow-sm">五球盲盒</h1>
+  <div class="blind-box-page min-h-[100svh] flex flex-col items-center justify-center relative px-4 pt-36 pb-16 md:px-6">
+    <header class="blind-box-heading"><p>THE UNEXPECTED / BLIND BOX</p><h1>五球盲盒<span>下一位，会是谁？</span></h1></header>
 
     <!-- Display Area -->
     <div class="w-full max-w-4xl mb-12 min-h-[300px] flex items-center justify-center">
@@ -88,18 +88,29 @@ const drawBlindBox = () => {
     </div>
 
     <!-- Draw Button (Bottom Left Fixed) -->
-    <div class="fixed bottom-8 left-8 z-50">
+    <div class="blind-box-action">
       <button
         :disabled="isDrawing"
-        class="group relative px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-full font-bold shadow-[0_0_20px_rgba(8,145,178,0.5)] transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+        class="blind-box-button group relative px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed"
         @click="drawBlindBox"
       >
         <span class="relative z-10 flex items-center gap-2">
           <Icon name="lucide:box" class="size-5" />
           {{ isDrawing ? '抽取中...' : '抽取盲盒' }}
         </span>
-        <div class="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </button>
     </div>
   </div>
 </template>
+
+<style scoped>
+.blind-box-page { padding-inline: var(--site-pad); }
+.blind-box-heading { width: 100%; border-top: 1px solid #333; padding-top: 25px; margin-bottom: 60px; }
+.blind-box-heading p { font-size: 10px; letter-spacing: .16em; color: #888; }
+.blind-box-heading h1 { font-size: clamp(40px, 6vw, 86px); letter-spacing: -.05em; font-weight: 500; line-height: 1.2; margin-top: 30px; }
+.blind-box-heading h1 span { display: block; font-size: 13px; font-weight: 300; letter-spacing: 0; color: #999; margin-top: 25px; }
+.blind-box-action { margin-top: 30px; border-top: 1px solid #333; width: 100%; padding-top: 30px; display: flex; justify-content: center; }
+.blind-box-button { border: 1px solid #aaa; border-radius: 6px; color: #fff; background: transparent; font-size: 13px; font-weight: 400; cursor: pointer; transition: background .25s, color .25s; }
+.blind-box-button:hover:not(:disabled) { background: #fff; color: #000; }
+@media(max-width:640px) { .blind-box-heading { margin-bottom: 40px; } }
+</style>

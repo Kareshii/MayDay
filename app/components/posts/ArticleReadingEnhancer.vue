@@ -366,27 +366,27 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="grid gap-8"
-    :class="tocItems.length ? 'xl:grid-cols-[minmax(0,1fr)_16rem]' : 'xl:grid-cols-1'"
+    class="reading-layout"
+    :class="{ 'reading-layout--with-toc': tocItems.length }"
   >
-    <div ref="contentRef" class="surface-card p-6 md:p-10">
+    <div ref="contentRef" class="reading-content">
       <slot />
     </div>
 
-    <aside v-if="tocItems.length" class="hidden xl:block">
-      <div class="sticky top-20 rounded-[4px 4px 0 0] border border-[var(--border)] bg-[color:var(--card)]/[0.82] p-5 shadow-[0_24px_64px_-52px_rgba(15,23,42,0.42)] backdrop-blur-xl">
-        <p class="section-kicker">目录</p>
-        <nav class="mt-4 space-y-1">
+    <aside v-if="tocItems.length" class="reading-aside">
+      <div class="reading-toc">
+        <p class="reading-toc__label">ON THIS PAGE<span>目录</span></p>
+        <nav class="reading-toc__links">
           <a
             v-for="item in tocItems"
             :key="item.id"
             :href="`#${item.id}`"
-            class="block rounded-lg px-3 py-2 text-sm leading-5 transition-colors"
+            class="reading-toc__link"
             :class="[
-              item.level >= 3 ? 'ml-3 text-xs' : '',
+              item.level >= 3 ? 'reading-toc__link--nested' : '',
               activeHeadingId === item.id
-                ? 'bg-[var(--primary-soft)] text-[var(--text-primary)]'
-                : 'text-[var(--text-secondary)] hover:bg-black/5 hover:text-[var(--text-primary)] dark:hover:bg-white/[0.08]',
+                ? 'reading-toc__link--active'
+                : '',
             ]"
           >
             {{ item.text }}
@@ -409,7 +409,7 @@ onBeforeUnmount(() => {
           role="dialog"
           aria-modal="true"
           aria-label="图片预览"
-          class="fixed inset-0 z-[95] flex touch-none items-center justify-center bg-black/[0.82] p-4 backdrop-blur-xl"
+          class="reading-lightbox fixed inset-0 z-[95] flex touch-none items-center justify-center p-4"
           @click.self="closeLightbox"
           @wheel.prevent="handleLightboxWheel"
           @pointerdown="handleLightboxPointerDown"
@@ -419,7 +419,7 @@ onBeforeUnmount(() => {
         >
           <button
             type="button"
-            class="absolute right-4 top-4 flex size-10 items-center justify-center rounded-full border border-white/[0.15] bg-white/10 text-white shadow-[0_18px_40px_-24px_rgba(0,0,0,0.8)] backdrop-blur-xl transition-colors hover:bg-white/[0.18]"
+            class="reading-control reading-lightbox__close absolute right-5 top-5"
             aria-label="关闭图片预览"
             @click="closeLightbox"
           >
@@ -429,7 +429,7 @@ onBeforeUnmount(() => {
             :src="lightboxImage.src"
             :alt="lightboxImage.alt"
             draggable="false"
-            class="max-h-[88vh] max-w-[92vw] select-none rounded-[1.2rem] object-contain shadow-[0_32px_100px_-36px_rgba(0,0,0,0.9)] transition-transform duration-100"
+            class="max-h-[88vh] max-w-[92vw] select-none object-contain transition-transform duration-100"
             :style="{ transform: lightboxTransform }"
             @click.stop
             @dblclick.stop="toggleLightboxZoom"
@@ -450,7 +450,7 @@ onBeforeUnmount(() => {
         <button
           v-if="backTopVisible"
           type="button"
-          class="fixed bottom-5 right-5 z-[90] flex size-11 items-center justify-center rounded-full border border-[var(--border)] bg-[color:var(--card)]/[0.9] text-[var(--text-primary)] shadow-[0_18px_50px_-34px_rgba(15,23,42,0.72)] backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-[var(--surface-low)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] md:bottom-8 md:right-8"
+          class="reading-control reading-back-top fixed bottom-5 right-5 z-[90] md:bottom-8 md:right-8"
           aria-label="回到顶部"
           title="回到顶部"
           @click="scrollBackToTop"
@@ -463,76 +463,50 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-:deep(.article-code-shell) {
-  margin: 1.5rem 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 1.1rem;
-  background: rgba(15, 23, 42, 0.055);
+.reading-layout { display: grid; grid-template-columns: minmax(0, 52rem); justify-content: center; gap: clamp(3rem, 5vw, 5rem); }
+.reading-content { min-width: 0; }
+.reading-aside { display: none; }
+.reading-toc { position: sticky; top: 7rem; padding-top: 1.4rem; border-top: 1px solid var(--border-strong); }
+.reading-toc__label { display: flex; flex-direction: column; gap: .7rem; font-size: .55rem; font-weight: 500; letter-spacing: .16em; color: var(--text-muted); }
+.reading-toc__label span { color: var(--text-primary); font-size: .8rem; letter-spacing: .05em; }
+.reading-toc__links { margin-top: 1.5rem; max-height: calc(100svh - 14rem); overflow-y: auto; }
+.reading-toc__link { display: block; margin-bottom: .3rem; border-left: 1px solid var(--border); padding: .5rem 0 .5rem 1rem; color: var(--text-muted); font-size: .72rem; line-height: 1.65; transition: color .2s, border-color .2s; }
+.reading-toc__link:hover, .reading-toc__link--active { color: var(--text-primary); border-left-color: var(--text-primary); }
+.reading-toc__link--nested { padding-left: 1.7rem; font-size: .66rem; }
+.reading-lightbox { background: rgb(0 0 0 / 96%); }
+.reading-control { display: flex; width: 2.75rem; height: 2.75rem; justify-content: center; align-items: center; border: 1px solid #656565; border-radius: 50%; color: #fff; background: #000; transition: background .2s, color .2s, transform .2s; }
+.reading-control:hover { background: #fff; color: #000; transform: translateY(-2px); }
+.reading-control:focus-visible { outline: 1px solid #fff; outline-offset: 5px; }
+:deep(.blog-content) { color: var(--text-secondary); font-size: 1rem; line-height: 1.95; }
+:deep(.blog-content > :first-child) { margin-top: 0; }
+:deep(.blog-content h1), :deep(.blog-content h2), :deep(.blog-content h3), :deep(.blog-content h4) { font-weight: 400; line-height: 1.35; letter-spacing: -.035em; }
+:deep(.blog-content h2) { margin-top: 3.5rem; margin-bottom: 1.5rem; font-size: clamp(1.75rem, 3vw, 2.5rem); }
+:deep(.blog-content h3) { margin-top: 2.5rem; margin-bottom: 1rem; font-size: 1.45rem; }
+:deep(.blog-content p) { margin-bottom: 1.5rem; }
+:deep(.blog-content a) { border-bottom-color: var(--border-strong); text-underline-offset: .25em; }
+:deep(.blog-content a:hover) { border-bottom-color: var(--text-primary); }
+:deep(.blog-content blockquote) { margin-block: 2.5rem; padding: .2rem 0 .2rem 1.5rem; border-left: 1px solid var(--text-primary); border-radius: 0; background: transparent; color: var(--text-primary); font-size: 1.12rem; font-style: normal; font-weight: 300; }
+:deep(.blog-content blockquote p:last-child) { margin-bottom: 0; }
+:deep(.blog-content code) { border-color: var(--border); border-radius: 2px; background: var(--surface-low); font-size: .85em; }
+:deep(.blog-content img) { width: auto; max-width: 100%; height: auto; margin-block: 2rem; border: 0; border-radius: 2px; box-shadow: none; }
+:deep(.blog-content hr) { margin-block: 3rem; border-color: var(--border); }
+:deep(.blog-content table) { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; font-size: .85rem; }
+:deep(.blog-content th), :deep(.blog-content td) { padding: .75rem 1rem; border: 1px solid var(--border); text-align: left; }
+:deep(.article-code-shell) { margin: 2rem 0; overflow: hidden; border: 1px solid var(--border); border-radius: 3px; background: var(--surface-low); }
+:deep(.article-code-shell pre) { margin: 0; padding: 1.25rem; border: 0; border-radius: 0; background: transparent; font-size: .8rem; line-height: 1.8; }
+:deep(.article-code-shell pre code) { padding: 0; border: 0; background: transparent; }
+:deep(.article-code-toolbar) { display: flex; align-items: center; gap: .75rem; border-bottom: 1px solid var(--border); padding: .65rem 1rem; }
+:deep(.article-code-dots) { display: flex; gap: .3rem; }
+:deep(.article-code-dots span) { width: .3rem; height: .3rem; border-radius: 50%; background: var(--text-muted); }
+:deep(.article-code-language) { font-size: .55rem; font-weight: 500; letter-spacing: .14em; color: var(--text-muted); }
+:deep(.article-code-copy) { margin-left: auto; padding: .2rem 0 .2rem .75rem; color: var(--text-secondary); font-size: .62rem; transition: color .2s; }
+:deep(.article-code-copy:hover) { color: var(--text-primary); }
+@media (min-width: 1280px) {
+  .reading-layout--with-toc { grid-template-columns: minmax(0, 52rem) 12rem; justify-content: start; }
+  .reading-aside { display: block; }
 }
-
-:global(.dark) :deep(.article-code-shell) {
-  background: rgba(255, 255, 255, 0.045);
-}
-
-:deep(.article-code-shell pre) {
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
-:deep(.article-code-toolbar) {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border-bottom: 1px solid var(--border);
-  padding: 0.65rem 0.8rem;
-}
-
-:deep(.article-code-dots) {
-  display: flex;
-  gap: 0.35rem;
-}
-
-:deep(.article-code-dots span) {
-  width: 0.65rem;
-  height: 0.65rem;
-  border-radius: 9999px;
-}
-
-:deep(.article-code-dots span:nth-child(1)) {
-  background: #ff5f57;
-}
-
-:deep(.article-code-dots span:nth-child(2)) {
-  background: #ffbd2e;
-}
-
-:deep(.article-code-dots span:nth-child(3)) {
-  background: #28c840;
-}
-
-:deep(.article-code-language) {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-  color: var(--text-secondary);
-}
-
-:deep(.article-code-copy) {
-  margin-left: auto;
-  border: 1px solid var(--border);
-  border-radius: 9999px;
-  padding: 0.28rem 0.62rem;
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 700;
-  transition: background 160ms ease, color 160ms ease;
-}
-
-:deep(.article-code-copy:hover) {
-  background: var(--surface-low);
-  color: var(--text-primary);
+@media (max-width: 639px) {
+  :deep(.blog-content) { font-size: .92rem; }
+  :deep(.blog-content blockquote) { padding-left: 1rem; font-size: 1rem; }
 }
 </style>

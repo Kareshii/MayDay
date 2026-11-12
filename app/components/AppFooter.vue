@@ -12,46 +12,33 @@ const footerLinks = computed(() => [
   { title: '内容管理', path: '/admin' },
 ])
 
+const siteName = computed(() => siteConfig.value.site.siteName || 'mayday.life')
 const footerCopyright = computed(() => siteConfig.value.site.copyright || `Copyright © ${currentYear} mayday.life`)
 const icpNumber = computed(() => siteConfig.value.site.icpNumber)
 </script>
 
 <template>
-  <footer class="site-footer border-t border-[var(--border)] bg-[var(--card)]/88 backdrop-blur-xl">
-    <div class="container py-2 lg:py-3">
-      <div class="flex min-h-18 flex-col justify-center gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div class="max-w-xl">
-          <p class="section-kicker mb-1 text-[10px] leading-none">MAYDAY.LIFE</p>
-          <p class="hidden text-sm font-medium tracking-tight text-[var(--text-primary)]">
-            把还保留的互动、收藏和文章入口，整理成可以反复回来的地方。
-          </p>
-          <p class="text-xs text-[var(--text-secondary)] lg:text-[13px]">
-            {{ footerCopyright }}
-          </p>
-          <a
-            v-if="icpNumber"
-            href="https://beian.miit.gov.cn/"
-            target="_blank"
-            rel="noreferrer"
-            class="mt-1 inline-block text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          >
-            {{ icpNumber }}
-          </a>
-        </div>
-
-        <div class="flex flex-col gap-2 lg:items-end">
-          <nav class="hidden flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--text-secondary)] lg:flex">
-            <NuxtLink
-              v-for="link in footerLinks"
-              :key="link.path"
-              :to="link.path"
-              class="transition-colors hover:text-[var(--text-primary)]"
-            >
-              {{ link.title }}
-            </NuxtLink>
-          </nav>
-
-        </div>
+  <footer class="site-footer">
+    <div class="site-footer__frame">
+      <div class="site-footer__main">
+        <NuxtLink to="/" class="site-footer__wordmark">{{ siteName }}</NuxtLink>
+        <nav class="site-footer__links" aria-label="页脚导航">
+          <NuxtLink v-for="link in footerLinks" :key="link.path" :to="link.path">
+            {{ link.title }}
+            <Icon name="lucide:arrow-up-right" class="size-4" />
+          </NuxtLink>
+        </nav>
+      </div>
+      <div class="site-footer__colophon">
+        <p>{{ footerCopyright }}</p>
+        <a
+          v-if="icpNumber"
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          {{ icpNumber }}
+        </a>
       </div>
     </div>
   </footer>

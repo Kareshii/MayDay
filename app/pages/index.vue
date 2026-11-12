@@ -1,461 +1,168 @@
 <script setup lang="ts">
-import type { DirectiveBinding } from 'vue'
 import type { ManagedArticleSummary } from '~~/shared/types/articles'
 import { isPublicRouteEnabled } from '~~/shared/types/routes'
-import { useMediaQuery, useWindowScroll } from '@vueuse/core'
 import { AppleCard, AppleCardCarousel, AppleCarouselItem } from '~/components/inspira/ui/apple-card-carousel'
-import { CardBody, CardContainer, CardItem } from '~/components/inspira/ui/card-3d'
 import { showcaseSections } from '@/utils/siteSections'
-import { mojoItems } from '@/utils/mojoData'
 
-definePageMeta({
-  layout: 'full-width',
-})
-
-// const { countdowns } = useMasterGoData()
-const { y } = useWindowScroll()
-const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+definePageMeta({ layout: 'full-width' })
 const { data: siteConfig } = await usePublicSiteConfig()
-
 const { data: postsData } = await useFetch<{ articles: ManagedArticleSummary[] }>('/api/posts', {
   key: 'home-featured-posts',
   default: () => ({ articles: [] }),
 })
-
+const scene = useTemplateRef<{ rotate: (direction: number) => void }>('scene')
+const activeView = ref(1)
 const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
 const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 ?? '继续唱。')
+const heroLines = computed(() => [heroTitleLine1.value, heroTitleLine2.value].filter(Boolean))
 const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
-const heroImage = computed(() => siteConfig.value.site.homeHeroImage || '/cover.jpg')
-
-useSeoMeta({
-  title: () => siteConfig.value.seo.title || siteConfig.value.site.siteName || 'Hi,',
-  description: () => siteConfig.value.seo.description || '一个用 Vue 写成的五月天档案馆首页，把文章、收藏和互动页面重新编排成 blog-next 风格。',
-  keywords: () => siteConfig.value.seo.keywords,
-})
-
-const visibleShowcaseSections = computed(() => showcaseSections.filter((section) => {
-  return isPublicRouteEnabled(siteConfig.value.routes, section.routeId)
-}))
+const sections = computed(() => showcaseSections.filter(section => isPublicRouteEnabled(siteConfig.value.routes, section.routeId)))
 const postsVisible = computed(() => isPublicRouteEnabled(siteConfig.value.routes, 'posts'))
-const statTargets = computed(() => [
-  { label: 'SECTIONS', value: visibleShowcaseSections.value.length },
-  // { label: 'COUNTDOWNS', value: countdowns.value.length },
-  { label: 'MOJOS', value: mojoItems.length },
-])
-
-const secondarySections = computed(() => visibleShowcaseSections.value.filter(section => section.routeId !== 'posts'))
-const homeArticles = computed(() => (postsData.value?.articles || []).slice(0, 3))
+const articles = computed(() => (postsData.value?.articles || []).slice(0, 3))
 const gallery = computed(() => siteConfig.value.gallery)
 const galleryItems = computed(() => gallery.value.enabled ? gallery.value.items : [])
 
-function getArticleRoute(article: ManagedArticleSummary) {
-  return article.path || `/detail/${article.slug}`
+function rotate(direction: number) {
+  scene.value?.rotate(direction)
+  activeView.value = (activeView.value + direction + 3) % 3
 }
-
-function getArticleCover(article: ManagedArticleSummary) {
-  return article.coverImage || '/cover.jpg'
+function selectView(index: number) {
+  scene.value?.rotate(index - activeView.value)
+  activeView.value = index
 }
-
-function getArticleSummary(article: ManagedArticleSummary) {
-  return article.summary || article.description || '暂无摘要。'
-}
-
-const heroImageStyle = computed(() => ({
-  transform: prefersReducedMotion.value
-    ? 'translate3d(0, 0, 0) scale(1.08)'
-    : `translate3d(0, ${Math.min(y.value * 0.38, 220)}px, 0) scale(1.08)`,
-}))
-
-const rollCueInitial = {
-  opacity: 0,
-  y: 18,
-}
-
-const rollCueEnter = computed(() => (prefersReducedMotion.value
-  ? {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0,
-      },
-    }
-  : {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 680,
-        delay: 980,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    }))
-
-const animatedStats = ref(statTargets.value.map(() => 0))
-let statsRaf = 0
-
-function animateStats() {
-  const targets = statTargets.value.map(item => item.value)
-
-  if (prefersReducedMotion.value) {
-    animatedStats.value = [...targets]
-    return
-  }
-
-  if (statsRaf) {
-    cancelAnimationFrame(statsRaf)
-  }
-
-  const startedAt = performance.now()
-  const duration = 1800
-
-  const tick = (now: number) => {
-    const progress = Math.min((now - startedAt) / duration, 1)
-    const eased = 1 - (1 - progress) ** 3
-
-    animatedStats.value = targets.map(target => Math.round(target * eased))
-
-    if (progress < 1) {
-      statsRaf = requestAnimationFrame(tick)
-    }
-  }
-
-  statsRaf = requestAnimationFrame(tick)
-}
-
-const revealObservers = new WeakMap<HTMLElement, IntersectionObserver>()
-
-const vReveal = {
-  mounted(el: HTMLElement, binding: DirectiveBinding<number | { delay?: number }>) {
-    const delay = typeof binding.value === 'number'
-      ? binding.value
-      : binding.value?.delay ?? 0
-
-    el.style.setProperty('--reveal-delay', `${delay}ms`)
-
-    if (prefersReducedMotion.value || typeof IntersectionObserver === 'undefined') {
-      el.classList.add('is-visible')
-      return
-    }
-
-    el.classList.add('reveal-on-scroll')
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          el.classList.add('is-visible')
-          observer.unobserve(el)
-        }
-      },
-      {
-        threshold: 0.18,
-        rootMargin: '0px 0px -10% 0px',
-      },
-    )
-
-    observer.observe(el)
-    revealObservers.set(el, observer)
-  },
-  unmounted(el: HTMLElement) {
-    const observer = revealObservers.get(el)
-    observer?.disconnect()
-    revealObservers.delete(el)
-  },
-}
-
-onMounted(() => {
-  animateStats()
-})
-
-onBeforeUnmount(() => {
-  if (statsRaf) {
-    cancelAnimationFrame(statsRaf)
-  }
+useSeoMeta({
+  title: () => siteConfig.value.seo.title || siteConfig.value.site.siteName,
+  description: () => siteConfig.value.seo.description,
+  keywords: () => siteConfig.value.seo.keywords,
 })
 </script>
 
 <template>
-  <div class="home-page relative overflow-hidden">
-    <section class="home-hero relative h-[100svh] overflow-hidden">
-      <img
-        :src="heroImage"
-        alt="MasterGo cover"
-        class="hero-parallax-layer absolute inset-x-0 -top-[12%] h-[116%] w-full object-cover"
-        :style="heroImageStyle"
-      >
-      <div class="hero-halo absolute inset-0" />
-      <div class="home-hero__shade absolute inset-0 bg-gradient-to-b from-slate-950/34 via-slate-950/72 to-[var(--bg-primary)]" />
-      <div class="home-hero__accent absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
-      <div class="hero-grid absolute inset-0 opacity-35" />
-
-      <div class="container relative z-10 flex h-full flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
-        <div class="max-w-4xl space-y-6">
-
-
-          <h1 class="home-hero__title mt-4 hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
-            <span class="glitch-text block" :data-text="heroTitleLine1">{{ heroTitleLine1 }}</span>
-            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
-          </h1>
-
-          <div class="home-hero__subtitle hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">
-            <p class="text-xl font-medium md:text-2xl">
-              {{ heroSubtitle }}
-            </p>
-          </div>
-
+  <div class="design-home">
+    <section class="design-hero" aria-labelledby="home-title">
+      <GlassHeroScene ref="scene" :lines="heroLines" />
+      <h1 id="home-title" class="sr-only">{{ heroLines.join(' ') }}</h1>
+      <div class="hero-interface">
+        <div class="hero-arrows" aria-label="旋转冰块">
+          <button class="design-arrow" type="button" aria-label="向左旋转" @click="rotate(-1)"><Icon name="lucide:arrow-left" /></button>
+          <button class="design-arrow" type="button" aria-label="向右旋转" @click="rotate(1)"><Icon name="lucide:arrow-right" /></button>
         </div>
-
-        <a
-          v-motion
-          :initial="rollCueInitial"
-          :enter="rollCueEnter"
-          href="#chapters"
-          class="home-roll-cue absolute bottom-7 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 text-xs tracking-[0.24em] text-white/58 transition-colors hover:text-white/78 md:bottom-9"
-        >
-          <Icon name="lucide:arrow-down" class="roll-arrow size-4" />
-        </a>
+        <nav class="hero-dots" aria-label="方体视角">
+          <button v-for="index in 3" :key="index" type="button" :aria-label="`视角 ${index}`" :aria-pressed="activeView === index - 1" :class="{ active: activeView === index - 1 }" @click="selectView(index - 1)" />
+        </nav>
+        <p class="hero-tagline">{{ heroSubtitle }}<strong>{{ siteConfig.site.siteName }}</strong></p>
+        <div class="hero-cta-row">
+          <a href="#chapters" class="design-cta">开始探索 <Icon name="lucide:arrow-up-right" /></a>
+          <span class="hero-cta-line" />
+          <span class="hero-count" aria-hidden="true">{{ String(sections.length).padStart(2, '0') }}</span>
+        </div>
+        <span class="hero-instruction">DRAG TO EXPLORE</span>
       </div>
     </section>
 
-    <section id="chapters" class="home-chapters relative z-10 mx-auto min-h-[100svh] w-full max-w-[96rem] scroll-mt-18 px-4 pt-12 pb-20 sm:px-6 md:pt-16 md:pb-28">
-      <div v-if="postsVisible" v-reveal="120" class="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p class="section-kicker flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
-            <Icon name="lucide:book-open-text" class="size-4" />
-            POSTS
-          </p>
-          <h2 class="home-section-title mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
-            文章
-          </h2>
-        </div>
-
-        <NuxtLink
-          to="/posts"
-          class="home-section-action inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border-strong)] bg-[var(--surface-card)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition-all duration-300 hover:-translate-y-0.5"
-        >
-          查看全部
-          <Icon name="lucide:arrow-right" class="size-4" />
-        </NuxtLink>
-      </div>
-
-      <div
-        v-if="postsVisible && homeArticles.length"
-        class="mt-8 grid gap-6 lg:grid-cols-2 2xl:grid-cols-3"
-      >
-        <NuxtLink
-          v-for="(article, index) in homeArticles"
-          :key="article.id"
-          v-reveal="{ delay: 180 + index * 90 }"
-          :to="getArticleRoute(article)"
-          class="group/article block focus:outline-none"
-        >
-          <CardContainer container-class="h-full">
-            <CardBody class="home-article-card group/card relative h-auto w-full max-w-[30rem] rounded-xl border border-black/10 bg-gray-50 p-6 transition-colors duration-300 sm:w-[30rem] dark:border-white/20 dark:bg-black dark:hover:shadow-2xl dark:hover:shadow-emerald-500/10">
-              <CardItem
-                :translate-z="50"
-                class="line-clamp-1 w-full text-xl font-bold text-neutral-600 dark:text-white"
-              >
-                {{ article.title }}
-              </CardItem>
-
-              <CardItem
-                as="p"
-                :translate-z="60"
-                class="mt-2 line-clamp-1 w-full max-w-sm text-sm text-neutral-500 dark:text-neutral-300"
-              >
-                {{ getArticleSummary(article) }}
-              </CardItem>
-
-              <CardItem
-                :translate-z="100"
-                class="mt-4 w-full"
-              >
-                <img
-                  :src="getArticleCover(article)"
-                  :alt="article.title"
-                  class="h-60 w-full rounded-xl object-cover group-hover/card:shadow-xl"
-                  width="1000"
-                  height="1000"
-                >
-              </CardItem>
-
-              <div class="mt-12 flex items-center justify-between" style="transform-style: preserve-3d;">
-                <CardItem
-                  :translate-z="20"
-                  as="span"
-                  class="rounded-xl px-4 py-2 text-xs font-normal text-neutral-700 dark:text-white"
-                >
-                  阅读文章 →
-                </CardItem>
-              </div>
-            </CardBody>
-          </CardContainer>
-        </NuxtLink>
-      </div>
-
-      <div
-        v-else-if="postsVisible"
-        v-reveal="180"
-        class="mt-8 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-card)] p-8 text-sm text-[var(--text-secondary)]"
-      >
-        还没有已发布的文章。
-      </div>
-
-      <div class="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <NuxtLink
-          v-for="(section, index) in secondarySections"
-          :key="section.path"
-          v-reveal="{ delay: 160 + index * 90 }"
-          :to="section.path"
-          class="group block"
-        >
-          <article
-            class="surface-card relative flex h-full flex-col overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:border-[var(--border-strong)] hover:shadow-[0_24px_64px_-12px_rgba(15,23,42,0.15)] dark:hover:shadow-[0_24px_64px_-12px_rgba(255,255,255,0.05)]"
-            :class="section.cardClass"
-          >
-            <div class="relative aspect-[4/3] w-full overflow-hidden">
-              <img
-                :src="section.image"
-                :alt="section.title"
-                class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-              >
-              <div class="absolute inset-0 bg-gradient-to-t" :class="section.overlayClass || 'from-black/60 to-transparent'" />
-              <div class="absolute inset-x-0 bottom-0 p-6 text-white">
-                <h3 class="mt-3.5 text-2xl font-bold tracking-tight drop-shadow-md">
-                  {{ section.title }}
-                </h3>
-              </div>
-            </div>
-            <div class="flex flex-1 flex-col justify-between p-6">
-              <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
-                {{ section.description }}
-              </p>
-              <div class="inline-flex items-center gap-2 text-sm font-bold text-[var(--text-primary)] transition-colors group-hover:text-cyan-600 dark:group-hover:text-cyan-400">
-                继续阅读
-                <Icon name="lucide:arrow-right" class="size-4 transition-transform duration-300 group-hover:translate-x-1" />
-              </div>
-            </div>
-          </article>
+    <section id="chapters" class="home-section">
+      <header class="section-topline"><span>01 / THE ARCHIVE</span><span>MAYDAY.LIFE</span></header>
+      <div class="home-section-heading"><h2>一直唱。<br><span>一直记录。</span></h2><p>文章、收藏与相遇。<br>留住每一个值得重播的片刻。</p></div>
+      <div class="section-directory">
+        <NuxtLink v-for="(section, index) in sections" :key="section.path" :to="section.path">
+          <span class="directory-number">{{ String(index + 1).padStart(2, '0') }}</span>
+          <div><span class="directory-eyebrow">{{ section.eyebrow }}</span><h3>{{ section.title }}</h3></div>
+          <Icon name="lucide:arrow-up-right" />
         </NuxtLink>
       </div>
     </section>
 
-    <section
-      v-if="galleryItems.length"
-      id="gallery"
-      class="relative z-10 mx-auto w-full scroll-mt-18 py-16 md:py-24"
-    >
-      <div v-reveal="80" class="mx-auto flex w-full max-w-[96rem] flex-col gap-5 px-4 sm:px-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p class="section-kicker flex items-center gap-2 text-[var(--text-secondary)]">
-            <Icon name="lucide:images" class="size-4" />
-            GALLERY
-          </p>
-          <h2 class="home-section-title mt-4 text-3xl font-bold tracking-tight text-[var(--text-primary)] md:text-5xl">
-            {{ gallery.title }}
-          </h2>
-          <p v-if="gallery.subtitle" class="mt-4 max-w-2xl text-sm leading-7 text-[var(--text-secondary)] md:text-base">
-            {{ gallery.subtitle }}
-          </p>
-        </div>
+    <section v-if="postsVisible" class="home-section">
+      <header class="section-topline"><span>02 / JOURNAL</span><NuxtLink to="/posts">全部文章 <Icon name="lucide:arrow-up-right" /></NuxtLink></header>
+      <div class="home-section-heading"><h2>最近的<br><span>一些文字。</span></h2></div>
+      <div v-if="articles.length" class="home-articles">
+        <NuxtLink v-for="article in articles" :key="article.id" :to="article.path || `/detail/${article.slug}`" class="home-article">
+          <div class="home-article-image"><img :src="article.coverImage || '/cover.jpg'" :alt="article.title" loading="lazy"><Icon name="lucide:arrow-up-right" /></div>
+          <time>{{ String(article.updatedAt || article.createdAt).slice(0, 10) }}</time><h3>{{ article.title }}</h3><p>{{ article.summary || article.description }}</p>
+        </NuxtLink>
       </div>
-
-      <AppleCardCarousel :item-count="galleryItems.length">
-        <AppleCarouselItem
-          v-for="(item, index) in galleryItems"
-          :key="item.id"
-          :index="index"
-        >
-          <AppleCard
-            :card="item"
-            :index="index"
-            layout
-          />
-        </AppleCarouselItem>
-      </AppleCardCarousel>
+      <p v-else class="home-empty">还没有已发布的文章。</p>
     </section>
 
-    <section class="container pb-24 md:pb-32">
-      <div class="grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <!-- Countdown Module (Static Hover Glow) -->
-        <div v-reveal="60" class="surface-card group relative overflow-hidden p-8 transition-all duration-700 hover:border-cyan-500/30 hover:shadow-xl dark:hover:border-cyan-500/20 md:p-10">
-          <div class="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-cyan-500/5 blur-3xl transition-colors duration-700 group-hover:bg-cyan-500/10"/>
-          
-          <p class="section-kicker relative z-10 flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
-            <Icon name="lucide:timer" class="size-4" /> 
-            COUNTDOWN
-          </p>
-          <div class="relative z-10 mt-8">
-            <CountdownBoard />
-          </div>
-        </div>
+    <section v-if="galleryItems.length" id="gallery" class="home-section home-gallery">
+      <header class="section-topline"><span>03 / GALLERY</span><span>{{ String(galleryItems.length).padStart(2, '0') }} MOMENTS</span></header>
+      <div class="home-section-heading"><h2>{{ gallery.title }}</h2><p v-if="gallery.subtitle">{{ gallery.subtitle }}</p></div>
+      <AppleCardCarousel :item-count="galleryItems.length"><AppleCarouselItem v-for="(item, index) in galleryItems" :key="item.id" :index="index"><AppleCard :card="item" :index="index" layout /></AppleCarouselItem></AppleCardCarousel>
+    </section>
 
-        <div class="space-y-6">
-          <!-- NOTE Module (Static Hover Glow) -->
-          <div v-reveal="180" class="surface-card group relative overflow-hidden p-8 transition-all duration-700 hover:border-purple-500/30 hover:shadow-xl dark:hover:border-purple-500/20">
-            <div class="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full bg-purple-500/5 blur-3xl transition-colors duration-700 group-hover:bg-purple-500/10"/>
-            
-            <p class="section-kicker relative z-10 flex items-center gap-2 text-purple-600 dark:text-purple-400">
-              <Icon name="lucide:quote" class="size-4" /> 
-              NOTE
-            </p>
-            <blockquote class="relative z-10 mt-5 rounded-r-xl border-l-4 border-purple-500/40 bg-purple-500/5 py-4 pl-5 text-lg font-medium leading-relaxed text-[var(--text-primary)] transition-colors duration-700 group-hover:border-purple-500/60 dark:border-purple-400/50 dark:bg-purple-500/10">
-              “无垠的蓝色年代，相伴的每一秒钟，分离的每一滴泪，都陪你穿越二十多年。”
-            </blockquote>
-            <p class="relative z-10 mt-5 text-sm leading-relaxed text-[var(--text-secondary)]">
-              首页不再只是 markdown 内容输出，而是一张完整的入口海报。原来的内容语气仍然留在这里。
-            </p>
-          </div>
-
-          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-            <!-- Mojo Module (Interactive Link) -->
-            <NuxtLink
-              v-reveal="260"
-              to="/mojo"
-              class="surface-card group relative block overflow-hidden p-7 transition-all duration-500 hover:-translate-y-1 hover:border-amber-500/40 hover:shadow-2xl dark:hover:border-amber-500/30"
-            >
-              <div class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-amber-500/5 blur-3xl transition-colors duration-700 group-hover:bg-amber-500/15"/>
-              
-              <div class="absolute right-6 top-6 text-amber-500/0 transition-all duration-500 ease-out group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-amber-500/80">
-                <Icon name="lucide:arrow-up-right" class="size-5" />
-              </div>
-
-              <p class="section-kicker relative z-10 flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                <Icon name="lucide:sparkles" class="size-4" /> 
-                COLLECTION
-              </p>
-              <h3 class="relative z-10 mt-4 text-2xl font-bold tracking-tight text-[var(--text-primary)] transition-colors duration-300 group-hover:text-amber-600 dark:group-hover:text-amber-400">
-                Mojo Family
-              </h3>
-              <p class="relative z-10 mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                收集页保留原本的乐趣，但现在和首页卡片系统在视觉上更统一。
-              </p>
-            </NuxtLink>
-
-            <!-- Original Page Module (Interactive Link) -->
-            <NuxtLink
-              v-reveal="340"
-              to="/balls"
-              class="surface-card group relative block overflow-hidden p-7 transition-all duration-500 hover:-translate-y-1 hover:border-blue-500/40 hover:shadow-2xl dark:hover:border-blue-500/30"
-            >
-              <div class="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-blue-500/5 blur-3xl transition-colors duration-700 group-hover:bg-blue-500/15"/>
-              
-              <div class="absolute right-6 top-6 text-blue-500/0 transition-all duration-500 ease-out group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-blue-500/80">
-                <Icon name="lucide:arrow-up-right" class="size-5" />
-              </div>
-
-              <p class="section-kicker relative z-10 flex items-center gap-2 text-blue-600 dark:text-blue-400">
-                <Icon name="lucide:box" class="size-4" /> 
-                ORIGINAL PAGE
-              </p>
-              <h3 class="relative z-10 mt-4 text-2xl font-bold tracking-tight text-[var(--text-primary)] transition-colors duration-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                五球盲盒
-              </h3>
-              <p class="relative z-10 mt-3 text-sm leading-relaxed text-[var(--text-secondary)]">
-                用户要求保留原本的 balls 页面，所以它没有被做成新的文章模版，而是继续保持独立互动页。
-              </p>
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
+    <section class="home-section home-countdowns">
+      <header class="section-topline"><span>04 / LOOKING FORWARD</span><Icon name="lucide:arrow-down-right" /></header>
+      <div class="home-section-heading"><h2>下一次，<br><span>见面。</span></h2></div>
+      <CountdownBoard />
     </section>
   </div>
 </template>
+
+<style scoped>
+.design-home { background: #000; color: #fff; overflow: clip; }
+.design-hero { position: relative; height: 100svh; min-height: 620px; background: #000; overflow: hidden; }
+.hero-interface { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+.hero-interface button, .hero-interface a { pointer-events: auto; }
+.hero-arrows { position: absolute; top: 18.9%; left: 76.7%; display: flex; gap: 32px; transform: translate(-19px,-50%); }
+.design-arrow { display: grid; place-items: center; width: 38px; height: 38px; border: 2px solid #fff; border-radius: 50%; color: #fff; background: transparent; transition: color .25s, background .25s; cursor: pointer; }
+.design-arrow:hover { background: #fff; color: #000; }
+.design-arrow .iconify { width: 18px; height: 18px; }
+.hero-dots { position: absolute; right: calc(var(--site-pad) - 7px); top: 49.4%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 33px; }
+.hero-dots button { width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; background: white; cursor: pointer; transition: background .25s; }
+.hero-dots button.active { background: transparent; }
+.hero-tagline { position: absolute; left: var(--site-pad); bottom: clamp(40px, 7.5vh, 70px); max-width: 12em; font-size: clamp(22px, 2.45vw, 40px); font-weight: 300; line-height: 1.45; letter-spacing: -.03em; }
+.hero-tagline strong { display: block; margin-top: .25em; font-weight: 600; }
+.hero-cta-row { display: flex; align-items: center; position: absolute; left: 45.6%; right: -1vw; top: 88.7%; transform: translateY(-50%); }
+.design-cta { display: inline-flex; flex: none; align-items: center; gap: 25px; min-height: 48px; padding: 0 18px; border: 1px solid #ffffffb3; border-radius: 6px; font-size: 13px; font-weight: 400; transition: background .25s, color .25s; }
+.design-cta:hover { background: #fff; color: #000; }
+.hero-cta-line { flex: 1; height: 1px; min-width: 40px; background: #ffffffb3; }
+.hero-count { flex: none; font-size: clamp(140px, 19.8vw, 360px); line-height: 1; letter-spacing: -.05em; color: transparent; -webkit-text-stroke: 1px #ffffffd9; transform: translateY(6%); user-select: none; }
+.hero-instruction { position: absolute; top: 72%; left: 50%; transform: translateX(-50%); color: #777; letter-spacing: .22em; font-size: 9px; white-space: nowrap; }
+.home-section { padding: 80px var(--site-pad) 100px; scroll-margin-top: 80px; }
+.section-topline { display: flex; justify-content: space-between; align-items: center; padding-top: 22px; border-top: 1px solid #333; color: #999; font-size: 10px; letter-spacing: .15em; }
+.section-topline a { display: inline-flex; align-items: center; gap: 20px; color: white; letter-spacing: 0; }
+.home-section-heading { display: flex; justify-content: space-between; align-items: end; gap: 35px; margin: 50px 0 65px; }
+.home-section-heading h2 { font-size: clamp(36px, 5.4vw, 82px); font-weight: 500; line-height: 1.2; letter-spacing: -.06em; }
+.home-section-heading h2 span { color: #777; }
+.home-section-heading p { max-width: 320px; padding-bottom: 8px; color: #999; font-size: 13px; line-height: 2; }
+.section-directory a { display: flex; align-items: center; gap: 45px; padding: 30px 0; border-bottom: 1px solid #282828; transition: padding .3s; }
+.section-directory a:hover { padding-inline: 15px; }
+.directory-number { align-self: start; color: #777; font-size: 12px; padding-top: 8px; }
+.directory-eyebrow { color: #888; font-size: 10px; letter-spacing: .16em; }
+.section-directory h3 { margin-top: 8px; font-size: clamp(24px, 3vw, 42px); font-weight: 400; letter-spacing: -.04em; }
+.section-directory .iconify { margin-left: auto; width: 30px; height: 30px; }
+.home-articles { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 28px; }
+.home-article { min-width: 0; }
+.home-article-image { position: relative; aspect-ratio: 4/3; background: #111; overflow: hidden; }
+.home-article-image img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s; }
+.home-article:hover img { transform: scale(1.04); }
+.home-article-image .iconify { position: absolute; bottom: 15px; right: 15px; width: 38px; height: 38px; padding: 9px; background: #000; border: 1px solid #ffffff80; border-radius: 50%; }
+.home-article time { display: block; margin: 24px 0 12px; font-size: 10px; color: #888; letter-spacing: .1em; }
+.home-article h3 { font-size: 22px; font-weight: 400; letter-spacing: -.04em; }
+.home-article p { margin-top: 12px; color: #999; font-size: 12px; line-height: 1.9; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.home-empty { border-block: 1px solid #222; padding: 40px 0; color: #999; font-size: 13px; }
+.home-gallery { padding-bottom: 0; }
+.home-countdowns { padding-bottom: 120px; }
+@media (max-width: 900px), (max-aspect-ratio: 1/1) {
+  .hero-arrows { left: auto; right: var(--site-pad); top: 17%; transform: translateY(-50%); gap: 14px; }
+  .hero-tagline { bottom: clamp(155px, 20vh, 220px); font-size: 25px; max-width: 12em; }
+  .hero-cta-row { left: var(--site-pad); right: -3vw; top: auto; bottom: 24px; transform: none; }
+  .hero-count { font-size: clamp(120px, 22vw, 200px); }
+  .hero-instruction { top: 63%; }
+  .home-articles { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  .design-hero { min-height: 740px; }
+  .hero-dots { right: 18px; gap: 20px; }
+  .hero-dots button { width: 10px; height: 10px; }
+  .hero-tagline { bottom: 170px; font-size: 20px; max-width: 15em; }
+  .hero-cta-row { right: -8vw; }
+  .hero-count { font-size: 120px; }
+  .hero-instruction { top: 64%; font-size: 8px; }
+  .home-section { padding-block: 45px 65px; }
+  .home-section-heading { margin-block: 35px 40px; flex-direction: column; align-items: start; gap: 20px; }
+  .home-section-heading h2 { font-size: 42px; }
+  .home-articles { grid-template-columns: 1fr; gap: 40px; }
+  .section-directory a { gap: 25px; }
+}
+</style>

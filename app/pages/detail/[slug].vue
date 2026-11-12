@@ -124,25 +124,32 @@ useSeoMeta({
 
 <template>
   <PostArticleDetail v-if="article" :article="article" :comments="comments" />
-  <section v-else-if="isLoading" class="container space-y-8 pt-26">
-    <header class="overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] p-6 md:p-10">
-      <div class="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
-        <div class="space-y-5">
-          <div class="h-3 w-24 animate-pulse rounded bg-[var(--surface-low)]" />
-          <div class="h-12 w-4/5 animate-pulse rounded bg-[var(--surface-low)] md:h-16" />
-          <div class="h-4 w-full animate-pulse rounded bg-[var(--surface-low)]" />
-          <div class="h-4 w-2/3 animate-pulse rounded bg-[var(--surface-low)]" />
+  <section v-else-if="isLoading" class="container article-loading" aria-label="正在加载文章">
+    <header class="article-loading__header">
+      <div class="h-3 w-28 animate-pulse bg-[var(--surface-low)]" />
+      <div class="article-loading__grid">
+        <div class="space-y-7">
+          <div class="h-16 w-4/5 animate-pulse bg-[var(--surface-low)]" />
+          <div class="h-16 w-3/5 animate-pulse bg-[var(--surface-low)]" />
+          <div class="h-4 w-full animate-pulse bg-[var(--surface-low)]" />
+          <div class="h-4 w-2/3 animate-pulse bg-[var(--surface-low)]" />
         </div>
-        <div class="aspect-[4/3] animate-pulse rounded-[1.6rem] bg-[var(--surface-low)]" />
+        <div class="aspect-[4/5] animate-pulse bg-[var(--surface-low)]" />
       </div>
     </header>
-    <div class="surface-card p-6 md:p-10">
-      <div class="space-y-4">
-        <div class="h-4 w-full animate-pulse rounded bg-[var(--surface-low)]" />
-        <div class="h-4 w-11/12 animate-pulse rounded bg-[var(--surface-low)]" />
-        <div class="h-4 w-10/12 animate-pulse rounded bg-[var(--surface-low)]" />
-        <div class="h-4 w-3/4 animate-pulse rounded bg-[var(--surface-low)]" />
-      </div>
+    <div class="article-loading__body space-y-6">
+      <div class="h-4 w-full animate-pulse bg-[var(--surface-low)]" />
+      <div class="h-4 w-11/12 animate-pulse bg-[var(--surface-low)]" />
+      <div class="h-4 w-10/12 animate-pulse bg-[var(--surface-low)]" />
+      <div class="h-4 w-3/4 animate-pulse bg-[var(--surface-low)]" />
     </div>
   </section>
 </template>
+
+<style scoped>
+.article-loading { padding-top: clamp(7rem, 13vw, 12rem); }
+.article-loading__header { padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.article-loading__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .85fr); gap: clamp(2rem, 5vw, 5rem); align-items: center; margin-top: 3rem; }
+.article-loading__body { max-width: 52rem; margin-top: 5rem; padding-top: 2rem; border-top: 1px solid var(--border); }
+@media (max-width: 767px) { .article-loading__grid { grid-template-columns: minmax(0, 1fr); } }
+</style>

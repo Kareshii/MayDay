@@ -82,47 +82,27 @@ const articleMetaItems = computed(() => [
 </script>
 
 <template>
-  <article v-if="isTopHero" class="public-article space-y-8">
-    <header class="public-article__hero relative flex min-h-screen overflow-hidden">
-      <img
-        :src="coverImage"
-        :alt="article.title"
-        class="absolute inset-x-0 -top-[10%] h-[114%] w-full object-cover"
-      >
-      <div class="absolute inset-0 bg-gradient-to-b from-slate-950/34 via-slate-950/72 to-[var(--bg-primary)]" />
-      <div class="absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
-
-      <div class="container relative z-10 flex min-h-screen w-full flex-col pb-16 pt-30 md:pb-22 md:pt-36">
-        <div class="max-w-4xl text-white">
-          <p class="section-kicker text-white/76">
-            ARTICLE
-          </p>
-          <h1 class="mt-4 max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl">
-            {{ article.title }}
-          </h1>
-          <p class="mt-5 max-w-2xl text-base leading-8 text-white/86">
-            {{ article.summary }}
-          </p>
-
+  <article v-if="isTopHero" class="public-article article-layout article-layout--hero">
+    <header class="public-article__hero article-hero">
+      <img :src="coverImage" :alt="article.title" class="article-hero__image">
+      <div class="article-hero__shade" />
+      <div class="container article-hero__content">
+        <NuxtLink to="/posts" class="article-back"><Icon name="lucide:arrow-up-left" class="size-4" />全部文章 / JOURNAL</NuxtLink>
+        <div class="article-hero__copy">
+          <p class="article-eyebrow">01 / ARTICLE</p>
+          <h1>{{ article.title }}</h1>
+          <p class="article-summary">{{ article.summary }}</p>
         </div>
+        <span class="article-hero__scroll">SCROLL TO READ <Icon name="lucide:arrow-down" class="size-3.5" /></span>
       </div>
     </header>
 
-    <div class="container">
+    <div class="container article-body">
       <ArticleReadingEnhancer :content-key="article.id">
-        <div class="mb-8 grid gap-3 border-b border-[var(--border)] pb-6 sm:grid-cols-2 xl:grid-cols-4">
-          <div
-            v-for="item in articleMetaItems"
-            :key="item.label"
-            class="flex items-center gap-3 rounded-xl bg-[var(--surface-low)] px-4 py-3"
-          >
-            <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--primary-soft)] text-[var(--text-primary)]">
-              <Icon :name="item.icon" class="size-4" />
-            </span>
-            <span class="min-w-0">
-              <span class="block text-[11px] font-semibold tracking-[0.18em] text-[var(--text-secondary)]">{{ item.label }}</span>
-              <span class="mt-1 block truncate text-sm font-semibold text-[var(--text-primary)]">{{ item.value }}</span>
-            </span>
+        <div class="article-meta">
+          <div v-for="item in articleMetaItems" :key="item.label" class="article-meta__item">
+            <span class="article-meta__label"><Icon :name="item.icon" class="size-3.5" />{{ item.label }}</span>
+            <span class="article-meta__value">{{ item.value }}</span>
           </div>
         </div>
         <!-- eslint-disable-next-line vue/no-v-html -->
@@ -133,68 +113,74 @@ const articleMetaItems = computed(() => [
     </div>
   </article>
 
-  <article v-else class="public-article container space-y-8 pt-26">
-    <header class="public-article__header overflow-hidden rounded-[2rem] border border-[var(--border)] bg-[var(--card)] shadow-[0_32px_80px_-58px_rgba(15,23,42,0.5)]">
-      <div class="grid gap-6 p-6 md:p-10 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:items-end">
-        <div
-          v-if="isSplitLeft"
-          class="relative aspect-[4/3] overflow-hidden rounded-[1.6rem] bg-slate-950"
-        >
-          <img
-            :src="coverImage"
-            :alt="article.title"
-            class="absolute inset-0 h-full w-full object-cover"
-          >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/88 via-black/28 to-transparent" />
+  <article v-else class="public-article container article-layout article-layout--split">
+    <header class="public-article__header article-header">
+      <div class="article-header__top">
+        <NuxtLink to="/posts" class="article-back"><Icon name="lucide:arrow-up-left" class="size-4" />全部文章 / JOURNAL</NuxtLink>
+        <span class="article-eyebrow">01 / ARTICLE</span>
+      </div>
+      <div class="article-header__grid" :class="{ 'article-header__grid--image-left': isSplitLeft }">
+        <div v-if="isSplitLeft" class="article-cover"><img :src="coverImage" :alt="article.title"></div>
+        <div class="article-header__copy">
+          <h1>{{ article.title }}</h1>
+          <p class="article-summary">{{ article.summary }}</p>
+          <span class="article-header__date">{{ formattedArticleDate }}<Icon name="lucide:arrow-down-right" class="size-5" /></span>
         </div>
-
-        <div>
-          <p class="section-kicker">
-            ARTICLE
-          </p>
-          <h1 class="mt-4 text-4xl font-semibold tracking-tight text-[var(--text-primary)] md:text-6xl">
-            {{ article.title }}
-          </h1>
-          <p class="mt-5 max-w-2xl text-base leading-8 text-[var(--text-secondary)]">
-            {{ article.summary }}
-          </p>
-
-        </div>
-
-        <div
-          v-if="!isSplitLeft"
-          class="relative aspect-[4/3] overflow-hidden rounded-[1.6rem] bg-slate-950"
-        >
-          <img
-            :src="coverImage"
-            :alt="article.title"
-            class="absolute inset-0 h-full w-full object-cover"
-          >
-          <div class="absolute inset-0 bg-gradient-to-t from-black/88 via-black/28 to-transparent" />
-        </div>
+        <div v-if="!isSplitLeft" class="article-cover"><img :src="coverImage" :alt="article.title"></div>
       </div>
     </header>
 
     <ArticleReadingEnhancer :content-key="article.id">
-      <div class="mb-8 grid gap-3 border-b border-[var(--border)] pb-6 sm:grid-cols-2 xl:grid-cols-4">
-        <div
-          v-for="item in articleMetaItems"
-          :key="item.label"
-          class="flex items-center gap-3 rounded-xl bg-[var(--surface-low)] px-4 py-3"
-        >
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--primary-soft)] text-[var(--text-primary)]">
-            <Icon :name="item.icon" class="size-4" />
-          </span>
-          <span class="min-w-0">
-            <span class="block text-[11px] font-semibold tracking-[0.18em] text-[var(--text-secondary)]">{{ item.label }}</span>
-            <span class="mt-1 block truncate text-sm font-semibold text-[var(--text-primary)]">{{ item.value }}</span>
-          </span>
+        <div class="article-meta">
+          <div v-for="item in articleMetaItems" :key="item.label" class="article-meta__item">
+            <span class="article-meta__label"><Icon :name="item.icon" class="size-3.5" />{{ item.label }}</span>
+            <span class="article-meta__value">{{ item.value }}</span>
+          </div>
         </div>
-      </div>
-      <!-- eslint-disable-next-line vue/no-v-html -->
-      <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
-      <MDC v-else :value="article.content" class="blog-content" />
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <div v-if="isHtmlContent" class="blog-content" v-html="article.content" />
+        <MDC v-else :value="article.content" class="blog-content" />
     </ArticleReadingEnhancer>
     <PostArticleComments :comments="comments || []" />
   </article>
 </template>
+
+<style scoped>
+.article-layout { color: var(--text-primary); }
+.article-layout--split { padding-top: clamp(7rem, 13vw, 12rem); padding-bottom: 3rem; }
+.article-header { margin-bottom: clamp(4rem, 8vw, 8rem); }
+.article-header__top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+.article-back { display: inline-flex; align-items: center; gap: .65rem; color: var(--text-secondary); font-size: .63rem; letter-spacing: .08em; transition: color .2s; }
+.article-back:hover { color: var(--text-primary); }
+.article-eyebrow { color: var(--text-muted); font-size: .6rem; font-weight: 500; letter-spacing: .18em; }
+.article-header__grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .85fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); padding-top: clamp(2.5rem, 5vw, 5rem); }
+.article-header__grid--image-left { grid-template-columns: minmax(0, .85fr) minmax(0, 1.2fr); }
+.article-header h1, .article-hero h1 { font-size: clamp(2.75rem, 5.5vw, 5.75rem); font-weight: 400; line-height: 1.15; letter-spacing: -.05em; overflow-wrap: anywhere; }
+.article-summary { max-width: 36rem; margin-top: 2rem; color: var(--text-secondary); font-size: .95rem; line-height: 1.95; }
+.article-header__date { display: flex; justify-content: space-between; align-items: center; margin-top: 3rem; padding-block: 1.1rem; border-block: 1px solid var(--border); color: var(--text-muted); font-size: .65rem; letter-spacing: .12em; }
+.article-cover { overflow: hidden; background: var(--surface-low); }
+.article-cover img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; filter: grayscale(1); }
+.article-hero { position: relative; min-height: 100svh; overflow: hidden; background: #000; color: #fff; }
+.article-hero__image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); }
+.article-hero__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(0 0 0 / 48%), rgb(0 0 0 / 35%) 25%, rgb(0 0 0 / 84%) 80%, #000); }
+.article-hero__content { position: relative; z-index: 1; display: flex; min-height: 100svh; flex-direction: column; padding-top: 9rem; padding-bottom: 3rem; }
+.article-hero .article-back { color: rgb(255 255 255 / 65%); }
+.article-hero .article-back:hover { color: #fff; }
+.article-hero__copy { max-width: 58rem; margin-top: auto; padding-top: 5rem; }
+.article-hero .article-eyebrow { color: rgb(255 255 255 / 60%); margin-bottom: 1.5rem; }
+.article-hero h1 { font-size: clamp(3rem, 6.5vw, 7rem); }
+.article-hero .article-summary { color: rgb(255 255 255 / 65%); }
+.article-hero__scroll { display: flex; gap: 1rem; align-items: center; margin-top: 3rem; font-size: .56rem; letter-spacing: .2em; color: rgb(255 255 255 / 50%); }
+.article-body { padding-top: clamp(3rem, 6vw, 6rem); }
+.article-meta { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.5rem; margin-bottom: 3rem; padding-block: 1.5rem 2rem; border-block: 1px solid var(--border); }
+.article-meta__item { min-width: 0; }
+.article-meta__label { display: flex; gap: .45rem; align-items: center; color: var(--text-muted); font-size: .6rem; letter-spacing: .08em; }
+.article-meta__value { display: block; margin-top: .7rem; color: var(--text-primary); font-size: .72rem; overflow-wrap: anywhere; }
+@media (max-width: 767px) {
+  .article-header__grid, .article-header__grid--image-left { grid-template-columns: minmax(0, 1fr); }
+  .article-cover img { aspect-ratio: 16 / 10; }
+  .article-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1.75rem; }
+  .article-hero__content { padding-top: 7rem; }
+  .article-header__date { margin-top: 2rem; }
+}
+</style>
