@@ -3,9 +3,10 @@ const route = useRoute()
 const router = useRouter()
 const nuxtApp = useNuxtApp()
 const mobileOpen = ref(false)
-const sidebarCollapsed = ref(false)
+const sidebarCollapsed = ref(true)
 const routeLoading = ref(false)
 const routeProgress = ref(0)
+const shellRef = useTemplateRef<HTMLElement>('shellRef')
 const mainContentRef = useTemplateRef<HTMLElement>('mainContentRef')
 let progressTimer: number | null = null
 let finishTimer: number | null = null
@@ -16,8 +17,18 @@ let removeRouterError: (() => void) | null = null
 let removePageStartHook: (() => void) | null = null
 let removePageFinishHook: (() => void) | null = null
 
+useHead({
+  htmlAttrs: { class: 'cms-document' },
+  link: [
+    { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+    { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+    { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500&display=swap' },
+  ],
+})
+
 watch(() => route.path, () => {
   mobileOpen.value = false
+  shellRef.value?.scrollTo({ top: 0, behavior: 'instant' })
 })
 
 function clearProgressTimers() {
@@ -136,10 +147,13 @@ onBeforeUnmount(() => {
 <template>
   <UiTooltipProvider>
     <div
-      class="cms-admin-shell min-h-dvh flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] lg:flex-row"
+      ref="shellRef"
+      class="cms-admin-shell"
       :class="{ 'is-sidebar-collapsed': sidebarCollapsed }"
       @click.capture="handleNavigationIntent"
     >
+      <SvgSprite />
+      <div class="cms-stage-background" aria-hidden="true" />
       <div
         class="cms-route-progress"
         :class="{ 'is-active': routeLoading }"
@@ -165,12 +179,12 @@ onBeforeUnmount(() => {
         @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       />
 
-      <div class="min-h-dvh min-w-0 flex flex-1 flex-col">
+      <div class="cms-workspace">
         <AdminHeader @toggle="mobileOpen = true" />
         <main
           id="admin-main-content"
           ref="mainContentRef"
-          class="relative min-h-0 flex-1 outline-none"
+          class="cms-main-content relative min-h-0 flex-1 outline-none"
           tabindex="-1"
           :aria-busy="routeLoading"
         >

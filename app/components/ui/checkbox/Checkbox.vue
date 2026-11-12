@@ -15,6 +15,7 @@ const props = defineProps<Props>()
 <template>
   <CheckboxRoot
     v-model="model"
+    data-slot="checkbox"
     :disabled="props.disabled"
     :class="cn('grid size-5 shrink-0 place-items-center rounded-md border border-[var(--border-soft)] bg-[var(--surface-card)] leading-none text-white outline-none transition focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] data-[state=checked]:border-[var(--primary)] data-[state=checked]:bg-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-65', props.class)"
   >

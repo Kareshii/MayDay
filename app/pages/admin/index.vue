@@ -54,6 +54,10 @@ const recentArticleColumns = [
   { prop: 'actions', label: '操作', width: 96, align: 'right', headerClass: 'px-6', cellClass: 'px-6' },
 ] satisfies readonly TableColumn[]
 
+const latestUpdate = computed(() => data.value?.stats.latestUpdatedAt
+  ? new Date(data.value.stats.latestUpdatedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+  : '暂无更新记录')
+
 const recentArticles = computed(() => data.value?.recentArticles || [])
 const filteredRecentArticles = computed(() => {
   const keyword = recentSearch.value.trim().toLocaleLowerCase('zh-CN')
@@ -115,89 +119,75 @@ watch(error, (value) => {
 </script>
 
 <template>
-  <div class="cms-page space-y-6">
-    <AdminPageHeader title="仪表板概览" subtitle="" />
-
-    <UiAlert v-if="error" variant="destructive">
+  <div class="cms-dashboard">
+    <AdminPageHeader title="仪表盘概览" />
+    <UiAlert v-if="error" variant="destructive" class="mb-6">
       <Icon name="lucide:circle-alert" />
       <UiAlertTitle>仪表盘加载失败</UiAlertTitle>
       <UiAlertDescription>{{ error.message }}</UiAlertDescription>
-      <UiAlertAction>
-        <UiButton variant="outline" size="sm" @click="refresh">
-          <Icon name="lucide:refresh-cw" class="size-4" />
-          重试
-        </UiButton>
-      </UiAlertAction>
+      <UiAlertAction><UiButton variant="outline" size="sm" @click="refresh">刷新</UiButton></UiAlertAction>
     </UiAlert>
-
-    <UiAlert v-else-if="data?.configMissing" variant="warning">
+    <UiAlert v-else-if="data?.configMissing" variant="warning" class="mb-6">
       <Icon name="lucide:database-zap" />
       <UiAlertTitle>数据库尚未配置</UiAlertTitle>
-      <UiAlertDescription>
-        `DATABASE_URL` 还没有配置，所以后台目前只显示空态。把 PostgreSQL 连接串写进项目环境变量后再刷新。
-      </UiAlertDescription>
+      <UiAlertDescription>请在项目环境变量中配置 DATABASE_URL 后刷新。</UiAlertDescription>
     </UiAlert>
 
     <template v-if="!error">
-    <!-- 统一核心指标栏 -->
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <template v-if="pending">
-        <UiSkeleton v-for="index in 4" :key="index" class="h-32" />
-      </template>
-      <template v-else>
-        <AdminMetricCard
-          label="文章库"
-          :value="data?.stats.total || 0"
-          :hint="`${data?.stats.published || 0} 已发布 · ${data?.stats.drafts || 0} 草稿`"
-          icon="lucide:file-text"
-        />
-        <AdminMetricCard
-          label="分类架构"
-          :value="data?.extensionStats.categories || 0"
-          hint="后台维护的主题分类"
-          icon="lucide:folder-tree"
-        />
-        <AdminMetricCard
-          label="读者互动"
-          :value="data?.extensionStats.comments || 0"
-          :hint="`${data?.extensionStats.pendingComments || 0} 条待审核评论`"
-          icon="lucide:message-square"
-        />
-        <AdminMetricCard
-          label="媒体资产"
-          :value="data?.extensionStats.images || 0"
-          :hint="`已占用容量 ${formatSize(data?.extensionStats.imageStorageSize || 0)}`"
-          icon="lucide:image"
-        />
-      </template>
-    </div>
+      <section class="cms-dashboard-stage" aria-label="仪表盘概览">
+        <div class="cms-dashboard-hero">
+          <span class="cms-glass-chip">Dashboard Overview</span>
+          <h1><span><span>记录此刻，</span></span><span><span>继续热爱。</span></span></h1>
+          <p class="cms-dashboard-hero__description">在这里整理灵感，记录生活的每一个片刻。<br>从一篇文章开始，让值得分享的故事被看见。</p>
+          <p class="cms-dashboard-hero__updated"><AppIcon name="i-clock-3" /> 最近更新 · {{ latestUpdate }}</p>
+        </div>
 
-    <!-- 左主右从分栏 -->
-    <div class="grid gap-6 xl:grid-cols-[1fr_320px] items-start">
-      
-      <!-- 左侧内容区 -->
-      <div class="space-y-6 overflow-hidden">
-        <UiCard class="p-6">
-          <div class="mb-6 flex items-start justify-between gap-4">
-            <div>
-              <p class="text-lg font-bold text-[var(--text-primary)]">
-                内容更新分布
-              </p>
-              <p class="mt-1 text-xs text-[var(--text-secondary)]">
-                最近 6 个月文章发布量
-              </p>
-            </div>
-            <UiBadge variant="secondary">
-              最近 6 个月
-            </UiBadge>
-          </div>
-
-          <UiSkeleton v-if="pending" class="h-64 w-full" />
-
+        <div class="cms-dashboard-forecast">
+          <div class="cms-dashboard-forecast__heading"><h2>内容增长趋势</h2><span>最近 6 个有内容的月份</span></div>
+          <UiSkeleton v-if="pending" class="h-60 w-full" />
           <AdminTrendChart v-else :data="data?.byMonth || []" />
-        </UiCard>
+        </div>
 
-        <UiCard class="overflow-hidden p-0">
+        <aside class="cms-dashboard-rail" aria-label="内容数据">
+          <template v-if="pending">
+            <UiSkeleton v-for="index in 4" :key="index" class="min-h-28 flex-1" />
+          </template>
+          <template v-else-if="data">
+            <NuxtLink to="/admin/articles" class="cms-stat-card cms-stat-card--big">
+              <div class="cms-stat-card__heading"><span>文章库</span><AppIcon name="i-file-text" /></div>
+              <p class="cms-stat-card__total">{{ data.stats.total }}<i>篇</i></p>
+              <div class="cms-stat-card__metrics">
+                <span><AppIcon name="i-circle-check" />{{ data.stats.published }} 已发布</span>
+                <span><AppIcon name="i-file-pen-line" />{{ data.stats.drafts }} 草稿</span>
+                <span><AppIcon name="i-pin" />{{ data.stats.pinned }} 置顶</span>
+              </div>
+            </NuxtLink>
+            <NuxtLink to="/admin/features/categories" class="cms-stat-card cms-stat-card--row">
+              <div><span class="cms-stat-card__eyebrow">内容组织</span><h2>分类架构</h2><p>后台维护的主题分类</p></div>
+              <div class="cms-stat-card__number">{{ data.extensionStats.categories }}<AppIcon name="i-folder-tree" /></div>
+            </NuxtLink>
+            <NuxtLink to="/admin/features/comments" class="cms-stat-card cms-stat-card--row">
+              <div><span class="cms-stat-card__eyebrow">读者互动</span><h2>评论消息</h2><p>{{ data.extensionStats.pendingComments }} 条待审核评论</p></div>
+              <div class="cms-stat-card__number">{{ data.extensionStats.comments }}<AppIcon name="i-message-square" /></div>
+            </NuxtLink>
+            <NuxtLink to="/admin/content-images" class="cms-stat-card cms-stat-card--row">
+              <div><span class="cms-stat-card__eyebrow">媒体资产</span><h2>内容图片</h2><p>已占用 {{ formatSize(data.extensionStats.imageStorageSize) }}</p></div>
+              <div class="cms-stat-card__number">{{ data.extensionStats.images }}<AppIcon name="i-images" /></div>
+            </NuxtLink>
+          </template>
+        </aside>
+        <a href="#dashboard-content" class="cms-dashboard-more">最近文章与快捷操作 <AppIcon name="i-chevron-down" /></a>
+      </section>
+
+      <section id="dashboard-content" class="cms-dashboard-content" aria-label="最近文章与快捷操作">
+        <div class="cms-section-heading"><div><span>YOUR WORKSPACE</span><h2>继续你的创作</h2></div><p>每一个想法，都值得被记录。</p></div>
+        <div class="cms-quick-actions">
+          <NuxtLink v-for="action in quickActions" :key="action.to" :to="action.to" class="cms-quick-action">
+            <AppIcon :name="action.icon" /><span>{{ action.title }}</span><AppIcon name="i-chevron-right" />
+          </NuxtLink>
+        </div>
+        <div class="cms-section-heading cms-section-heading--recent"><h2>最近文章</h2><p>查看、整理与继续编辑</p></div>
+        <UiCard class="cms-recent-articles overflow-hidden p-0">
           <div class="flex flex-col items-stretch gap-3 border-b border-[var(--border-soft)] p-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5 lg:p-5">
             <div class="flex shrink-0 items-center gap-2">
               <UiLabel for="recent-article-search" class="shrink-0 text-sm font-medium text-[var(--text-secondary)]">
@@ -234,9 +224,9 @@ watch(error, (value) => {
               共 <strong class="mx-1 font-semibold tabular-nums text-[var(--text-primary)]">{{ filteredRecentArticles.length }}</strong> 篇
             </div>
 
-            <UiButton as="NuxtLink" to="/admin/articles" class="shrink-0" variant="secondary" size="sm">
-              全部文章
-            </UiButton>
+            <NuxtLink to="/admin/articles" class="shrink-0">
+              <UiButton as="span" variant="secondary" size="sm">全部文章</UiButton>
+            </NuxtLink>
           </div>
 
           <div v-if="pending" class="space-y-3 p-5" aria-label="正在加载最近文章">
@@ -275,80 +265,15 @@ watch(error, (value) => {
 
             <template #cell-actions="{ item: article }">
               <div class="flex justify-end">
-                <UiButton as="NuxtLink" :to="`/admin/articles/${article.id}`" variant="ghost" size="sm">
-                  编辑
-                </UiButton>
+                <NuxtLink :to="`/admin/articles/${article.id}`">
+                  <UiButton as="span" variant="ghost" size="sm">编辑</UiButton>
+                </NuxtLink>
               </div>
             </template>
           </UiTable>
         </UiCard>
-      </div>
-
-      <!-- 右侧辅助侧边栏 -->
-      <div class="space-y-6">
-        <UiCard class="p-5">
-          <div class="mb-4">
-            <p class="text-base font-bold text-[var(--text-primary)]">
-              快捷操作
-            </p>
-            <p class="mt-0.5 text-xs text-[var(--text-secondary)]">
-              快速直达各个模块
-            </p>
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <NuxtLink
-              v-for="action in quickActions"
-              :key="action.to"
-              :to="action.to"
-              class="group flex items-center gap-3 rounded-md p-3 transition-colors hover:bg-[var(--surface-hover)]"
-            >
-              <span class="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--surface-low)] text-[var(--text-secondary)] transition-colors group-hover:bg-[var(--primary)] group-hover:text-[var(--primary-foreground)]">
-                <Icon :name="action.icon" class="size-4" />
-              </span>
-              <div class="flex-1 overflow-hidden">
-                <p class="truncate text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--primary)] transition-colors">
-                  {{ action.title }}
-                </p>
-                <p class="truncate text-xs text-[var(--text-secondary)]">
-                  {{ action.hint }}
-                </p>
-              </div>
-            </NuxtLink>
-          </div>
-        </UiCard>
-
-        <UiCard class="p-5">
-          <div class="mb-4 flex items-start justify-between gap-4">
-            <div>
-            <p class="text-base font-bold text-[var(--text-primary)]">
-                系统状态
-              </p>
-              <p class="mt-0.5 text-xs text-[var(--text-secondary)]">
-                版本与运行环境
-              </p>
-            </div>
-            <UiBadge :variant="data?.stats.latestUpdatedAt ? 'success' : 'secondary'">
-              {{ data?.stats.latestUpdatedAt ? '运行中' : '空闲' }}
-            </UiBadge>
-          </div>
-
-          <div class="space-y-3 text-sm text-[var(--text-secondary)]">
-            <div class="flex items-center justify-between">
-              <span>系统核心版本</span>
-              <span class="font-mono text-[var(--text-primary)]">v{{ packageVersion }}</span>
-            </div>
-            <div class="flex items-center justify-between border-t border-[var(--border-soft)] pt-3">
-              <span>PostgreSQL</span>
-              <UiBadge variant="success">已连接</UiBadge>
-            </div>
-            <p class="border-t border-[var(--border-soft)] pt-3 text-xs leading-relaxed">
-              功能总览和待办缺口清单，请直接参阅源码中的 <span class="font-semibold text-[var(--text-primary)]">admin.md</span>。
-            </p>
-          </div>
-        </UiCard>
-      </div>
-    </div>
+        <div class="cms-dashboard-system"><span>Mayday CMS <span class="font-mono">v{{ packageVersion }}</span></span><span><span class="cms-status-dot" />{{ data?.configMissing ? '数据库未配置' : 'PostgreSQL 已连接' }}</span><span>最近更新 · {{ latestUpdate }}</span></div>
+      </section>
     </template>
   </div>
 </template>

@@ -23,6 +23,7 @@ const attrs = useAttrs()
     :is="props.as"
     v-bind="attrs"
     data-slot="button"
+    :data-variant="props.variant"
     :class="cn(buttonVariants({ variant: props.variant, size: props.size }), attrs.class as string)"
   >
     <slot />

@@ -24,8 +24,6 @@ const { data: postsData } = await useFetch<{ articles: ManagedArticleSummary[] }
 
 const heroTitleLine1 = computed(() => siteConfig.value.site.homeHeroTitleLine1 || 'Hi，Kareshi')
 const heroTitleLine2 = computed(() => siteConfig.value.site.homeHeroTitleLine2 ?? '继续唱。')
-const heroTitleCharactersLine1 = computed(() => Array.from(heroTitleLine1.value))
-const heroTitleCharactersLine2 = computed(() => Array.from(heroTitleLine2.value))
 const heroSubtitle = computed(() => siteConfig.value.site.homeHeroSubtitle || '星星在闪烁，你会怎么说。')
 const heroImage = computed(() => siteConfig.value.site.homeHeroImage || '/cover.jpg')
 
@@ -187,34 +185,14 @@ onBeforeUnmount(() => {
       <div class="home-hero__shade absolute inset-0 bg-gradient-to-b from-slate-950/34 via-slate-950/72 to-[var(--bg-primary)]" />
       <div class="home-hero__accent absolute inset-0 bg-[linear-gradient(115deg,rgba(56,189,248,0.12),transparent_28%,transparent_68%,rgba(244,114,182,0.1))]" />
       <div class="hero-grid absolute inset-0 opacity-35" />
-      <div class="phantom-hero-figure" aria-hidden="true">
-        <span class="phantom-hero-figure__mask">
-          <Icon name="lucide:venetian-mask" />
-        </span>
-        <span class="phantom-hero-figure__callout">STEAL BACK YOUR FUTURE</span>
-      </div>
 
       <div class="container relative z-10 flex h-full flex-col justify-center pt-28 pb-14 md:pt-36 md:pb-18">
         <div class="max-w-4xl space-y-6">
 
 
           <h1 class="home-hero__title mt-4 hero-entrance hero-title-glow max-w-4xl text-5xl font-semibold leading-[0.96] tracking-tight text-white md:text-7xl lg:text-[6.5rem]" style="--enter-delay: 180ms">
-            <span class="glitch-text block" :data-text="heroTitleLine1">
-              <span
-                v-for="(character, index) in heroTitleCharactersLine1"
-                :key="`hero-line-1-${index}`"
-                class="phantom-title-letter"
-                :class="{ 'is-space': character === ' ' }"
-              >{{ character }}</span>
-            </span>
-            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">
-              <span
-                v-for="(character, index) in heroTitleCharactersLine2"
-                :key="`hero-line-2-${index}`"
-                class="phantom-title-letter"
-                :class="{ 'is-space': character === ' ' }"
-              >{{ character }}</span>
-            </span>
+            <span class="glitch-text block" :data-text="heroTitleLine1">{{ heroTitleLine1 }}</span>
+            <span v-if="heroTitleLine2" class="glitch-text mt-1 block" :data-text="heroTitleLine2">{{ heroTitleLine2 }}</span>
           </h1>
 
           <div class="home-hero__subtitle hero-entrance mt-7 space-y-2 text-white/80" style="--enter-delay: 320ms">

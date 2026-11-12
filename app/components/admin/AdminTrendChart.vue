@@ -4,91 +4,78 @@ interface TrendPoint {
   value: number
 }
 
-const props = defineProps<{
-  data: TrendPoint[]
-}>()
+const props = defineProps<{ data: TrendPoint[] }>()
+const chartId = useId().replaceAll(':', '')
+const CHART_WIDTH = 835
+const CHART_HEIGHT = 230
+const CHART_TOP = 35
+const CHART_BASELINE = 180
 
-const chartData = computed(() => props.data.length ? props.data : [
-  { label: '无数据', value: 1 },
-])
+const points = computed(() => {
+  const maximum = Math.max(...props.data.map(item => item.value), 1)
 
-const totalValue = computed(() => chartData.value.reduce((sum, item) => sum + item.value, 0) || 1)
+  return props.data.map((item, index) => ({
+    ...item,
+    x: (index + .5) * CHART_WIDTH / props.data.length,
+    y: CHART_BASELINE - item.value / maximum * (CHART_BASELINE - CHART_TOP),
+  }))
+})
 
-const colors = [
-  'var(--primary)',
-  'var(--success)',
-  'var(--warning)',
-  'var(--info)',
-  'var(--danger)',
-  'var(--text-secondary)',
-]
-
-const segments = computed(() => {
-  let current = 0
-  return chartData.value.map((item, index) => {
-    const percentage = (item.value / totalValue.value) * 100
-    const start = current
-    const end = current + percentage
-    current = end
-    return {
-      ...item,
-      color: colors[index % colors.length],
-      start,
-      end,
-      percentage,
+const linePath = computed(() => {
+  const path = points.value.map((point, index) => {
+    if (index === 0) {
+      return `M 0,${point.y} L ${point.x},${point.y}`
     }
-  })
+
+    const previous = points.value[index - 1]!
+    const middle = (previous.x + point.x) / 2
+    return `C ${middle},${previous.y} ${middle},${point.y} ${point.x},${point.y}`
+  }).join(' ')
+
+  return points.value.length ? `${path} L ${CHART_WIDTH},${points.value[points.value.length - 1]!.y}` : ''
 })
 
-const conicGradient = computed(() => {
-  if (props.data.length === 0 || totalValue.value === 0) {
-    return 'conic-gradient(var(--border) 0% 100%)'
-  }
-  const stops = segments.value.map(s => `${s.color} ${s.start}% ${s.end}%`)
-  return `conic-gradient(${stops.join(', ')})`
-})
+const areaPath = computed(() => `${linePath.value} L ${CHART_WIDTH},${CHART_HEIGHT} L 0,${CHART_HEIGHT} Z`)
 </script>
 
 <template>
-  <div class="flex min-h-64 flex-col items-center justify-center gap-6 px-2 py-4 sm:flex-row sm:px-4">
-    <div
-      class="relative flex size-36 shrink-0 items-center justify-center rounded-full sm:size-40"
-      :style="{ background: conicGradient }"
-    >
-      <div class="absolute inset-0 m-auto flex size-24 flex-col items-center justify-center rounded-full bg-[var(--surface-card)] sm:size-28">
-        <span class="text-2xl font-black text-[var(--text-primary)]">
-          {{ props.data.length === 0 ? 0 : totalValue }}
-        </span>
-        <span class="mt-0.5 text-[10px] font-medium text-[var(--text-secondary)]">
-          总分布
-        </span>
+  <div v-if="data.length" class="cms-trend">
+    <div class="cms-trend__values" :style="{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }">
+      <div v-for="(point, index) in data" :key="point.label" class="cms-trend__value" :style="{ '--point-index': index }">
+        <span>{{ point.value }}<small>篇</small></span>
+        <AppIcon name="i-file-text" />
       </div>
     </div>
-
-    <div class="flex w-full flex-col justify-center gap-3 border-t border-[var(--border-soft)] pt-4 sm:w-auto sm:flex-1 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
-      <div
-        v-for="segment in segments"
-        :key="segment.label"
-        class="flex cursor-default items-center justify-between gap-4"
-      >
-        <div class="flex items-center gap-2.5">
-          <span
-            class="size-3 rounded-full"
-            :style="{ backgroundColor: segment.color }"
-          />
-          <span class="text-sm font-medium text-[var(--text-secondary)]">
-            {{ segment.label }}
-          </span>
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span class="text-sm font-bold text-[var(--text-primary)]">
-            {{ props.data.length === 0 ? 0 : segment.value }}
-          </span>
-          <span class="w-10 text-right text-xs font-semibold text-[var(--text-secondary)]">
-            {{ props.data.length === 0 ? '0' : segment.percentage.toFixed(0) }}%
-          </span>
-        </div>
-      </div>
+    <svg class="cms-trend__chart" :viewBox="`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`" preserveAspectRatio="none" role="img" aria-label="最近文章创建数量趋势">
+      <title>{{ data.map(point => `${point.label}：${point.value} 篇`).join('，') }}</title>
+      <defs>
+        <linearGradient :id="`${chartId}-fill`" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="currentColor" stop-opacity=".3" />
+          <stop offset="1" stop-color="currentColor" stop-opacity="0" />
+        </linearGradient>
+        <linearGradient :id="`${chartId}-stroke`">
+          <stop offset="0" stop-color="currentColor" stop-opacity=".35" />
+          <stop offset=".25" stop-color="currentColor" />
+          <stop offset=".75" stop-color="currentColor" />
+          <stop offset="1" stop-color="currentColor" stop-opacity=".5" />
+        </linearGradient>
+        <clipPath :id="`${chartId}-clip`">
+          <rect class="cms-trend__wipe" :width="CHART_WIDTH" :height="CHART_HEIGHT" />
+        </clipPath>
+      </defs>
+      <path v-if="data.length > 1" :d="areaPath" :fill="`url(#${chartId}-fill)`" :clip-path="`url(#${chartId}-clip)`" />
+      <path v-if="data.length > 1" class="cms-trend__line" :d="linePath" fill="none" stroke="currentColor" stroke-width="6.2" stroke-opacity=".17" pathLength="1" />
+      <path v-if="data.length > 1" class="cms-trend__line" :d="linePath" fill="none" stroke="currentColor" stroke-width="4.6" stroke-opacity=".26" pathLength="1" />
+      <path v-if="data.length > 1" class="cms-trend__line" :d="linePath" fill="none" :stroke="`url(#${chartId}-stroke)`" stroke-width="3.4" stroke-linecap="round" pathLength="1" />
+      <circle v-if="points.length === 1" :cx="points[0]!.x" :cy="points[0]!.y" r="5" fill="currentColor" />
+    </svg>
+    <div class="cms-trend__months" :style="{ gridTemplateColumns: `repeat(${data.length}, minmax(0, 1fr))` }">
+      <span v-for="(point, index) in data" :key="point.label" :style="{ '--point-index': index }">{{ point.label }}</span>
     </div>
+  </div>
+  <div v-else class="cms-trend-empty">
+    <AppIcon name="i-chart-no-axes-column" />
+    <p>还没有文章创建记录</p>
+    <NuxtLink to="/admin/articles/new">从第一篇文章开始 <span aria-hidden="true">↗</span></NuxtLink>
   </div>
 </template>

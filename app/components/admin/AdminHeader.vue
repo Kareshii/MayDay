@@ -2,6 +2,7 @@
 const loggingOut = ref(false)
 const headerMounted = ref(false)
 const route = useRoute()
+const isDashboard = computed(() => route.path === '/admin')
 const colorMode = useColorMode()
 const { adminHeaderState } = useAdminHeader()
 const { showSuccessToast, showErrorToast } = useAdminToast()
@@ -160,12 +161,12 @@ function toggleColorMode() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-[var(--surface-card)]">
+  <header class="cms-header" :class="{ 'is-dashboard': isDashboard }">
     <div class="cms-admin-toolbar flex h-[var(--cms-toolbar-height)] w-full items-center justify-between">
       <div class="flex h-full min-w-0 flex-1 items-center overflow-hidden pe-14 ps-2 lg:ps-4">
         <UiTooltip>
           <UiTooltipTrigger as-child>
-            <UiButton variant="ghost" size="icon-sm" class="mr-1 shrink-0 lg:hidden" aria-label="打开侧边栏" @click="emit('toggle')">
+            <UiButton variant="ghost" size="icon-sm" class="cms-header__menu-toggle mr-1 shrink-0 lg:hidden" aria-label="打开侧边栏" @click="emit('toggle')">
               <Icon name="lucide:menu" class="size-3.5" />
             </UiButton>
           </UiTooltipTrigger>
@@ -174,7 +175,11 @@ function toggleColorMode() {
           </UiTooltipContent>
         </UiTooltip>
 
-        <nav class="min-w-0 flex-1" aria-label="面包屑">
+        <div v-if="isDashboard" class="cms-header__welcome">
+          <p>欢迎回来</p>
+          <strong>{{ adminUsername }}</strong>
+        </div>
+        <nav v-else class="min-w-0 flex-1" aria-label="面包屑">
           <ol class="flex min-w-0 items-center gap-1.5 text-sm">
             <li v-for="(breadcrumb, index) in breadcrumbs" :key="`${breadcrumb.label}-${index}`" class="flex min-w-0 items-center gap-1.5">
               <Icon v-if="index > 0" name="lucide:chevron-right" class="size-3.5 shrink-0 text-[var(--text-muted)]" />
@@ -207,7 +212,15 @@ function toggleColorMode() {
         </UiLabel>
       </div>
 
-      <div class="flex h-full shrink-0 items-center justify-end gap-1.5 px-2 lg:px-4">
+      <div class="cms-header__tools flex h-full shrink-0 items-center justify-end gap-1.5 px-2 lg:px-4">
+        <template v-if="isDashboard">
+          <NuxtLink to="/admin/articles/new" class="cms-tool" aria-label="新建文章" title="新建文章">
+            <AppIcon name="i-plus" />
+          </NuxtLink>
+          <NuxtLink to="/admin/articles" class="cms-tool" aria-label="搜索文章" title="搜索文章">
+            <AppIcon name="i-search" />
+          </NuxtLink>
+        </template>
         <div v-if="headerActions.length" class="hidden items-center gap-1.5 md:flex">
           <template v-if="headerActions.length < 3">
             <UiButton
@@ -265,6 +278,7 @@ function toggleColorMode() {
             <UiButton
               variant="ghost"
               size="icon"
+              :class="{ 'cms-tool': isDashboard }"
               :aria-label="themeToggleLabel"
               @click="toggleColorMode"
             >

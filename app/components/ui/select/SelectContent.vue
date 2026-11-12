@@ -8,6 +8,7 @@ const attrs = useAttrs()
 <template>
   <SelectPortal>
     <SelectContent
+      data-slot="select-content"
       v-bind="attrs"
       :class="cn(
         'z-[130] max-h-72 min-w-[8rem] overflow-hidden rounded-xl border border-[var(--border-soft)] bg-white text-[var(--text-primary)] shadow-none outline-none dark:bg-[#141721] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',

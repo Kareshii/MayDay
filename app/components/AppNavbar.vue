@@ -134,7 +134,6 @@ function openCommandPalette() {
         </nav>
 
         <div class="site-navbar__actions flex items-center gap-2">
-          <SiteThemeSwitch :transparent="isTransparent" />
           <ColorModeSwitch :transparent="isTransparent" :class="isTransparent ? 'text-white' : 'text-[var(--text-primary)]'" />
           <button
             type="button"
@@ -147,18 +146,9 @@ function openCommandPalette() {
             @click="mobileOpen = !mobileOpen"
           >
             <Icon :name="mobileOpen ? 'lucide:x' : 'lucide:menu'" class="size-5" />
-            <span class="site-navbar__menu-label hidden">{{ mobileOpen ? 'EXIT' : 'MENU' }}</span>
           </button>
         </div>
       </div>
-
-      <button
-        v-if="mobileOpen"
-        type="button"
-        class="site-navbar__menu-scrim hidden"
-        aria-label="关闭导航菜单"
-        @click="mobileOpen = false"
-      />
 
       <Transition
         enter-active-class="transition duration-200 ease-out"

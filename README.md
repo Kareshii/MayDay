@@ -32,6 +32,8 @@
 - 数据库：PostgreSQL + Drizzle ORM / drizzle-kit
 - 其他：TinyMCE、Iconify、VueUse
 
+后台背景、面板和按钮使用黑白实色，支持亮暗主题切换；配色与布局分别位于 `app/assets/css/admin.css`、`app/assets/css/admin-layout.css`。前台样式独立。
+
 ## 项目结构
 
 ```text

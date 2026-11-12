@@ -36,7 +36,7 @@ export default defineNuxtConfig({
     server: false,
     client: false,
   },
-  css: ['assets/css/main.css'],
+  css: ['assets/css/main.css', 'assets/css/admin.css', 'assets/css/admin-layout.css'],
   components: {
     dirs: [
       {
